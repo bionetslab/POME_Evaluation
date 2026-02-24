@@ -61,6 +61,37 @@ def add_suggestion_column(df):
     return df
 
 
+def compute_adjuvant_therapy_modality_fractions(year_filter=2019):
+    """
+    Compute fractions of patients in each adjuvant therapy modality for a given year.
+    
+    Args:
+        df: DataFrame with 'adjuvant_therapy_modality' and 'year_of_initial_diagnosis' columns
+        year_filter: year to filter on (e.g., 2019)
+    Returns:
+        DataFrame with modality fractions  
+    """
+    df = load_data('data/HANCOCK_samples_16_0.tsv')
+    df = add_modality_column(df)
+
+    modality_fractions = []
+    for mod in df['adjuvant_therapy_modality'].unique():
+        mod_subset = df[df['year_of_initial_diagnosis'] < year_filter]
+        total_count = len(mod_subset)
+        if total_count > 0:
+            fraction = (mod_subset['adjuvant_therapy_modality'] == mod).sum() / total_count
+            modality_fractions.append({'modality': mod, 'fraction': fraction, 'year': f"< {year_filter}"})
+        mod_subset = df[df['year_of_initial_diagnosis'] == year_filter]
+        total_count = len(mod_subset)
+        if total_count > 0:
+            fraction = (mod_subset['adjuvant_therapy_modality'] == mod).sum() / total_count
+            modality_fractions.append({'modality': mod, 'fraction': fraction, 'year': f"{year_filter}"})
+
+    modality_fractions_df = pd.DataFrame(modality_fractions)
+    
+    return modality_fractions_df
+
+
 def process_multi_file_analysis(glob_pattern, feature_cols, year_filter=2019, n_neighbors=10):
     """
     Process multiple data files and compute survival fractions by embedding size and suggestion_followed.
@@ -105,7 +136,7 @@ def process_multi_file_analysis(glob_pattern, feature_cols, year_filter=2019, n_
         else:
             subset = df_i
         
-        # compute survival fractions by suggestion_followed
+        # compute survival fractions by suggestion_followed overall and by modality
         if 'survival_status' in subset.columns and 'suggestion_followed' in subset.columns:
             total_count = subset.shape[0]
             
@@ -120,15 +151,43 @@ def process_multi_file_analysis(glob_pattern, feature_cols, year_filter=2019, n_
                     'embedding_size': emb,
                     'suggestion_followed': followed_val,
                     'survived_frac': frac,
-                    'file': name
+                    'file': name,
+                    'modality': 'All'
                 })
-                
-                if followed_val == 1:
-                    prop = sub2.shape[0] / total_count if total_count > 0 else np.nan
+
+                for mod in subset['adjuvant_therapy_modality'].dropna().unique():
+                    mod_sub = sub2[sub2['adjuvant_therapy_modality'] == mod]
+                    if mod_sub.shape[0] > 0:
+                        frac_mod = (mod_sub['survival_status'].astype(str).str.strip().str.lower() == 'living').mean()
+                    else:
+                        frac_mod = np.nan
+                    
+                    results.append({
+                        'embedding_size': emb,
+                        'suggestion_followed': followed_val,
+                        'survived_frac': frac_mod,
+                        'file': name,
+                        'modality': mod
+                    })
+
+            # compute proportions of suggestion followed overall and by modality
+            sub_followed_1 = subset[subset['suggestion_followed'] == 1]
+            prop = sub_followed_1.shape[0] / total_count if total_count > 0 else np.nan
+            proportions.append({'embedding_size': emb, 
+                                'proportion_followed': prop, 
+                                'file': name,
+                                'modality': 'All'
+            })
+
+            for mod in subset['adjuvant_therapy_modality'].dropna().unique():
+                mod_count = (subset['adjuvant_therapy_modality'] == mod).sum()
+                if mod_count > 0:
+                    prop = sub_followed_1[sub_followed_1['adjuvant_therapy_modality'] == mod].shape[0] / mod_count
                     proportions.append({
                         'embedding_size': emb,
                         'proportion_followed': prop,
-                        'file': name
+                        'file': name,
+                        'modality': mod
                     })
     
     results_df = pd.DataFrame(results)

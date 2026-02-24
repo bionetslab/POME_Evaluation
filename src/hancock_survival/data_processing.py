@@ -18,7 +18,7 @@ def compute_modality(row):
         row: pandas Series with 'adjuvant_systemic_therapy' and 'adjuvant_radiotherapy'
         
     Returns:
-        str: One of 'none', 'systemic_therapy', 'radiotherapy', 'both', or NaN
+        str: One of 'No therapy', 'Only systemic therapy', 'Only radiotherapy', 'Systemic and radiotherapy', or NaN
     """
     sys = row.get('adjuvant_systemic_therapy')
     rad = row.get('adjuvant_radiotherapy')
@@ -33,13 +33,13 @@ def compute_modality(row):
     rad_yes = is_yes(rad)
     
     if not sys_yes and not rad_yes:
-        return 'none'
+        return 'No therapy'
     if sys_yes and not rad_yes:
-        return 'systemic_therapy'
+        return 'Only systemic therapy'
     if not sys_yes and rad_yes:
-        return 'radiotherapy'
+        return 'Only radiotherapy'
     if sys_yes and rad_yes:
-        return 'both'
+        return 'Systemic and radiotherapy'
     
     return np.nan
 

@@ -1,0 +1,121 @@
+embedding_size,proportion_followed,file,modality
+16,0.34210526315789475,HANCOCK_samples_16_0.tsv,All
+16,0.23076923076923078,HANCOCK_samples_16_0.tsv,Systemic and radiotherapy
+16,0.45,HANCOCK_samples_16_0.tsv,No therapy
+16,0.2,HANCOCK_samples_16_0.tsv,Only radiotherapy
+16,0.34210526315789475,HANCOCK_samples_16_1.tsv,All
+16,0.38461538461538464,HANCOCK_samples_16_1.tsv,Systemic and radiotherapy
+16,0.35,HANCOCK_samples_16_1.tsv,No therapy
+16,0.2,HANCOCK_samples_16_1.tsv,Only radiotherapy
+16,0.39473684210526316,HANCOCK_samples_16_2.tsv,All
+16,0.23076923076923078,HANCOCK_samples_16_2.tsv,Systemic and radiotherapy
+16,0.45,HANCOCK_samples_16_2.tsv,No therapy
+16,0.6,HANCOCK_samples_16_2.tsv,Only radiotherapy
+16,0.3684210526315789,HANCOCK_samples_16_3.tsv,All
+16,0.23076923076923078,HANCOCK_samples_16_3.tsv,Systemic and radiotherapy
+16,0.5,HANCOCK_samples_16_3.tsv,No therapy
+16,0.2,HANCOCK_samples_16_3.tsv,Only radiotherapy
+16,0.4473684210526316,HANCOCK_samples_16_4.tsv,All
+16,0.23076923076923078,HANCOCK_samples_16_4.tsv,Systemic and radiotherapy
+16,0.65,HANCOCK_samples_16_4.tsv,No therapy
+16,0.2,HANCOCK_samples_16_4.tsv,Only radiotherapy
+16,0.5,HANCOCK_samples_16_5.tsv,All
+16,0.38461538461538464,HANCOCK_samples_16_5.tsv,Systemic and radiotherapy
+16,0.65,HANCOCK_samples_16_5.tsv,No therapy
+16,0.2,HANCOCK_samples_16_5.tsv,Only radiotherapy
+16,0.5,HANCOCK_samples_16_6.tsv,All
+16,0.15384615384615385,HANCOCK_samples_16_6.tsv,Systemic and radiotherapy
+16,0.8,HANCOCK_samples_16_6.tsv,No therapy
+16,0.2,HANCOCK_samples_16_6.tsv,Only radiotherapy
+16,0.34210526315789475,HANCOCK_samples_16_7.tsv,All
+16,0.23076923076923078,HANCOCK_samples_16_7.tsv,Systemic and radiotherapy
+16,0.45,HANCOCK_samples_16_7.tsv,No therapy
+16,0.2,HANCOCK_samples_16_7.tsv,Only radiotherapy
+16,0.5263157894736842,HANCOCK_samples_16_8.tsv,All
+16,0.38461538461538464,HANCOCK_samples_16_8.tsv,Systemic and radiotherapy
+16,0.7,HANCOCK_samples_16_8.tsv,No therapy
+16,0.2,HANCOCK_samples_16_8.tsv,Only radiotherapy
+16,0.42105263157894735,HANCOCK_samples_16_9.tsv,All
+16,0.23076923076923078,HANCOCK_samples_16_9.tsv,Systemic and radiotherapy
+16,0.65,HANCOCK_samples_16_9.tsv,No therapy
+16,0.0,HANCOCK_samples_16_9.tsv,Only radiotherapy
+32,0.47368421052631576,HANCOCK_samples_32_0.tsv,All
+32,0.38461538461538464,HANCOCK_samples_32_0.tsv,Systemic and radiotherapy
+32,0.65,HANCOCK_samples_32_0.tsv,No therapy
+32,0.0,HANCOCK_samples_32_0.tsv,Only radiotherapy
+32,0.5,HANCOCK_samples_32_1.tsv,All
+32,0.46153846153846156,HANCOCK_samples_32_1.tsv,Systemic and radiotherapy
+32,0.55,HANCOCK_samples_32_1.tsv,No therapy
+32,0.4,HANCOCK_samples_32_1.tsv,Only radiotherapy
+32,0.3157894736842105,HANCOCK_samples_32_2.tsv,All
+32,0.15384615384615385,HANCOCK_samples_32_2.tsv,Systemic and radiotherapy
+32,0.45,HANCOCK_samples_32_2.tsv,No therapy
+32,0.2,HANCOCK_samples_32_2.tsv,Only radiotherapy
+32,0.39473684210526316,HANCOCK_samples_32_3.tsv,All
+32,0.07692307692307693,HANCOCK_samples_32_3.tsv,Systemic and radiotherapy
+32,0.65,HANCOCK_samples_32_3.tsv,No therapy
+32,0.2,HANCOCK_samples_32_3.tsv,Only radiotherapy
+32,0.47368421052631576,HANCOCK_samples_32_4.tsv,All
+32,0.3076923076923077,HANCOCK_samples_32_4.tsv,Systemic and radiotherapy
+32,0.6,HANCOCK_samples_32_4.tsv,No therapy
+32,0.4,HANCOCK_samples_32_4.tsv,Only radiotherapy
+32,0.3684210526315789,HANCOCK_samples_32_5.tsv,All
+32,0.15384615384615385,HANCOCK_samples_32_5.tsv,Systemic and radiotherapy
+32,0.45,HANCOCK_samples_32_5.tsv,No therapy
+32,0.6,HANCOCK_samples_32_5.tsv,Only radiotherapy
+32,0.3684210526315789,HANCOCK_samples_32_6.tsv,All
+32,0.3076923076923077,HANCOCK_samples_32_6.tsv,Systemic and radiotherapy
+32,0.4,HANCOCK_samples_32_6.tsv,No therapy
+32,0.4,HANCOCK_samples_32_6.tsv,Only radiotherapy
+32,0.47368421052631576,HANCOCK_samples_32_7.tsv,All
+32,0.3076923076923077,HANCOCK_samples_32_7.tsv,Systemic and radiotherapy
+32,0.65,HANCOCK_samples_32_7.tsv,No therapy
+32,0.2,HANCOCK_samples_32_7.tsv,Only radiotherapy
+32,0.42105263157894735,HANCOCK_samples_32_8.tsv,All
+32,0.15384615384615385,HANCOCK_samples_32_8.tsv,Systemic and radiotherapy
+32,0.65,HANCOCK_samples_32_8.tsv,No therapy
+32,0.2,HANCOCK_samples_32_8.tsv,Only radiotherapy
+32,0.3684210526315789,HANCOCK_samples_32_9.tsv,All
+32,0.23076923076923078,HANCOCK_samples_32_9.tsv,Systemic and radiotherapy
+32,0.55,HANCOCK_samples_32_9.tsv,No therapy
+32,0.0,HANCOCK_samples_32_9.tsv,Only radiotherapy
+64,0.47368421052631576,HANCOCK_samples_64_0.tsv,All
+64,0.46153846153846156,HANCOCK_samples_64_0.tsv,Systemic and radiotherapy
+64,0.5,HANCOCK_samples_64_0.tsv,No therapy
+64,0.4,HANCOCK_samples_64_0.tsv,Only radiotherapy
+64,0.47368421052631576,HANCOCK_samples_64_1.tsv,All
+64,0.23076923076923078,HANCOCK_samples_64_1.tsv,Systemic and radiotherapy
+64,0.65,HANCOCK_samples_64_1.tsv,No therapy
+64,0.4,HANCOCK_samples_64_1.tsv,Only radiotherapy
+64,0.3684210526315789,HANCOCK_samples_64_2.tsv,All
+64,0.15384615384615385,HANCOCK_samples_64_2.tsv,Systemic and radiotherapy
+64,0.5,HANCOCK_samples_64_2.tsv,No therapy
+64,0.4,HANCOCK_samples_64_2.tsv,Only radiotherapy
+64,0.47368421052631576,HANCOCK_samples_64_3.tsv,All
+64,0.07692307692307693,HANCOCK_samples_64_3.tsv,Systemic and radiotherapy
+64,0.8,HANCOCK_samples_64_3.tsv,No therapy
+64,0.2,HANCOCK_samples_64_3.tsv,Only radiotherapy
+64,0.3684210526315789,HANCOCK_samples_64_4.tsv,All
+64,0.23076923076923078,HANCOCK_samples_64_4.tsv,Systemic and radiotherapy
+64,0.5,HANCOCK_samples_64_4.tsv,No therapy
+64,0.2,HANCOCK_samples_64_4.tsv,Only radiotherapy
+64,0.4473684210526316,HANCOCK_samples_64_5.tsv,All
+64,0.38461538461538464,HANCOCK_samples_64_5.tsv,Systemic and radiotherapy
+64,0.55,HANCOCK_samples_64_5.tsv,No therapy
+64,0.2,HANCOCK_samples_64_5.tsv,Only radiotherapy
+64,0.34210526315789475,HANCOCK_samples_64_6.tsv,All
+64,0.23076923076923078,HANCOCK_samples_64_6.tsv,Systemic and radiotherapy
+64,0.45,HANCOCK_samples_64_6.tsv,No therapy
+64,0.2,HANCOCK_samples_64_6.tsv,Only radiotherapy
+64,0.39473684210526316,HANCOCK_samples_64_7.tsv,All
+64,0.07692307692307693,HANCOCK_samples_64_7.tsv,Systemic and radiotherapy
+64,0.65,HANCOCK_samples_64_7.tsv,No therapy
+64,0.2,HANCOCK_samples_64_7.tsv,Only radiotherapy
+64,0.34210526315789475,HANCOCK_samples_64_8.tsv,All
+64,0.15384615384615385,HANCOCK_samples_64_8.tsv,Systemic and radiotherapy
+64,0.5,HANCOCK_samples_64_8.tsv,No therapy
+64,0.2,HANCOCK_samples_64_8.tsv,Only radiotherapy
+64,0.39473684210526316,HANCOCK_samples_64_9.tsv,All
+64,0.3076923076923077,HANCOCK_samples_64_9.tsv,Systemic and radiotherapy
+64,0.55,HANCOCK_samples_64_9.tsv,No therapy
+64,0.0,HANCOCK_samples_64_9.tsv,Only radiotherapy

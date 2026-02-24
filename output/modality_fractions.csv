@@ -1,0 +1,9 @@
+modality,fraction,year
+Systemic and radiotherapy,0.40827586206896554,< 2019
+Systemic and radiotherapy,0.34210526315789475,2019
+Only radiotherapy,0.22482758620689655,< 2019
+Only radiotherapy,0.13157894736842105,2019
+No therapy,0.3641379310344828,< 2019
+No therapy,0.5263157894736842,2019
+Only systemic therapy,0.002758620689655172,< 2019
+Only systemic therapy,0.0,2019
