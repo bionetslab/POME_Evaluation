@@ -69,7 +69,7 @@ def compute_adjuvant_therapy_modality_fractions(year_filter=2019):
         df: DataFrame with 'adjuvant_therapy_modality' and 'year_of_initial_diagnosis' columns
         year_filter: year to filter on (e.g., 2019)
     Returns:
-        DataFrame with modality fractions  
+        DataFrame with modality fractions and survival fractions per modality for the specified year and prior years
     """
     df = load_data('data/HANCOCK_samples_16_0.tsv')
     df = add_modality_column(df)
@@ -77,15 +77,26 @@ def compute_adjuvant_therapy_modality_fractions(year_filter=2019):
     modality_fractions = []
     for mod in df['adjuvant_therapy_modality'].unique():
         mod_subset = df[df['year_of_initial_diagnosis'] < year_filter]
-        total_count = len(mod_subset)
-        if total_count > 0:
-            fraction = (mod_subset['adjuvant_therapy_modality'] == mod).sum() / total_count
-            modality_fractions.append({'modality': mod, 'fraction': fraction, 'year': f"< {year_filter}"})
+        n_patients_before_year_filter = len(mod_subset)
+        if n_patients_before_year_filter > 0:
+            mod_subset = mod_subset[mod_subset['adjuvant_therapy_modality'] == mod]
+            modality_fraction = len(mod_subset) / n_patients_before_year_filter
+            survival_fraction = (mod_subset['survival_status'].astype(str).str.strip().str.lower() == 'living').mean()
+            modality_fractions.append({'modality': mod, 
+                                       'modality_fraction': modality_fraction, 
+                                       'survival_fraction': survival_fraction, 
+                                       'year': f"< {year_filter}"})
+        
         mod_subset = df[df['year_of_initial_diagnosis'] == year_filter]
-        total_count = len(mod_subset)
-        if total_count > 0:
-            fraction = (mod_subset['adjuvant_therapy_modality'] == mod).sum() / total_count
-            modality_fractions.append({'modality': mod, 'fraction': fraction, 'year': f"{year_filter}"})
+        n_year_filter = len(mod_subset)
+        if n_year_filter > 0:
+            mod_subset = mod_subset[mod_subset['adjuvant_therapy_modality'] == mod]
+            modality_fraction = len(mod_subset) / n_year_filter
+            survival_fraction = (mod_subset['survival_status'].astype(str).str.strip().str.lower() == 'living').mean()
+            modality_fractions.append({'modality': mod, 
+                                       'modality_fraction': modality_fraction, 
+                                       'survival_fraction': survival_fraction, 
+                                       'year': f"{year_filter}"})
 
     modality_fractions_df = pd.DataFrame(modality_fractions)
     

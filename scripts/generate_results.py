@@ -38,18 +38,12 @@ def main():
         n_neighbors=n_neighbors
     )
     
-    print(f"Results: {len(results_df)} rows")
-    print(f"Proportions: {len(proportions_df)} rows")
-    
     # Compute modality fractions for 2019
     modality_fractions_df = compute_adjuvant_therapy_modality_fractions(year_filter=year_filter)
     modality_fractions_df.to_csv(output_dir / 'modality_fractions.csv', index=False)
     
     print("\nPerforming statistical tests...")
     wilcoxon_results_df = perform_wilcoxon_tests(results_df)
-    
-    print("\nWilcoxon test results:")
-    print(wilcoxon_results_df)
     
     print(f"\nSaving results to {output_dir}...")
     results_df.to_csv(output_dir / 'survival_results.csv', index=False)
