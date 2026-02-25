@@ -52,8 +52,6 @@ def main():
     if output_dir.joinpath('wilcoxon_results.csv').exists():
         print("Loading existing Wilcoxon test results...")
         wilcoxon_results_df = pd.read_csv(output_dir / 'wilcoxon_results.csv')
-        print("\nWilcoxon test results:")
-        print(wilcoxon_results_df)
     else:
         print("\nPerforming statistical tests...")
         wilcoxon_results_df = perform_wilcoxon_tests(results_df)
