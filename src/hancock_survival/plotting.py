@@ -85,7 +85,7 @@ def create_survival_figure(results_df, proportions_df, wilcoxon_results_df, moda
     proportions_df.modality = proportions_df.modality.map(mod2description_map)
     sns.barplot(data=proportions_df, x='embedding_size', y='proportion_followed', hue='modality', 
                 hue_order=hue_order[:-1], dodge=True, ax=axes['c'], 
-                palette=sns.color_palette("husl", 5)[:-1])
+                palette=sns.color_palette("husl", 5)[:-1], gap=0.2)
     axes['c'].set_xlabel('Embedding size', fontsize=13)
     axes['c'].set_ylabel('Fraction POME-consistent', fontsize=13)
     axes['c'].set_title('Fractions of patients with\nPOME-consistent AT modality (2019)', fontsize=14)
@@ -98,7 +98,8 @@ def create_survival_figure(results_df, proportions_df, wilcoxon_results_df, moda
     for mod in ['No therapy', 'Systemic and radiotherapy', 'Only radiotherapy', 'All']:
         label = mod2label_map[mod]
         mod_subset = results_df[results_df['modality'] == mod]
-        sns.boxplot(data=mod_subset, x='embedding_size', y='survived_frac', hue='suggestion_followed', fill=False, ax=axes[label])
+        sns.boxplot(data=mod_subset, x='embedding_size', y='survived_frac', hue='suggestion_followed', fill=False, ax=axes[label], 
+                    gap=0.2)
         axes[label].set_xlabel('Embedding size', fontsize=13)
         axes[label].set_ylabel('5-year survival fraction', fontsize=13)
         axes[label].set_yticks([0.5, 0.6, 0.7, 0.8, 0.9,1.0])
