@@ -34,7 +34,9 @@ pip install -e .
 Generate the analysis figure from data files:
 
 ```bash
-python scripts/generate_figure.py
+python scripts/generate_survival_figure.py
+python scripts/generate_imputation_figure.py
+python scripts/generate_imputation_binning_figure.py
 ```
 
 This will:
@@ -42,22 +44,27 @@ This will:
 - Compute k-NN graphs with year-based temporal constraints
 - Generate treatment recommendations
 - Perform paired Wilcoxon signed-rank statistical tests
-- Save a manuscript-ready PDF figure to `figures/survival_analysis.pdf`
+- Save manuscript-ready PDFs to `output/`
 
 ## Project Structure
 
 ```
 hancock_survival/
 ├── src/hancock_survival/        # Main package
-│   ├── data_processing.py        # Data loading and k-NN graph construction
-│   ├── analysis.py               # Treatment recommendation logic
-│   ├── statistics.py             # Statistical testing (Wilcoxon)
-│   └── plotting.py               # Figure generation
+│   ├── survival_data_processing.py  # Data loading and k-NN graph construction
+│   ├── survival_analysis.py         # Treatment recommendation logic
+│   ├── survival_statistics.py       # Statistical testing (Wilcoxon)
+│   ├── survival_plotting.py         # Survival figure generation
+│   ├── imputation_analysis.py       # Imputation rank/distribution analysis
+│   └── imputation_plotting.py       # Imputation figure generation
 ├── scripts/
-│   ├── generate_figure.py        # Main pipeline script
+│   ├── generate_survival_figure.py
+│   ├── generate_imputation_figure.py
+│   ├── generate_imputation_binning_figure.py
+│   ├── generate_survival_results.py
 │   └── README.md                 # Script documentation
 ├── data/                         # HANCOCK sample data files
-├── figures/                      # Output figures (PDF)
+├── output/                       # Output CSVs and figures (PDF)
 ├── environment.yml               # Conda environment specification
 └── README.md                     # This file
 ```
@@ -67,9 +74,9 @@ hancock_survival/
 ### As a module
 
 ```python
-from hancock_survival.analysis import process_multi_file_analysis
-from hancock_survival.statistics import perform_wilcoxon_tests
-from hancock_survival.plotting import create_survival_figure
+from hancock_survival.survival_analysis import process_multi_file_analysis
+from hancock_survival.survival_statistics import perform_wilcoxon_tests
+from hancock_survival.survival_plotting import create_survival_figure
 
 # Process data files
 results_df, proportions_df = process_multi_file_analysis(
@@ -87,7 +94,7 @@ fig = create_survival_figure(
     results_df, 
     proportions_df, 
     wilcoxon_results,
-    output_path='figures/analysis.pdf'
+    output_path='output/analysis.pdf'
 )
 ```
 

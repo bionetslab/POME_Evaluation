@@ -7,16 +7,15 @@ recommendations, and generates a manuscript-ready figure showing survivor fracti
 and statistical test results.
 """
 import sys
-import os
 from pathlib import Path
 import pandas as pd
 
 # Add src to path so we can import hancock_survival modules
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from hancock_survival.analysis import compute_adjuvant_therapy_modality_fractions, process_multi_file_analysis
-from hancock_survival.statistics import perform_wilcoxon_tests
-from hancock_survival.plotting import create_survival_figure
+from hancock_survival.survival_analysis import compute_adjuvant_therapy_modality_fractions, process_multi_file_analysis
+from hancock_survival.survival_statistics import perform_wilcoxon_tests
+from hancock_survival.survival_plotting import create_survival_figure
 
 
 def main():

@@ -67,9 +67,9 @@ def compute_knn_graph(X, years, n_neighbors=10):
     """
     if years is None:
         from sklearn.neighbors import kneighbors_graph
-        return kneighbors_graph(X, n_neighbors=n_neighbors, mode='connectivity', include_self=False)
+        return kneighbors_graph(X, n_neighbors=n_neighbors, mode='connectivity', metric='sqeuclidean', include_self=False)
     
-    dist = pairwise_distances(X)
+    dist = pairwise_distances(X, metric='sqeuclidean')
     n_samples = X.shape[0]
     
     # mask: do not consider j if year[j] >= year[i]

@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import glob
-from .data_processing import load_data, add_modality_column, compute_knn_graph
+from .survival_data_processing import load_data, add_modality_column, compute_knn_graph
 
 
 def compute_suggestions(df, knn_graph):

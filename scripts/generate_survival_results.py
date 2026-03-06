@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 """
-Generate survival analysis figure from HANCOCK dataset.
+Generate survival analysis result tables from HANCOCK dataset.
 
 This script processes multiple HANCOCK sample files, computes k-NN based treatment
-recommendations, and generates a manuscript-ready figure showing survivor fractions
-and statistical test results.
+recommendations, and writes result CSV files for downstream plotting.
 """
 import sys
-import os
 from pathlib import Path
 
 # Add src to path so we can import hancock_survival modules
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from hancock_survival.analysis import process_multi_file_analysis, compute_adjuvant_therapy_modality_fractions
-from hancock_survival.statistics import perform_wilcoxon_tests
+from hancock_survival.survival_analysis import process_multi_file_analysis, compute_adjuvant_therapy_modality_fractions
+from hancock_survival.survival_statistics import perform_wilcoxon_tests
 
 
 def main():
