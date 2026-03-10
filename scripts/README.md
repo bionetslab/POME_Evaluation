@@ -2,6 +2,20 @@
 
 This directory contains scripts to generate the manuscript figures.
 
+## Unsupervised stratification results (Figure 4)
+
+The results figure showing POME's clusterability and visualization results can be reproduced with the notebook `plot_fig4_unsupervised.ipynb`. As input, it takes the output files of the analysis scripts `analyze_unsupervised_clustering.py`, `analyze_cluster_preservation_2D.ipynb`, and `analyze_distance_preservation_2D.ipynb`.
+
+Necessary UMAP embeddings were computed using the script `embed_UMAP_several_runs.py`. POME's embeddings 2D visualizations were computed with the help of the notebook `project_embeddings_to_2D.ipynb`.
+
+## Linear probing (Figure 3)
+
+The results figure showing POME's supervised learning applicability can be reproduced with the notebook `plot_fig3_linear_probing.ipynb`. As input, it takes the output files of the analysis scripts `analyze_HANCOCK_embedding_separability.ipynb`, `analyze_LUAD_embedding_separability.ipynb`, and `analyze_MIMIC_embedding_separability.ipynb`.
+
+## Variable embeddings (Figure 5)
+
+The results figure showing POME's variable embedding results can be reproduced with the notebook `plot_fig5_variable_embeddings.ipynb`. As input, it takes output files of the analysis script `analyze_variable_embeddings.ipynb`. The required files storing feature importances for Aplasia and Neutropenic Fever are located under `data/feature_ranks_NF.csv` and `data/feature_ranks_aplasia.csv`.
+
 ## Usage
 
 From the project root directory, run:
