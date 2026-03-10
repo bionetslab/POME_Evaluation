@@ -5,8 +5,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from hancock_survival.imputation_analysis import load_pome_binning_results
-from hancock_survival.imputation_plotting import plot_binning_effects_results
+from pome_evaluation.imputation_analysis import load_pome_binning_results
+from pome_evaluation.imputation_plotting import plot_binning_effects_results
 
 def main() -> None:
     """Load data and render the 12-panel binning-effects figure."""

@@ -1,4 +1,4 @@
-name: hancock_survival
+name: pome_evaluation
 channels:
   - defaults
   - conda-forge

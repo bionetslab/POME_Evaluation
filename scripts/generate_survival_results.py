@@ -11,8 +11,8 @@ from pathlib import Path
 # Add src to path so we can import hancock_survival modules
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from hancock_survival.survival_analysis import process_multi_file_analysis, compute_adjuvant_therapy_modality_fractions
-from hancock_survival.survival_statistics import perform_wilcoxon_tests
+from pome_evaluation.survival_analysis import process_multi_file_analysis, compute_adjuvant_therapy_modality_fractions
+from pome_evaluation.survival_statistics import perform_wilcoxon_tests
 
 
 def main():

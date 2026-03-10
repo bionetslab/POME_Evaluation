@@ -1,4 +1,4 @@
-# Hancock Survival Analysis
+# POME Evaluation
 
 A Python package for analyzing treatment recommendations in survival data using k-nearest neighbors and statistical testing.
 

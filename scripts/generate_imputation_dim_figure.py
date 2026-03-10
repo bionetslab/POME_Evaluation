@@ -5,8 +5,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from hancock_survival.imputation_analysis import load_pome_z15_dim_results
-from hancock_survival.imputation_plotting import plot_imputation_dim_results
+from pome_evaluation.imputation_analysis import load_pome_z15_dim_results
+from pome_evaluation.imputation_plotting import plot_imputation_dim_results
 
 def main() -> None:
     """Load z-score/15-bin POME data and render a dim-effects figure."""

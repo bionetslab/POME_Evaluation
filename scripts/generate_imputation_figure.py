@@ -9,8 +9,8 @@ import pandas as pd
 # Add src to path so we can import hancock_survival modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from hancock_survival.imputation_analysis import build_imputation_figure_data
-from hancock_survival.imputation_plotting import plot_imputation_results
+from pome_evaluation.imputation_analysis import build_imputation_figure_data
+from pome_evaluation.imputation_plotting import plot_imputation_results
 
 
 def parse_args() -> argparse.Namespace:
