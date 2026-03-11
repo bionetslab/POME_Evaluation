@@ -33,3 +33,6 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+data/input_datasets/mimic_*
+data/embeddings/MIMIC
