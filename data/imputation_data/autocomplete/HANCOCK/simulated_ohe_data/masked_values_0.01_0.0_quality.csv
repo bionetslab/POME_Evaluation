@@ -1,0 +1,147 @@
+feature,info,r2,quality
+recurrence,0.0010160571707600403,,LOM
+perineural_invasion_Pn,0.002321390739966228,,LOM
+ohe_survival_status_with_cause_3.0,0.0014772083941247977,,LOM
+ohe_survival_status_with_cause_2.0,0.0018349188856082923,,LOM
+ohe_survival_status_with_cause_1.0,0.0002500660970542944,,LOM
+ohe_survival_status_with_cause_0.0,0.00012754190169592388,,LOM
+ohe_grading_0.0,0.00040926691844415854,,LOM
+ohe_grading_3.0,0.0013293605444868134,,LOM
+ohe_grading_2.0,0.0019506332151904935,,LOM
+ohe_grading_1.0,0.001814777505716695,,LOM
+ohe_pN_stage_0.0,0.0012315434222374695,,LOM
+ohe_pN_stage_1.0,0.0014451951460564964,,LOM
+ohe_pN_stage_2.0,0.00016231662526975066,,LOM
+ohe_pN_stage_3.0,0.0,,LOM
+ohe_pN_stage_4.0,0.00044761361936581924,,LOM
+ohe_pN_stage_5.0,0.0036136412998464553,,LOM
+ohe_pN_stage_6.0,0.0005712441356336257,,LOM
+ohe_pN_stage_7.0,0.0018671459481132025,,LOM
+ohe_pN_stage_8.0,0.0005637274357134374,,LOM
+ohe_pN_stage_9.0,0.0019127197635444991,,LOM
+ohe_histologic_type_0.0,0.0009061343422049115,,LOM
+ohe_histologic_type_1.0,0.005921193478657519,,LOM
+ohe_histologic_type_2.0,0.0014288723254686434,,LOM
+ohe_histologic_type_3.0,0.0020609146827039225,,LOM
+ohe_histologic_type_4.0,0.0007200227405162149,,LOM
+ohe_histologic_type_6.0,0.005535480653906295,,LOM
+ohe_histologic_type_7.0,0.0007139327246348593,,LOM
+ohe_histologic_type_5.0,0.0024786347922691955,,LOM
+ohe_pT_stage_0.0,0.0037628220442053398,,LOM
+ohe_pT_stage_1.0,0.0016126335210435389,,LOM
+ohe_pT_stage_2.0,0.0010481028607212592,0.06861554112418959,LOM
+ohe_pT_stage_3.0,0.0015556075129165388,,LOM
+ohe_pT_stage_4.0,0.0010567202129255324,,LOM
+ohe_pT_stage_5.0,0.0017537240556146025,0.7687892793708432,LOM
+ohe_pT_stage_8.0,0.0011073807364706534,,LOM
+ohe_pT_stage_7.0,0.0010119653080569008,,LOM
+ohe_pT_stage_6.0,0.0024787226591424637,,LOM
+ohe_histologic_type_8.0,0.0026535024359596406,,LOM
+ohe_smoking_status_3.0,0.0004449681684056784,,LOM
+ohe_smoking_status_2.0,0.0003676813344780033,,LOM
+ohe_smoking_status_1.0,0.002710055884796728,,LOM
+ohe_smoking_status_0.0,0.0012372007511148283,,LOM
+ohe_hpv_association_p16_1.0,0.0019037243974411283,1.0,LOM
+ohe_hpv_association_p16_0.0,0.0013918562161072555,1.0,LOM
+days_to_last_information,0.046354361236081644,,LOM
+days_to_rfs_event,0.05082815779449985,,LOM
+ohe_hpv_association_p16_2.0,0.002223794838313898,,LOM
+ohe_primary_tumor_site_3.0,0.00421877213016171,,LOM
+ohe_primary_tumor_site_2.0,0.002895790371709782,,LOM
+ohe_primary_tumor_site_1.0,0.0018185988181996311,,LOM
+ohe_primary_tumor_site_0.0,0.0014996755703650514,,LOM
+ohe_primary_tumor_site_4.0,0.002063016982353998,,LOM
+ohe_resection_status_0.0,0.0016096655084626172,,LOM
+vascular_invasion_V,0.002927660393337142,,LOM
+rfs_event,0.0009326252370587962,,LOM
+ohe_resection_status_3.0,0.0024245268378064394,,LOM
+ohe_resection_status_2.0,0.0014568890096694652,,LOM
+ohe_resection_status_1.0,0.0021945602097987542,,LOM
+ohe_resection_status_carcinoma_in_situ_2.0,0.0020361679703378064,,LOM
+carcinoma_in_situ,0.0012756770738633347,,LOM
+survival_status,0.0028137874032016967,,LOM
+ohe_resection_status_carcinoma_in_situ_1.0,0.0026204457039614827,,LOM
+ohe_resection_status_carcinoma_in_situ_0.0,0.0014520281108640106,,LOM
+lymphovascular_invasion_L,,1.0,LOM
+sex,0.0012588162165525331,,LOM
+age_at_initial_diagnosis,0.03650792287242324,0.8879582986124087,LOM
+primarily_metastasis,0.0013857398288492464,,LOM
+cd8_inv,,0.00042766559589282654,LOM
+c052,,,LOM
+c323,,,LOM
+r599,,,LOM
+cd8_z,,0.19583897877014791,LOM
+c139,,0.2969547386400113,LOM
+c131,,,LOM
+c091,,,LOM
+c111,,,LOM
+ohe_c320_2.0,,,LOM
+c100,,,LOM
+ohe_c021_2.0,,,LOM
+ohe_c021_1.0,,0.1265610964463926,LOM
+ohe_c021_0.0,,0.004033830895174297,LOM
+ohe_c320_0.0,,0.037177800856695815,LOM
+d000,,,LOM
+ohe_c320_1.0,,4.026331990469724e-05,LOM
+c029,,,LOM
+c099,,,LOM
+c090,,,LOM
+c770,,0.01609723167096223,LOM
+c132,,,LOM
+ohe_c321_2.0,,,LOM
+ohe_c321_1.0,,0.030260851528050303,LOM
+ohe_c321_0.0,,0.13200407412557616,LOM
+ohe_c068_2.0,,,LOM
+ohe_c068_1.0,,,LOM
+ohe_c068_0.0,,,LOM
+ohe_c108_0.0,,0.07444812374102829,LOM
+ohe_c108_1.0,,0.173490027930714,LOM
+ohe_c108_2.0,,,LOM
+d380,,,LOM
+c778,,,LOM
+c020,,0.001231772491815074,LOM
+ohe_c138_0.0,,0.05368346427964402,LOM
+ohe_c138_1.0,,0.06701734819254755,LOM
+ohe_c138_2.0,,,LOM
+c048,,,LOM
+c148,,,LOM
+c800,,,LOM
+c051,,0.022653186044671182,LOM
+c322,,,LOM
+c028,,,LOM
+c109,,,LOM
+r590,,,LOM
+t810,,,LOM
+c329,,,LOM
+ohe_c102_3.0,,,LOM
+c130,,,LOM
+ohe_c102_2.0,,,LOM
+ohe_c102_0.0,,,LOM
+c328,,,LOM
+ohe_c102_1.0,,,LOM
+c058,,,LOM
+d370,,,LOM
+c098,,,LOM
+c022,,,LOM
+Erythrocyte mean corpuscular hemoglobin concentration [Mass/volume],,0.26513372414696473,LOM
+Granulocytes [#/volume] in Blood,,0.05504828234708074,LOM
+Hemoglobin [Mass/volume] in Blood,,0.0218808307266098,LOM
+Basophils [#/volume] in Blood,,0.06740724066740726,LOM
+Erythrocyte mean corpuscular hemoglobin [Entitic mass],,0.09408038254114474,LOM
+cd3_inv,0.04799264156762177,,LOM
+Monocytes [#/volume] in Blood,,0.09531081027281345,LOM
+Platelets [#/volume] in Blood,,0.004226493223220581,LOQ
+Leukocytes [#/volume] in Blood,,0.03799493561275213,LOQ
+Eosinophils [#/volume] in Blood,,0.1359008597186835,LOQ
+Erythrocytes [#/volume] in Blood,,0.02524782311801994,LOQ
+Erythrocyte distribution width [Ratio],,0.014572237258809915,LOQ
+Platelet distribution width [Entitic volume] in Blood by Automated count,,0.012369044829032678,LOQ
+Platelet mean volume [Entitic volume] in Blood,,0.02416635393100811,LOQ
+Erythrocyte mean corpuscular volume [Entitic volume],,0.03783897652322655,LOQ
+cd3_z,,0.02822059911242775,LOQ
+Hematocrit [Volume Fraction] of Blood,,0.1462337520537138,LOQ
+Lymphocytes [#/volume] in Blood,,0.1673391713349309,LOQ
+infiltration_depth_in_mm,0.058334184629975784,0.24023045008783234,LOV
+number_of_positive_lymph_nodes,,0.007165992153342327,LOQ
+perinodal_invasion,,0.08175926450138796,LOQ
+days_to_recurrence,,,LOQ

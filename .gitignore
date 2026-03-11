@@ -36,3 +36,9 @@ htmlcov/
 
 data/input_datasets/mimic_*
 data/embeddings/MIMIC
+data/imputation_groundtruth/MIMIC
+data/imputation_data/pome_based/MIMIC
+data/imputation_data/knn/MIMIC
+data/imputation_data/autocomplete/MIMIC
+data/imputation_data/missforest/MIMIC
+
