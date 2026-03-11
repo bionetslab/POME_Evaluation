@@ -19,3 +19,11 @@ For analyzing which visualization technique best preserves high-dimension cluste
 ## Analyze supervised learning results
 
 For comparing how well POME's and UMAP's embeddings are suitable for predicting held-out target variables by using a simple logistic regression model, we provide one notebook for each dataset separately: `analyze_HANCOCK_embedding_separability.ipynb`, `analyze_LUAD_embedding_separability.ipynb`, and `analyze_MIMIC_embedding_separability.ipynb`.
+
+## Generate simulated missingness datasets
+
+In order to simulate certain amounts of missingness into the given datasets, simply run the notebook `generate_simulated_missingness.ipynb` with updated paths pointing to the files of the desired dataset. Scripts and notebooks to impute simulated datasets with the different imputation methods can be found in the respective subdirectories under `data/imputation_data/`.
+
+## Analyze imputation results
+
+In order to compute mean absolute errors and multiclass accuracies of imputed values against ground truth values, you can make use of the Python notebook `compute_imputation_results.ipynb`.
