@@ -15,3 +15,7 @@ For computing clusterability metrics on POME and UMAP embeddings, run the script
 ## Analyze visualization techniques
 
 For analyzing which visualization technique best preserves high-dimension cluster, run the notebook `analyze_cluster_preservation_2D.ipynb`. For analyzing which visualization technique best preservese local neighborhood structures, simply run the notebook `analyze_distance_preservation_2D.ipynb`.
+
+## Analyze supervised learning results
+
+For comparing how well POME's and UMAP's embeddings are suitable for predicting held-out target variables by using a simple logistic regression model, we provide one notebook for each dataset separately: `analyze_HANCOCK_embedding_separability.ipynb`, `analyze_LUAD_embedding_separability.ipynb`, and `analyze_MIMIC_embedding_separability.ipynb`.
