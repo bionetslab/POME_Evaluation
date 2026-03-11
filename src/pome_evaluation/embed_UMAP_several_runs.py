@@ -2,19 +2,24 @@ from sklearn.preprocessing import RobustScaler
 import pandas as pd
 import numpy as np
 import umap
+import os
 
-# Read dataset to embed.
-#df = pd.read_csv("../../data/input/hancock_wo_targets.csv", index_col=0)
-#cat_var_df = pd.read_csv("../../data/input/hancock_cat_variables.csv")
-#dataset = "HANCOCK"
+os.chdir("../../data/input_datasets")
 
-df = pd.read_csv("../../data/input/mimic_aggregated_wo_targets_umap.csv", index_col=0)
-cat_var_df = pd.read_csv("../../data/input/mimic_aggregated_cat_variables.csv")
-dataset = "MIMIC"
+# Specify which dataset to embed with UMAP.
+dataset = "HANCOCK"
+NUM_EMBEDDINGS = 10
+num_dimensions = 16
 
-#df = pd.read_csv("../../data/input/TCGA_LUAD_wo_targets.csv", index_col=0)
-#cat_var_df = pd.read_csv("../../data/input/TCGA_LUAD_cat_vars.csv")
-# dataset = "TCGA_LUAD"
+if dataset=="HANCOCK":
+    df = pd.read_csv("hancock_wo_targets.csv", index_col=0)
+    cat_var_df = pd.read_csv("hancock_cat_variables.csv")
+elif dataset=="MIMIC":
+    df = pd.read_csv("mimic_aggregated_wo_targets_umap.csv", index_col=0)
+    cat_var_df = pd.read_csv("mimic_aggregated_cat_variables.csv")
+else:
+    df = pd.read_csv("TCGA_LUAD_wo_targets.csv", index_col=0)
+    cat_var_df = pd.read_csv("TCGA_LUAD_cat_vars.csv")
 
 cat_variables = list(set(cat_var_df["cat_var"]).intersection(set(df.columns)))
 cont_variables = list(set(df.columns) - set(cat_variables))
@@ -23,10 +28,6 @@ cont_variables = list(set(df.columns) - set(cat_variables))
 numeric = df[cont_variables].copy()
 scaled_numeric = RobustScaler().fit_transform(numeric)
 categorical = df[cat_variables].copy()
-
-# Fit separate UMAP embedding for continuous and categorical data.
-NUM_EMBEDDINGS = 10
-num_dimensions = 16
 
 for num_run in range(NUM_EMBEDDINGS):
     print(f"Running UMAP {num_run} of {NUM_EMBEDDINGS}...")
