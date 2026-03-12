@@ -78,7 +78,7 @@ if __name__ == "__main__":
     
     NUM_EMBEDDINGS = 10
     dim_list = [16, 32, 64]
-    dataset = "HANCOCK"
+    dataset = "MIMIC"
 
     if dataset == "HANCOCK":
         embedding_path = f"../embeddings/{dataset}/embeddings"
