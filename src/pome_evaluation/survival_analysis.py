@@ -144,9 +144,14 @@ def process_multi_file_analysis(glob_pattern, feature_cols, year_filter=2019, n_
         # filter by year if specified
         if year_filter is not None and 'year_of_initial_diagnosis' in df_i.columns:
             subset = df_i[df_i['year_of_initial_diagnosis'] == year_filter]
+            print("Number of patients with diagnosis=2019: ", len(subset))
+            print("Unique values of year_of_diagnosis: ", set(df_i["year_of_initial_diagnosis"]))
+            print("Oldest values of year_of_diagnosis: ", min(set(df_i["year_of_initial_diagnosis"])))
+            print("Number of patients with diagnosis=2019: ", len(df_i[df_i['year_of_initial_diagnosis'] < year_filter]))
         else:
             subset = df_i
         
+        print("REACHED")
         # compute survival fractions by suggestion_followed overall and by modality
         if 'survival_status' in subset.columns and 'suggestion_followed' in subset.columns:
             total_count = subset.shape[0]

@@ -18,7 +18,7 @@ from pome_evaluation.survival_statistics import perform_wilcoxon_tests
 def main():
     """Main pipeline."""
     # Configuration
-    data_glob = 'data/HANCOCK_samples_*.tsv'
+    data_glob = 'data/HANCOCK_survival_embeddings/HANCOCK_samples_*.tsv'
     output_dir = 'output/'
     feature_cols = [f'dim_{i}' for i in range(16)]
     n_neighbors = 10

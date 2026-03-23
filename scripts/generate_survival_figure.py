@@ -21,7 +21,7 @@ from pome_evaluation.survival_plotting import create_survival_figure
 def main():
     """Main pipeline."""
     # Configuration
-    data_glob = 'data/HANCOCK_samples_*.tsv'
+    data_glob = 'data/HANCOCK_survival_embeddings/HANCOCK_samples_*.tsv'
     output_pdf = 'output/survival_analysis.pdf'
     feature_cols = [f'dim_{i}' for i in range(16)]
     n_neighbors = 10
