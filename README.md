@@ -1,16 +1,6 @@
 # POME Evaluation
 
-A Python package for analyzing treatment recommendations in survival data using k-nearest neighbors and statistical testing.
-
-## Overview
-
-This project implements a collaborative filtering-inspired approach to treatment recommendations based on patient survival outcomes. For each patient sample, the package:
-
-1. Identifies k-nearest neighbors based on feature similarity (with temporal constraints)
-2. Groups neighbors by treatment modality
-3. Calculates survival fractions for each modality among neighbors
-4. Recommends the modality with the highest survival fraction
-5. Evaluates recommendation adherence against actual treatment
+Python code to reproduce all figures and analyses used for the evaluation of POME.
 
 ## Installation
 
@@ -25,110 +15,77 @@ conda activate hancock_survival
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -e .
 ```
 
-## Quick Start
+## Generating manuscript figures
 
-Generate the analysis figure from data files:
+### Imputation analysis
+Simply run
+```bash
+python scripts/generate_imputation_figure.py
+```
 
+### Unsupervised stratification results
+The figure can be reproduced with the notebook `scripts/plot_fig4_unsupervised.ipynb`. The scripts to produce the required input for this notebook under `src/pome_evaluation` are `analyze_unsupervised_clustering.py`, `analyze_cluster_preservation_2D.ipynb`, and `analyze_distance_preservation_2D.ipynb`. Necessary UMAP embeddings were computed using the script `embed_UMAP_several_runs.py`. POME's embeddings 2D visualizations were computed with the help of the notebook `project_embeddings_to_2D.ipynb`.
+
+### Linear probing analysis
+The results figure showing POME's embeddings' supervised learning capability can be reproduced with the notebook `scripts/plot_fig3_linear_probing.ipynb`. As input, it takes the output files of the analysis scripts `analyze_HANCOCK_embedding_separability.ipynb`, `analyze_LUAD_embedding_separability.ipynb`, and `analyze_MIMIC_embedding_separability.ipynb`.
+
+### Survival analysis on HANCOCK
+Simply run
 ```bash
 python scripts/generate_survival_figure.py
-python scripts/generate_imputation_figure.py
+```
+
+### Exploratory analysis of variable embeddings
+The results figure showing POME's variable embedding results can be reproduced with the notebook `scripts/plot_fig5_variable_embeddings.ipynb`. As input, it takes output files of the analysis script `analyze_variable_embeddings.ipynb`. The required files storing feature importances for Aplasia and Neutropenic Fever are located under `data/feature_ranks_NF.csv` and `data/feature_ranks_aplasia.csv`.
+
+### Supplement imputation plots
+Simply run
+```bash
 python scripts/generate_imputation_binning_figure.py
+python scripts/generate_imputation_dim_figure.py
 ```
 
-This will:
-- Process all HANCOCK sample files from the `data/` directory
-- Compute k-NN graphs with year-based temporal constraints
-- Generate treatment recommendations
-- Perform paired Wilcoxon signed-rank statistical tests
-- Save manuscript-ready PDFs to `output/`
+### Supplement unsuperivsed results per embedding sizes
+Simply use the notebook located at `scripts/plot_supplement_unsupervised_per_dimension.ipynb`.
 
-## Project Structure
+### Supplement resource benchmark
 
-```
-hancock_survival/
-├── src/hancock_survival/        # Main package
-│   ├── survival_data_processing.py  # Data loading and k-NN graph construction
-│   ├── survival_analysis.py         # Treatment recommendation logic
-│   ├── survival_statistics.py       # Statistical testing (Wilcoxon)
-│   ├── survival_plotting.py         # Survival figure generation
-│   ├── imputation_analysis.py       # Imputation rank/distribution analysis
-│   └── imputation_plotting.py       # Imputation figure generation
-├── scripts/
-│   ├── generate_survival_figure.py
-│   ├── generate_imputation_figure.py
-│   ├── generate_imputation_binning_figure.py
-│   ├── generate_survival_results.py
-│   └── README.md                 # Script documentation
-├── data/                         # HANCOCK sample data files
-├── output/                       # Output CSVs and figures (PDF)
-├── environment.yml               # Conda environment specification
-└── README.md                     # This file
-```
+Simply use the notebook located at `scripts/plot_supplement_resource_benchmark.ipynb`.
 
-## Usage
+### Supplement imputation across epochs
 
-### As a module
+Simply use the notebook located at `scripts/plot_supplement_imputation_epochs.ipynb`.
 
-```python
-from hancock_survival.survival_analysis import process_multi_file_analysis
-from hancock_survival.survival_statistics import perform_wilcoxon_tests
-from hancock_survival.survival_plotting import create_survival_figure
+## Analysis scripts for POME Evaluation
+All of the following scripts for re-running the performed analyses on POME are located in the directory `src/pome_evaluation`.
+## Compute low-dimensional UMAP embeddings
 
-# Process data files
-results_df, proportions_df = process_multi_file_analysis(
-    glob_pattern='data/HANCOCK_samples_*.tsv',
-    feature_cols=[f'dim_{i}' for i in range(16)],
-    year_filter=2019,
-    n_neighbors=10
-)
+For computing required low-dimensional UMAP embeddings on input datasets, run the script `embed_UMAP_several_runs.py` with the desired dataset to embed specified on the top part of the file. 
 
-# Run statistical tests
-wilcoxon_results = perform_wilcoxon_tests(results_df)
+## Project POME embeddings to 2D
 
-# Generate figure
-fig = create_survival_figure(
-    results_df, 
-    proportions_df, 
-    wilcoxon_results,
-    output_path='output/analysis.pdf'
-)
-```
+For computing 2D visualizations (using PCA, t-SNE, UMAP) of POME's 16-, 32-, and 64-dimensional embeddings, you can run the notebook `project_embeddings_to_2D.ipynb`.
 
-## Dependencies
+## Analyze unsupervised clusterability
 
-- **Python** ≥ 3.11
-- **NumPy**: Numerical computing
-- **Pandas**: Data manipulation
-- **SciPy**: Scientific computing (k-NN, statistical tests)
-- **scikit-learn**: Machine learning (k-NN distance computation)
-- **Matplotlib**: Plotting
-- **Seaborn**: Statistical data visualization
-- **JupyterLab**: Interactive notebooks (optional)
+For computing clusterability metrics on POME and UMAP embeddings, run the script `analyze_unsupervised_clustering.py` with the desired dataset specified in the beginning of the file.
 
-## Methods
+## Analyze visualization techniques
 
-### k-NN Graph with Temporal Constraints
+For analyzing which visualization technique best preserves high-dimension cluster, run the notebook `analyze_cluster_preservation_2D.ipynb`. For analyzing which visualization technique best preservese local neighborhood structures, simply run the notebook `analyze_distance_preservation_2D.ipynb`.
 
-Only samples with an earlier `year_of_initial_diagnosis` can serve as neighbors, preserving temporal ordering in the analysis.
+## Analyze supervised learning results
 
-### Treatment Recommendation
+For comparing how well POME's and UMAP's embeddings are suitable for predicting held-out target variables by using a simple logistic regression model, we provide one notebook for each dataset separately: `analyze_HANCOCK_embedding_separability.ipynb`, `analyze_LUAD_embedding_separability.ipynb`, and `analyze_MIMIC_embedding_separability.ipynb`.
 
-For each sample, recommendations are based on the survival fraction of neighbors grouped by treatment modality:
-- **Modalities**: none, systemic_therapy, radiotherapy, both
-- **Selection**: The modality with the highest survival fraction among neighbors is recommended
+## Generate simulated missingness datasets
 
-### Statistical Testing
+In order to simulate certain amounts of missingness into the given datasets, simply run the notebook `generate_simulated_missingness.ipynb` with updated paths pointing to the files of the desired dataset. Scripts and notebooks to impute simulated datasets with the different imputation methods can be found in the respective subdirectories under `data/imputation_data/`.
 
-Paired Wilcoxon signed-rank test comparing survival fractions between samples that followed vs. did not follow the recommendation, with pairing by data file.
+## Analyze imputation results
 
-## License
-
-[Add your license here]
-
-## Contact
-
-For questions or contributions, please contact the BioNetS Lab.
+In order to compute mean absolute errors and multiclass accuracies of imputed values against ground truth values, you can make use of the Python notebook `compute_imputation_results.ipynb`.
