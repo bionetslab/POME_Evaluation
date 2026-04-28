@@ -1,0 +1,1231 @@
+Method,Target,Type,Score
+POME,Disease Free Status,AP,0.4475478225478226
+UMAP,Disease Free Status,AP,0.3748359598718022
+POME,Disease Free Status,AP,0.48581046570177006
+UMAP,Disease Free Status,AP,0.5989222288241897
+POME,Disease Free Status,AP,0.5547192096211704
+UMAP,Disease Free Status,AP,0.4329691534840276
+POME,Disease Free Status,AP,0.6885259548465483
+UMAP,Disease Free Status,AP,0.3416804594582372
+POME,Disease Free Status,AP,0.5223711473711474
+UMAP,Disease Free Status,AP,0.3421113091701327
+POME,Disease Free Status,AP,0.5335453127119794
+UMAP,Disease Free Status,AP,0.5831962089130873
+POME,Disease Free Status,AP,0.6600783475783476
+UMAP,Disease Free Status,AP,0.6413865546218487
+POME,Disease Free Status,AP,0.46254039982110157
+UMAP,Disease Free Status,AP,0.5955646205646206
+POME,Disease Free Status,AP,0.3818689117708726
+UMAP,Disease Free Status,AP,0.4968668767688375
+POME,Disease Free Status,AP,0.7517618411000765
+UMAP,Disease Free Status,AP,0.8627622377622377
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.7894472951291134
+UMAP,Disease-specific Survival status,AP,0.7676904562280057
+POME,Disease-specific Survival status,AP,0.5242930456640134
+UMAP,Disease-specific Survival status,AP,0.6033172578859001
+POME,Disease-specific Survival status,AP,0.532356472030385
+UMAP,Disease-specific Survival status,AP,0.363610084569944
+POME,Disease-specific Survival status,AP,0.5656386230728336
+UMAP,Disease-specific Survival status,AP,0.7134730766309714
+POME,Disease-specific Survival status,AP,0.6699802784361608
+UMAP,Disease-specific Survival status,AP,0.6320179289664583
+POME,Disease-specific Survival status,AP,0.600407848324515
+UMAP,Disease-specific Survival status,AP,0.6246225996225996
+POME,Disease-specific Survival status,AP,0.6959535572593353
+UMAP,Disease-specific Survival status,AP,0.7054487304487305
+POME,Disease-specific Survival status,AP,0.5639484813866953
+UMAP,Disease-specific Survival status,AP,0.6441378066378065
+POME,Disease-specific Survival status,AP,0.6617997021393868
+UMAP,Disease-specific Survival status,AP,0.42269431213679187
+POME,Disease-specific Survival status,AP,0.5786226693203438
+UMAP,Disease-specific Survival status,AP,0.5940788707392123
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.7517612737804087
+UMAP,Progression Free Status,AP,0.5964649202654186
+POME,Progression Free Status,AP,0.6156300049706149
+UMAP,Progression Free Status,AP,0.7620747575291491
+POME,Progression Free Status,AP,0.7418196043959058
+UMAP,Progression Free Status,AP,0.6598524354681992
+POME,Progression Free Status,AP,0.737743647598827
+UMAP,Progression Free Status,AP,0.655142740260582
+POME,Progression Free Status,AP,0.5968871340659266
+UMAP,Progression Free Status,AP,0.5331115939756139
+POME,Progression Free Status,AP,0.6396057928139972
+UMAP,Progression Free Status,AP,0.6806081932307482
+POME,Progression Free Status,AP,0.6663216391192581
+UMAP,Progression Free Status,AP,0.7333928559649878
+POME,Progression Free Status,AP,0.5871988599496707
+UMAP,Progression Free Status,AP,0.4781217459449208
+POME,Progression Free Status,AP,0.6287533280487854
+UMAP,Progression Free Status,AP,0.6987918148317309
+POME,Progression Free Status,AP,0.6906502159191283
+UMAP,Progression Free Status,AP,0.6428695077526674
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.06089396145246839
+UMAP,Disease Free (Months),R2,-0.9164810568426289
+POME,Disease Free (Months),R2,0.0004904404829259024
+UMAP,Disease Free (Months),R2,-0.26449703772944444
+POME,Disease Free (Months),R2,0.05938927323923082
+UMAP,Disease Free (Months),R2,-0.3709743067420279
+POME,Disease Free (Months),R2,-0.0821385774927208
+UMAP,Disease Free (Months),R2,0.19129438234163176
+POME,Disease Free (Months),R2,-2.7855824180742674
+UMAP,Disease Free (Months),R2,-4.523753793750754
+POME,Disease Free (Months),R2,-0.18449510567644078
+UMAP,Disease Free (Months),R2,0.18200277602089898
+POME,Disease Free (Months),R2,-2.068772781639829
+UMAP,Disease Free (Months),R2,-0.5102537145096637
+POME,Disease Free (Months),R2,-0.08881867688278344
+UMAP,Disease Free (Months),R2,0.06633347805548673
+POME,Disease Free (Months),R2,-0.4633237575890212
+UMAP,Disease Free (Months),R2,0.11977365134530649
+POME,Disease Free (Months),R2,0.044235284598588276
+UMAP,Disease Free (Months),R2,-0.9388756760857364
+POME,Months of disease-specific survival,R2,-0.17729782895339308
+UMAP,Months of disease-specific survival,R2,-0.1518163157015131
+POME,Months of disease-specific survival,R2,-0.08599075165050496
+UMAP,Months of disease-specific survival,R2,0.23949389012526534
+POME,Months of disease-specific survival,R2,-0.1697643111171847
+UMAP,Months of disease-specific survival,R2,-0.06516655555399864
+POME,Months of disease-specific survival,R2,-0.10598638513649639
+UMAP,Months of disease-specific survival,R2,0.13651220428478783
+POME,Months of disease-specific survival,R2,-0.08083740260875105
+UMAP,Months of disease-specific survival,R2,-0.030336878251690402
+POME,Months of disease-specific survival,R2,0.12729778594248498
+UMAP,Months of disease-specific survival,R2,-0.13907164032056762
+POME,Months of disease-specific survival,R2,-0.22372890304316084
+UMAP,Months of disease-specific survival,R2,-0.020095041202314645
+POME,Months of disease-specific survival,R2,-0.42829312798635844
+UMAP,Months of disease-specific survival,R2,-0.16376767910739698
+POME,Months of disease-specific survival,R2,0.018441100621463424
+UMAP,Months of disease-specific survival,R2,0.15696437339579206
+POME,Months of disease-specific survival,R2,-0.13016320530408176
+UMAP,Months of disease-specific survival,R2,-0.3769903281334701
+POME,Progress Free Survival (Months),R2,-0.21658429777129284
+UMAP,Progress Free Survival (Months),R2,-0.3373232955674823
+POME,Progress Free Survival (Months),R2,-0.23524001567310537
+UMAP,Progress Free Survival (Months),R2,0.21505400745718428
+POME,Progress Free Survival (Months),R2,-0.16853311783986813
+UMAP,Progress Free Survival (Months),R2,-0.023629616361007244
+POME,Progress Free Survival (Months),R2,-0.27333283928288976
+UMAP,Progress Free Survival (Months),R2,-0.30040591619919077
+POME,Progress Free Survival (Months),R2,-0.0542690785368638
+UMAP,Progress Free Survival (Months),R2,-0.1344689658587388
+POME,Progress Free Survival (Months),R2,0.0047653610479484465
+UMAP,Progress Free Survival (Months),R2,-0.08003252505537728
+POME,Progress Free Survival (Months),R2,-0.6979568663760953
+UMAP,Progress Free Survival (Months),R2,-0.4118178482389956
+POME,Progress Free Survival (Months),R2,-0.3103648962161256
+UMAP,Progress Free Survival (Months),R2,-0.1303081536506352
+POME,Progress Free Survival (Months),R2,-0.032002586778810516
+UMAP,Progress Free Survival (Months),R2,0.006461227041598461
+POME,Progress Free Survival (Months),R2,-0.2317983775117325
+UMAP,Progress Free Survival (Months),R2,-0.4051225145467656
+POME,Disease Free Status,AP,0.5061728395061729
+UMAP,Disease Free Status,AP,0.38621309456155195
+POME,Disease Free Status,AP,0.7596421609579505
+UMAP,Disease Free Status,AP,0.5713682720929097
+POME,Disease Free Status,AP,0.46749758351065546
+UMAP,Disease Free Status,AP,0.4856549623216289
+POME,Disease Free Status,AP,0.5517822333611807
+UMAP,Disease Free Status,AP,0.5006073187477362
+POME,Disease Free Status,AP,0.6238383838383839
+UMAP,Disease Free Status,AP,0.40269694297472075
+POME,Disease Free Status,AP,0.6887385418238412
+UMAP,Disease Free Status,AP,0.5438888888888889
+POME,Disease Free Status,AP,0.7704906204906206
+UMAP,Disease Free Status,AP,0.687306067208028
+POME,Disease Free Status,AP,0.4488766980146291
+UMAP,Disease Free Status,AP,0.7263468013468015
+POME,Disease Free Status,AP,0.8468253968253969
+UMAP,Disease Free Status,AP,0.6048951106226648
+POME,Disease Free Status,AP,0.5337777418659772
+UMAP,Disease Free Status,AP,0.85
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.4686161047883536
+UMAP,Disease-specific Survival status,AP,0.7530303030303029
+POME,Disease-specific Survival status,AP,0.5059961082688356
+UMAP,Disease-specific Survival status,AP,0.6179356591121298
+POME,Disease-specific Survival status,AP,0.42701429883248065
+UMAP,Disease-specific Survival status,AP,0.4098059542796385
+POME,Disease-specific Survival status,AP,0.4856704662950456
+UMAP,Disease-specific Survival status,AP,0.6674014117195934
+POME,Disease-specific Survival status,AP,0.6759369834082478
+UMAP,Disease-specific Survival status,AP,0.7425395166774478
+POME,Disease-specific Survival status,AP,0.5389905051089261
+UMAP,Disease-specific Survival status,AP,0.6721512805458885
+POME,Disease-specific Survival status,AP,0.6750502976132267
+UMAP,Disease-specific Survival status,AP,0.7027659069325736
+POME,Disease-specific Survival status,AP,0.43029663242911875
+UMAP,Disease-specific Survival status,AP,0.5696067029948609
+POME,Disease-specific Survival status,AP,0.4614845196395998
+UMAP,Disease-specific Survival status,AP,0.5370413676915226
+POME,Disease-specific Survival status,AP,0.377279518961879
+UMAP,Disease-specific Survival status,AP,0.5871108934911259
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.603493277747521
+UMAP,Progression Free Status,AP,0.570715243668662
+POME,Progression Free Status,AP,0.6388328500656626
+UMAP,Progression Free Status,AP,0.6748961101750655
+POME,Progression Free Status,AP,0.7438118767254462
+UMAP,Progression Free Status,AP,0.6878202362658741
+POME,Progression Free Status,AP,0.7428185863524417
+UMAP,Progression Free Status,AP,0.6817149060644576
+POME,Progression Free Status,AP,0.6448739509869788
+UMAP,Progression Free Status,AP,0.5000206757180877
+POME,Progression Free Status,AP,0.571407356507175
+UMAP,Progression Free Status,AP,0.7179797566612287
+POME,Progression Free Status,AP,0.7145139352931469
+UMAP,Progression Free Status,AP,0.7495440775437139
+POME,Progression Free Status,AP,0.6636322037814897
+UMAP,Progression Free Status,AP,0.43849265661686027
+POME,Progression Free Status,AP,0.6666785533040844
+UMAP,Progression Free Status,AP,0.6931496792408263
+POME,Progression Free Status,AP,0.8005379133005184
+UMAP,Progression Free Status,AP,0.7951336880163584
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.27640027009830925
+UMAP,Disease Free (Months),R2,-0.8553624978623438
+POME,Disease Free (Months),R2,-1.2868643178302839
+UMAP,Disease Free (Months),R2,-0.27072666866205886
+POME,Disease Free (Months),R2,-0.16421243529990504
+UMAP,Disease Free (Months),R2,-0.11243746292858958
+POME,Disease Free (Months),R2,0.11853885856684532
+UMAP,Disease Free (Months),R2,0.24438543898801957
+POME,Disease Free (Months),R2,-2.3060060808614673
+UMAP,Disease Free (Months),R2,-4.223281585598088
+POME,Disease Free (Months),R2,0.1741610794496954
+UMAP,Disease Free (Months),R2,0.190210317078903
+POME,Disease Free (Months),R2,-0.8765327734326593
+UMAP,Disease Free (Months),R2,-0.16017657233104177
+POME,Disease Free (Months),R2,-0.1783646394051399
+UMAP,Disease Free (Months),R2,0.3102376991331697
+POME,Disease Free (Months),R2,-0.5722697939995418
+UMAP,Disease Free (Months),R2,-0.06926242274494343
+POME,Disease Free (Months),R2,-0.4836815525647238
+UMAP,Disease Free (Months),R2,-0.6123806223893506
+POME,Months of disease-specific survival,R2,-0.1667682544608331
+UMAP,Months of disease-specific survival,R2,0.11856254304939884
+POME,Months of disease-specific survival,R2,0.05889062106400689
+UMAP,Months of disease-specific survival,R2,0.08402965184097155
+POME,Months of disease-specific survival,R2,-0.16136408784522627
+UMAP,Months of disease-specific survival,R2,-0.09311187225358353
+POME,Months of disease-specific survival,R2,-0.20241440860673587
+UMAP,Months of disease-specific survival,R2,0.06769970440194262
+POME,Months of disease-specific survival,R2,0.08178000765301441
+UMAP,Months of disease-specific survival,R2,0.10921796107911197
+POME,Months of disease-specific survival,R2,-0.24187932218440245
+UMAP,Months of disease-specific survival,R2,0.03352018339145879
+POME,Months of disease-specific survival,R2,-0.03161942318213273
+UMAP,Months of disease-specific survival,R2,0.01317634064901596
+POME,Months of disease-specific survival,R2,-0.1559611208851186
+UMAP,Months of disease-specific survival,R2,-0.22109116659953854
+POME,Months of disease-specific survival,R2,-0.06302427657418419
+UMAP,Months of disease-specific survival,R2,0.17827846998452135
+POME,Months of disease-specific survival,R2,-0.30517350745006033
+UMAP,Months of disease-specific survival,R2,-0.3993652486397421
+POME,Progress Free Survival (Months),R2,-0.3426694324101107
+UMAP,Progress Free Survival (Months),R2,-0.24656181317612558
+POME,Progress Free Survival (Months),R2,-0.07397224501363953
+UMAP,Progress Free Survival (Months),R2,0.16386485427144748
+POME,Progress Free Survival (Months),R2,-0.11913892347026822
+UMAP,Progress Free Survival (Months),R2,0.15402147029008972
+POME,Progress Free Survival (Months),R2,-0.22674457423579875
+UMAP,Progress Free Survival (Months),R2,-0.11661105463634192
+POME,Progress Free Survival (Months),R2,0.1114098107644016
+UMAP,Progress Free Survival (Months),R2,0.07977513440261985
+POME,Progress Free Survival (Months),R2,-0.3518064302884025
+UMAP,Progress Free Survival (Months),R2,-0.049701852079053976
+POME,Progress Free Survival (Months),R2,-0.43023363694015604
+UMAP,Progress Free Survival (Months),R2,-0.2179382634873246
+POME,Progress Free Survival (Months),R2,-0.18499456683272686
+UMAP,Progress Free Survival (Months),R2,0.32421183717788604
+POME,Progress Free Survival (Months),R2,-0.08159305785926962
+UMAP,Progress Free Survival (Months),R2,0.09759799310539385
+POME,Progress Free Survival (Months),R2,-0.19698430843736814
+UMAP,Progress Free Survival (Months),R2,-0.9516089440424698
+POME,Disease Free Status,AP,0.34967532467532464
+UMAP,Disease Free Status,AP,0.3788175074552784
+POME,Disease Free Status,AP,0.4236860670194004
+UMAP,Disease Free Status,AP,0.5827381295411986
+POME,Disease Free Status,AP,0.3176380204157982
+UMAP,Disease Free Status,AP,0.45645481969011387
+POME,Disease Free Status,AP,0.47176244235067766
+UMAP,Disease Free Status,AP,0.45742210464432687
+POME,Disease Free Status,AP,0.5196706152846504
+UMAP,Disease Free Status,AP,0.36171328671328673
+POME,Disease Free Status,AP,0.6067073667073668
+UMAP,Disease Free Status,AP,0.5927313667058991
+POME,Disease Free Status,AP,0.6330151719625403
+UMAP,Disease Free Status,AP,0.6600673459941195
+POME,Disease Free Status,AP,0.30839892783963313
+UMAP,Disease Free Status,AP,0.5172146299597281
+POME,Disease Free Status,AP,0.38381572131572134
+UMAP,Disease Free Status,AP,0.5225290791080265
+POME,Disease Free Status,AP,0.5563311688311688
+UMAP,Disease Free Status,AP,0.8322115384615385
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.7576518776279542
+UMAP,Disease-specific Survival status,AP,0.7850614439324117
+POME,Disease-specific Survival status,AP,0.5927981109799292
+UMAP,Disease-specific Survival status,AP,0.6881621473302288
+POME,Disease-specific Survival status,AP,0.42451741732463777
+UMAP,Disease-specific Survival status,AP,0.3672543639934944
+POME,Disease-specific Survival status,AP,0.45406604239491943
+UMAP,Disease-specific Survival status,AP,0.7182535824247054
+POME,Disease-specific Survival status,AP,0.6705389965470611
+UMAP,Disease-specific Survival status,AP,0.7439133192851728
+POME,Disease-specific Survival status,AP,0.5352417557932264
+UMAP,Disease-specific Survival status,AP,0.6805556711806713
+POME,Disease-specific Survival status,AP,0.5181759258159937
+UMAP,Disease-specific Survival status,AP,0.7048100493600256
+POME,Disease-specific Survival status,AP,0.49782076241717826
+UMAP,Disease-specific Survival status,AP,0.6287695936151314
+POME,Disease-specific Survival status,AP,0.4895827681923939
+UMAP,Disease-specific Survival status,AP,0.543788900801096
+POME,Disease-specific Survival status,AP,0.5107618947784026
+UMAP,Disease-specific Survival status,AP,0.5677586302586303
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.5166303039832452
+UMAP,Progression Free Status,AP,0.5919968008355614
+POME,Progression Free Status,AP,0.6721140722565657
+UMAP,Progression Free Status,AP,0.7228351454541933
+POME,Progression Free Status,AP,0.7090713999425533
+UMAP,Progression Free Status,AP,0.6815061803287921
+POME,Progression Free Status,AP,0.7219680388128449
+UMAP,Progression Free Status,AP,0.6811802594518988
+POME,Progression Free Status,AP,0.4774837361360318
+UMAP,Progression Free Status,AP,0.49240728967336145
+POME,Progression Free Status,AP,0.4079669612578126
+UMAP,Progression Free Status,AP,0.6580611588647665
+POME,Progression Free Status,AP,0.6348194779395653
+UMAP,Progression Free Status,AP,0.7726164185175701
+POME,Progression Free Status,AP,0.7064790066614286
+UMAP,Progression Free Status,AP,0.46553824728418386
+POME,Progression Free Status,AP,0.49130898724627137
+UMAP,Progression Free Status,AP,0.6968761190711652
+POME,Progression Free Status,AP,0.7448709126230135
+UMAP,Progression Free Status,AP,0.7602218719317735
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.45770751115403296
+UMAP,Disease Free (Months),R2,-0.5067747220993077
+POME,Disease Free (Months),R2,0.3979755573818229
+UMAP,Disease Free (Months),R2,-0.3707276224363114
+POME,Disease Free (Months),R2,-0.25552085953122483
+UMAP,Disease Free (Months),R2,0.13348753066309615
+POME,Disease Free (Months),R2,0.02768054336156589
+UMAP,Disease Free (Months),R2,0.35732498993314754
+POME,Disease Free (Months),R2,-3.430910714880844
+UMAP,Disease Free (Months),R2,-6.77192069881753
+POME,Disease Free (Months),R2,-0.02817056800058859
+UMAP,Disease Free (Months),R2,-0.011952836980854364
+POME,Disease Free (Months),R2,-1.3845664173195908
+UMAP,Disease Free (Months),R2,0.34713353769802047
+POME,Disease Free (Months),R2,-0.21036980273350436
+UMAP,Disease Free (Months),R2,0.5432596594736749
+POME,Disease Free (Months),R2,-0.8461065801617069
+UMAP,Disease Free (Months),R2,0.3901104870251698
+POME,Disease Free (Months),R2,-0.27645903759529933
+UMAP,Disease Free (Months),R2,-0.6318937722737634
+POME,Months of disease-specific survival,R2,-0.09194960702001187
+UMAP,Months of disease-specific survival,R2,0.24224455672912304
+POME,Months of disease-specific survival,R2,-0.2280057448285162
+UMAP,Months of disease-specific survival,R2,-0.408632708979741
+POME,Months of disease-specific survival,R2,-0.03624352279670018
+UMAP,Months of disease-specific survival,R2,-0.02846885784556763
+POME,Months of disease-specific survival,R2,-0.004924180900658159
+UMAP,Months of disease-specific survival,R2,0.08433705734559915
+POME,Months of disease-specific survival,R2,-0.11169929535547518
+UMAP,Months of disease-specific survival,R2,0.10561680896315484
+POME,Months of disease-specific survival,R2,0.008490357157213135
+UMAP,Months of disease-specific survival,R2,0.028746849903461547
+POME,Months of disease-specific survival,R2,-0.18474467366650638
+UMAP,Months of disease-specific survival,R2,-0.014560105352022124
+POME,Months of disease-specific survival,R2,-0.7697829454923935
+UMAP,Months of disease-specific survival,R2,-0.005657772526111993
+POME,Months of disease-specific survival,R2,-0.055475520498502684
+UMAP,Months of disease-specific survival,R2,0.22133165834444757
+POME,Months of disease-specific survival,R2,-0.547637737540356
+UMAP,Months of disease-specific survival,R2,-2.429152354454489
+POME,Progress Free Survival (Months),R2,-0.3474230431323393
+UMAP,Progress Free Survival (Months),R2,-0.3218519006390712
+POME,Progress Free Survival (Months),R2,-0.39930879460790014
+UMAP,Progress Free Survival (Months),R2,-1.1763475354640742
+POME,Progress Free Survival (Months),R2,-0.18224146180256406
+UMAP,Progress Free Survival (Months),R2,0.006641112554165884
+POME,Progress Free Survival (Months),R2,-0.18121876282324623
+UMAP,Progress Free Survival (Months),R2,0.13235086967269982
+POME,Progress Free Survival (Months),R2,-0.12051983563030255
+UMAP,Progress Free Survival (Months),R2,0.0390666328770215
+POME,Progress Free Survival (Months),R2,0.036814226208497836
+UMAP,Progress Free Survival (Months),R2,0.028094079783446135
+POME,Progress Free Survival (Months),R2,-0.5591343727205165
+UMAP,Progress Free Survival (Months),R2,-0.0420475735746908
+POME,Progress Free Survival (Months),R2,-0.9136487444508044
+UMAP,Progress Free Survival (Months),R2,0.06645292882148512
+POME,Progress Free Survival (Months),R2,-0.08640726050426872
+UMAP,Progress Free Survival (Months),R2,0.12539231624904368
+POME,Progress Free Survival (Months),R2,-0.22639749016651756
+UMAP,Progress Free Survival (Months),R2,-2.94127721359561
+POME,Disease Free Status,AP,0.3691149698396075
+UMAP,Disease Free Status,AP,0.35329380764163376
+POME,Disease Free Status,AP,0.5988742738742738
+UMAP,Disease Free Status,AP,0.6381308506308507
+POME,Disease Free Status,AP,0.4429191459924623
+UMAP,Disease Free Status,AP,0.40854055267848366
+POME,Disease Free Status,AP,0.6638213981244672
+UMAP,Disease Free Status,AP,0.4253341328656612
+POME,Disease Free Status,AP,0.5415029415029415
+UMAP,Disease Free Status,AP,0.37674122657782794
+POME,Disease Free Status,AP,0.598078529657477
+UMAP,Disease Free Status,AP,0.5943117859059888
+POME,Disease Free Status,AP,0.5561572777259052
+UMAP,Disease Free Status,AP,0.6372551496283747
+POME,Disease Free Status,AP,0.5422599005932338
+UMAP,Disease Free Status,AP,0.5398998151449133
+POME,Disease Free Status,AP,0.36362292296244825
+UMAP,Disease Free Status,AP,0.4851731893837157
+POME,Disease Free Status,AP,0.5067254541796875
+UMAP,Disease Free Status,AP,0.8265050167224081
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.475860161477622
+UMAP,Disease-specific Survival status,AP,0.7246662963524045
+POME,Disease-specific Survival status,AP,0.5476626864571529
+UMAP,Disease-specific Survival status,AP,0.6223112902423247
+POME,Disease-specific Survival status,AP,0.45616153778833207
+UMAP,Disease-specific Survival status,AP,0.37573673694257836
+POME,Disease-specific Survival status,AP,0.42812171737988436
+UMAP,Disease-specific Survival status,AP,0.7767749262964574
+POME,Disease-specific Survival status,AP,0.5462737616192901
+UMAP,Disease-specific Survival status,AP,0.7530493103073748
+POME,Disease-specific Survival status,AP,0.5626607827038861
+UMAP,Disease-specific Survival status,AP,0.6448676051617228
+POME,Disease-specific Survival status,AP,0.5300701248069669
+UMAP,Disease-specific Survival status,AP,0.7137595812483368
+POME,Disease-specific Survival status,AP,0.467384867145191
+UMAP,Disease-specific Survival status,AP,0.6116277241277241
+POME,Disease-specific Survival status,AP,0.5923053681634917
+UMAP,Disease-specific Survival status,AP,0.4690327184892402
+POME,Disease-specific Survival status,AP,0.3117554459800449
+UMAP,Disease-specific Survival status,AP,0.6428736960713706
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.5994001923161294
+UMAP,Progression Free Status,AP,0.5810200017221199
+POME,Progression Free Status,AP,0.6182300370880975
+UMAP,Progression Free Status,AP,0.6463541738878724
+POME,Progression Free Status,AP,0.7155198727629806
+UMAP,Progression Free Status,AP,0.6617072809006688
+POME,Progression Free Status,AP,0.5937343785333031
+UMAP,Progression Free Status,AP,0.7110369344290859
+POME,Progression Free Status,AP,0.45963660796270883
+UMAP,Progression Free Status,AP,0.500065430135277
+POME,Progression Free Status,AP,0.5283520099724496
+UMAP,Progression Free Status,AP,0.6708938378586647
+POME,Progression Free Status,AP,0.6707251067887714
+UMAP,Progression Free Status,AP,0.718459014929677
+POME,Progression Free Status,AP,0.6175287914137364
+UMAP,Progression Free Status,AP,0.4536722567872097
+POME,Progression Free Status,AP,0.5927488816686024
+UMAP,Progression Free Status,AP,0.7152519790216976
+POME,Progression Free Status,AP,0.75730891368642
+UMAP,Progression Free Status,AP,0.7727561305161859
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,0.01106600214728648
+UMAP,Disease Free (Months),R2,-0.10450790268239962
+POME,Disease Free (Months),R2,-0.2139143647974402
+UMAP,Disease Free (Months),R2,-0.6349800012605564
+POME,Disease Free (Months),R2,-0.23447733264645043
+UMAP,Disease Free (Months),R2,-0.32580721523180034
+POME,Disease Free (Months),R2,0.0423800728106144
+UMAP,Disease Free (Months),R2,0.5064961624382626
+POME,Disease Free (Months),R2,-3.0988183201595225
+UMAP,Disease Free (Months),R2,-2.887067595868589
+POME,Disease Free (Months),R2,-0.10590410348311474
+UMAP,Disease Free (Months),R2,0.20566244615723794
+POME,Disease Free (Months),R2,-0.8489308178578177
+UMAP,Disease Free (Months),R2,0.03966379075162274
+POME,Disease Free (Months),R2,-0.144009664309386
+UMAP,Disease Free (Months),R2,0.33978022813702335
+POME,Disease Free (Months),R2,0.20843787975475092
+UMAP,Disease Free (Months),R2,-0.36673184783316626
+POME,Disease Free (Months),R2,-0.41436765136602194
+UMAP,Disease Free (Months),R2,-0.6462453349319728
+POME,Months of disease-specific survival,R2,-0.04306395244072525
+UMAP,Months of disease-specific survival,R2,-0.005252935759241462
+POME,Months of disease-specific survival,R2,-0.237192953022916
+UMAP,Months of disease-specific survival,R2,-0.029571562857209743
+POME,Months of disease-specific survival,R2,-0.10781059970450291
+UMAP,Months of disease-specific survival,R2,-0.012438646090439764
+POME,Months of disease-specific survival,R2,0.08314033516957009
+UMAP,Months of disease-specific survival,R2,0.23013474273332302
+POME,Months of disease-specific survival,R2,0.029376827019967133
+UMAP,Months of disease-specific survival,R2,-0.09088396584474201
+POME,Months of disease-specific survival,R2,0.11236762331813632
+UMAP,Months of disease-specific survival,R2,-0.1169898875600397
+POME,Months of disease-specific survival,R2,0.1349011387800958
+UMAP,Months of disease-specific survival,R2,-0.10519599961295101
+POME,Months of disease-specific survival,R2,-0.30587437970197406
+UMAP,Months of disease-specific survival,R2,0.07787087724309583
+POME,Months of disease-specific survival,R2,0.0549755644571529
+UMAP,Months of disease-specific survival,R2,0.1692355668562734
+POME,Months of disease-specific survival,R2,-0.1447552515049786
+UMAP,Months of disease-specific survival,R2,-1.6257166880083314
+POME,Progress Free Survival (Months),R2,-0.2437086604570604
+UMAP,Progress Free Survival (Months),R2,-0.2034079135158957
+POME,Progress Free Survival (Months),R2,-0.2977980660723567
+UMAP,Progress Free Survival (Months),R2,-0.020807419760433543
+POME,Progress Free Survival (Months),R2,-0.07988879282942629
+UMAP,Progress Free Survival (Months),R2,0.06515267357581023
+POME,Progress Free Survival (Months),R2,-0.2599796397778371
+UMAP,Progress Free Survival (Months),R2,-0.24303637028381653
+POME,Progress Free Survival (Months),R2,-0.021679486496764877
+UMAP,Progress Free Survival (Months),R2,-0.44593219344146684
+POME,Progress Free Survival (Months),R2,-0.01602426847640781
+UMAP,Progress Free Survival (Months),R2,0.06387242902173362
+POME,Progress Free Survival (Months),R2,-0.41034819110373166
+UMAP,Progress Free Survival (Months),R2,-0.550774877548948
+POME,Progress Free Survival (Months),R2,-0.3142349967787741
+UMAP,Progress Free Survival (Months),R2,-0.03213882319905936
+POME,Progress Free Survival (Months),R2,0.0016800199741443533
+UMAP,Progress Free Survival (Months),R2,0.11138809957772822
+POME,Progress Free Survival (Months),R2,-0.11348123465863602
+UMAP,Progress Free Survival (Months),R2,-1.3380620882447491
+POME,Disease Free Status,AP,0.593584972532341
+UMAP,Disease Free Status,AP,0.37944131604720666
+POME,Disease Free Status,AP,0.6311524469570446
+UMAP,Disease Free Status,AP,0.679681468628837
+POME,Disease Free Status,AP,0.31798527982738506
+UMAP,Disease Free Status,AP,0.45791245791245794
+POME,Disease Free Status,AP,0.7755549461431814
+UMAP,Disease Free Status,AP,0.3745861068441714
+POME,Disease Free Status,AP,0.553907337965309
+UMAP,Disease Free Status,AP,0.39629933710393483
+POME,Disease Free Status,AP,0.44927048260381597
+UMAP,Disease Free Status,AP,0.4775046590836064
+POME,Disease Free Status,AP,0.49366744366744364
+UMAP,Disease Free Status,AP,0.6971529015646662
+POME,Disease Free Status,AP,0.5684511784511783
+UMAP,Disease Free Status,AP,0.4931623931623932
+POME,Disease Free Status,AP,0.731927337654892
+UMAP,Disease Free Status,AP,0.6398891404051363
+POME,Disease Free Status,AP,0.3343699124949125
+UMAP,Disease Free Status,AP,0.8066666666666666
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.2718162720836518
+UMAP,Disease-specific Survival status,AP,0.7367966814825104
+POME,Disease-specific Survival status,AP,0.39571597602743325
+UMAP,Disease-specific Survival status,AP,0.706558517042388
+POME,Disease-specific Survival status,AP,0.4440556182947487
+UMAP,Disease-specific Survival status,AP,0.38462736852746393
+POME,Disease-specific Survival status,AP,0.4448018275093374
+UMAP,Disease-specific Survival status,AP,0.7204441899563852
+POME,Disease-specific Survival status,AP,0.5911125140291806
+UMAP,Disease-specific Survival status,AP,0.6719274146905725
+POME,Disease-specific Survival status,AP,0.542612429387016
+UMAP,Disease-specific Survival status,AP,0.6157800657800658
+POME,Disease-specific Survival status,AP,0.65947563854778
+UMAP,Disease-specific Survival status,AP,0.701698780147056
+POME,Disease-specific Survival status,AP,0.4173287360787361
+UMAP,Disease-specific Survival status,AP,0.6711276539601347
+POME,Disease-specific Survival status,AP,0.5480225184172552
+UMAP,Disease-specific Survival status,AP,0.5379534258844604
+POME,Disease-specific Survival status,AP,0.3470455562846867
+UMAP,Disease-specific Survival status,AP,0.6883638319323198
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.46418070837355774
+UMAP,Progression Free Status,AP,0.6059264476403072
+POME,Progression Free Status,AP,0.688889795486171
+UMAP,Progression Free Status,AP,0.6864797381531789
+POME,Progression Free Status,AP,0.7011344459964939
+UMAP,Progression Free Status,AP,0.6920724706268746
+POME,Progression Free Status,AP,0.5587723012674118
+UMAP,Progression Free Status,AP,0.7042932184970314
+POME,Progression Free Status,AP,0.5036704465583359
+UMAP,Progression Free Status,AP,0.5329166669838694
+POME,Progression Free Status,AP,0.48028895273184063
+UMAP,Progression Free Status,AP,0.7079510667132476
+POME,Progression Free Status,AP,0.7596079276536569
+UMAP,Progression Free Status,AP,0.7665725823054854
+POME,Progression Free Status,AP,0.6463400991478883
+UMAP,Progression Free Status,AP,0.47227708745219693
+POME,Progression Free Status,AP,0.5536348090333212
+UMAP,Progression Free Status,AP,0.654051904263399
+POME,Progression Free Status,AP,0.6273360661049696
+UMAP,Progression Free Status,AP,0.707462002815572
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,0.05636882250917685
+UMAP,Disease Free (Months),R2,-1.8311089787138584
+POME,Disease Free (Months),R2,0.08396268776425886
+UMAP,Disease Free (Months),R2,0.08180546046677939
+POME,Disease Free (Months),R2,0.44777160587644893
+UMAP,Disease Free (Months),R2,0.05226105584880114
+POME,Disease Free (Months),R2,0.09428935713089315
+UMAP,Disease Free (Months),R2,0.28635016200869656
+POME,Disease Free (Months),R2,-4.056197255525275
+UMAP,Disease Free (Months),R2,-6.0508755646885835
+POME,Disease Free (Months),R2,0.3001225187062755
+UMAP,Disease Free (Months),R2,0.1731986412222889
+POME,Disease Free (Months),R2,-1.07743499003149
+UMAP,Disease Free (Months),R2,-0.010570293456903412
+POME,Disease Free (Months),R2,0.020499928787493404
+UMAP,Disease Free (Months),R2,0.22501336558616936
+POME,Disease Free (Months),R2,-0.33473400669714737
+UMAP,Disease Free (Months),R2,0.24997236884558005
+POME,Disease Free (Months),R2,-0.4484725759482666
+UMAP,Disease Free (Months),R2,-5.962081016016929
+POME,Months of disease-specific survival,R2,-0.22269499173720764
+UMAP,Months of disease-specific survival,R2,0.008723803526961449
+POME,Months of disease-specific survival,R2,-0.2796969895213215
+UMAP,Months of disease-specific survival,R2,-0.7880048996786582
+POME,Months of disease-specific survival,R2,-0.3025817531047581
+UMAP,Months of disease-specific survival,R2,-1.7144115016181893
+POME,Months of disease-specific survival,R2,-0.12863460784383496
+UMAP,Months of disease-specific survival,R2,0.2021633615875703
+POME,Months of disease-specific survival,R2,-0.05077689857368828
+UMAP,Months of disease-specific survival,R2,-0.06959101466857787
+POME,Months of disease-specific survival,R2,0.23158716415042757
+UMAP,Months of disease-specific survival,R2,-0.047268834544696325
+POME,Months of disease-specific survival,R2,-0.05326057150476293
+UMAP,Months of disease-specific survival,R2,-0.5580956578424712
+POME,Months of disease-specific survival,R2,-0.35824352842992013
+UMAP,Months of disease-specific survival,R2,0.044906795149466494
+POME,Months of disease-specific survival,R2,0.045050801887691616
+UMAP,Months of disease-specific survival,R2,0.1502247374561897
+POME,Months of disease-specific survival,R2,-0.32013494346969584
+UMAP,Months of disease-specific survival,R2,-0.28198749471819573
+POME,Progress Free Survival (Months),R2,-0.2809443272195753
+UMAP,Progress Free Survival (Months),R2,-0.32997528660185593
+POME,Progress Free Survival (Months),R2,-0.33330808230027764
+UMAP,Progress Free Survival (Months),R2,-0.9078475012860059
+POME,Progress Free Survival (Months),R2,-0.1623136448063709
+UMAP,Progress Free Survival (Months),R2,-2.7472008229569878
+POME,Progress Free Survival (Months),R2,-0.40454833679408475
+UMAP,Progress Free Survival (Months),R2,-0.18917672334301527
+POME,Progress Free Survival (Months),R2,-0.06606572318769421
+UMAP,Progress Free Survival (Months),R2,0.019232215531018504
+POME,Progress Free Survival (Months),R2,0.18712337049418126
+UMAP,Progress Free Survival (Months),R2,-0.025258792367004235
+POME,Progress Free Survival (Months),R2,-0.7127678190379862
+UMAP,Progress Free Survival (Months),R2,-1.366353860356699
+POME,Progress Free Survival (Months),R2,-0.2264361281384819
+UMAP,Progress Free Survival (Months),R2,-0.05576533123862504
+POME,Progress Free Survival (Months),R2,0.03942887200917611
+UMAP,Progress Free Survival (Months),R2,0.07823010564236799
+POME,Progress Free Survival (Months),R2,-0.49941757893149163
+UMAP,Progress Free Survival (Months),R2,-0.3714388280567884
+POME,Disease Free Status,AP,0.645806100217865
+UMAP,Disease Free Status,AP,0.3483464849523755
+POME,Disease Free Status,AP,0.8254569504569504
+UMAP,Disease Free Status,AP,0.6701854245971892
+POME,Disease Free Status,AP,0.646256038647343
+UMAP,Disease Free Status,AP,0.46057692307692305
+POME,Disease Free Status,AP,0.8788919413919416
+UMAP,Disease Free Status,AP,0.4310233872505678
+POME,Disease Free Status,AP,0.572703839370506
+UMAP,Disease Free Status,AP,0.4614743930533404
+POME,Disease Free Status,AP,0.7660774410774411
+UMAP,Disease Free Status,AP,0.5664379084967319
+POME,Disease Free Status,AP,0.6002746765904661
+UMAP,Disease Free Status,AP,0.6414021164021164
+POME,Disease Free Status,AP,0.5863053613053613
+UMAP,Disease Free Status,AP,0.5695013864131511
+POME,Disease Free Status,AP,0.6164428164428164
+UMAP,Disease Free Status,AP,0.562639958566732
+POME,Disease Free Status,AP,0.7976190476190477
+UMAP,Disease Free Status,AP,0.8264583333333333
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.6696616663194203
+UMAP,Disease-specific Survival status,AP,0.766931216931217
+POME,Disease-specific Survival status,AP,0.6858581255710442
+UMAP,Disease-specific Survival status,AP,0.662036016848851
+POME,Disease-specific Survival status,AP,0.7815390986513981
+UMAP,Disease-specific Survival status,AP,0.4130493902233033
+POME,Disease-specific Survival status,AP,0.5792256992943492
+UMAP,Disease-specific Survival status,AP,0.7348608462244826
+POME,Disease-specific Survival status,AP,0.6775012025012025
+UMAP,Disease-specific Survival status,AP,0.7361682392255148
+POME,Disease-specific Survival status,AP,0.5948606540518305
+UMAP,Disease-specific Survival status,AP,0.6732319540433576
+POME,Disease-specific Survival status,AP,0.890957190957191
+UMAP,Disease-specific Survival status,AP,0.7216774762473687
+POME,Disease-specific Survival status,AP,0.7515401671472619
+UMAP,Disease-specific Survival status,AP,0.6264161928206551
+POME,Disease-specific Survival status,AP,0.7650748859350898
+UMAP,Disease-specific Survival status,AP,0.5296526290109178
+POME,Disease-specific Survival status,AP,0.704401646666076
+UMAP,Disease-specific Survival status,AP,0.6746858214249519
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.765504253607344
+UMAP,Progression Free Status,AP,0.6074879850321362
+POME,Progression Free Status,AP,0.7646646465060829
+UMAP,Progression Free Status,AP,0.7228275458549676
+POME,Progression Free Status,AP,0.8238748995959722
+UMAP,Progression Free Status,AP,0.6827733180955287
+POME,Progression Free Status,AP,0.8221213810691819
+UMAP,Progression Free Status,AP,0.75054305013881
+POME,Progression Free Status,AP,0.553468276355205
+UMAP,Progression Free Status,AP,0.4989992031055422
+POME,Progression Free Status,AP,0.7372946432873999
+UMAP,Progression Free Status,AP,0.643224790916743
+POME,Progression Free Status,AP,0.8483503111168063
+UMAP,Progression Free Status,AP,0.7342432037491284
+POME,Progression Free Status,AP,0.8077617535491479
+UMAP,Progression Free Status,AP,0.4895185648000163
+POME,Progression Free Status,AP,0.757387754295024
+UMAP,Progression Free Status,AP,0.7361273975002445
+POME,Progression Free Status,AP,0.6831479797376513
+UMAP,Progression Free Status,AP,0.7490042653399933
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.13280256625246967
+UMAP,Disease Free (Months),R2,-1.9344431980911216
+POME,Disease Free (Months),R2,0.3074864313594734
+UMAP,Disease Free (Months),R2,0.0494647371560718
+POME,Disease Free (Months),R2,0.12503529086394538
+UMAP,Disease Free (Months),R2,-0.32996824040951545
+POME,Disease Free (Months),R2,-0.04148395411231842
+UMAP,Disease Free (Months),R2,0.30005368906585417
+POME,Disease Free (Months),R2,-3.0638164349360055
+UMAP,Disease Free (Months),R2,-2.9249066270222848
+POME,Disease Free (Months),R2,0.11523810410938384
+UMAP,Disease Free (Months),R2,0.31314942509083477
+POME,Disease Free (Months),R2,-0.5367768590277986
+UMAP,Disease Free (Months),R2,-0.5255721809149361
+POME,Disease Free (Months),R2,-0.233698770696267
+UMAP,Disease Free (Months),R2,0.021337481170494832
+POME,Disease Free (Months),R2,0.11419999524156332
+UMAP,Disease Free (Months),R2,-0.35167962423750576
+POME,Disease Free (Months),R2,-0.26602921346354824
+UMAP,Disease Free (Months),R2,-0.3633359638598528
+POME,Months of disease-specific survival,R2,3.881327441512816e-05
+UMAP,Months of disease-specific survival,R2,-0.04836500358717277
+POME,Months of disease-specific survival,R2,0.023023656389000613
+UMAP,Months of disease-specific survival,R2,-0.05248299674654722
+POME,Months of disease-specific survival,R2,-0.09322349952666009
+UMAP,Months of disease-specific survival,R2,0.08588194998506615
+POME,Months of disease-specific survival,R2,-0.22552891578592615
+UMAP,Months of disease-specific survival,R2,0.21322173055861027
+POME,Months of disease-specific survival,R2,0.06211979768212106
+UMAP,Months of disease-specific survival,R2,0.11549455954453502
+POME,Months of disease-specific survival,R2,-0.02309371941462457
+UMAP,Months of disease-specific survival,R2,-0.18107644490943442
+POME,Months of disease-specific survival,R2,-0.018241463350965992
+UMAP,Months of disease-specific survival,R2,0.029331190438862897
+POME,Months of disease-specific survival,R2,-0.3087177551676321
+UMAP,Months of disease-specific survival,R2,0.02406179223646232
+POME,Months of disease-specific survival,R2,0.004845506069626415
+UMAP,Months of disease-specific survival,R2,0.10025799203938901
+POME,Months of disease-specific survival,R2,0.039624934797952815
+UMAP,Months of disease-specific survival,R2,-0.5936423285908765
+POME,Progress Free Survival (Months),R2,-0.03967757587469789
+UMAP,Progress Free Survival (Months),R2,-0.4064656410646039
+POME,Progress Free Survival (Months),R2,0.03846196557645398
+UMAP,Progress Free Survival (Months),R2,-0.14382830282126569
+POME,Progress Free Survival (Months),R2,-0.14073733778426312
+UMAP,Progress Free Survival (Months),R2,-0.09042793091737877
+POME,Progress Free Survival (Months),R2,-0.6355281895658011
+UMAP,Progress Free Survival (Months),R2,-0.07892506794468868
+POME,Progress Free Survival (Months),R2,0.04900385360342219
+UMAP,Progress Free Survival (Months),R2,0.09177525144093823
+POME,Progress Free Survival (Months),R2,0.02711329181884592
+UMAP,Progress Free Survival (Months),R2,-0.2603524871441927
+POME,Progress Free Survival (Months),R2,-0.26498078196418695
+UMAP,Progress Free Survival (Months),R2,-0.14569858216261644
+POME,Progress Free Survival (Months),R2,-0.22279179312183128
+UMAP,Progress Free Survival (Months),R2,0.014699124111184347
+POME,Progress Free Survival (Months),R2,-0.02829616543991187
+UMAP,Progress Free Survival (Months),R2,0.030437106478218623
+POME,Progress Free Survival (Months),R2,0.04263873244302685
+UMAP,Progress Free Survival (Months),R2,-0.741733023321415
+POME,Disease Free Status,AP,0.47497852306992094
+UMAP,Disease Free Status,AP,0.36396562106028685
+POME,Disease Free Status,AP,0.5785178711207632
+UMAP,Disease Free Status,AP,0.6162775885582903
+POME,Disease Free Status,AP,0.4034291187739463
+UMAP,Disease Free Status,AP,0.3824729373748982
+POME,Disease Free Status,AP,0.3710820624546115
+UMAP,Disease Free Status,AP,0.39772774892450347
+POME,Disease Free Status,AP,0.6330012580012581
+UMAP,Disease Free Status,AP,0.41189242319677105
+POME,Disease Free Status,AP,0.6584822584822585
+UMAP,Disease Free Status,AP,0.5598595848595849
+POME,Disease Free Status,AP,0.6043516954894663
+UMAP,Disease Free Status,AP,0.6457957501435763
+POME,Disease Free Status,AP,0.5623184458968773
+UMAP,Disease Free Status,AP,0.4975542975542976
+POME,Disease Free Status,AP,0.8248538011695907
+UMAP,Disease Free Status,AP,0.5011722980290232
+POME,Disease Free Status,AP,0.5331349206349206
+UMAP,Disease Free Status,AP,0.8483333333333334
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.4229758023013155
+UMAP,Disease-specific Survival status,AP,0.738023088023088
+POME,Disease-specific Survival status,AP,0.6144861913154596
+UMAP,Disease-specific Survival status,AP,0.6996516462347926
+POME,Disease-specific Survival status,AP,0.4821949714294212
+UMAP,Disease-specific Survival status,AP,0.40627935196117015
+POME,Disease-specific Survival status,AP,0.7073670709969132
+UMAP,Disease-specific Survival status,AP,0.708519161716836
+POME,Disease-specific Survival status,AP,0.7131978403023961
+UMAP,Disease-specific Survival status,AP,0.6837225274725274
+POME,Disease-specific Survival status,AP,0.47689070501570496
+UMAP,Disease-specific Survival status,AP,0.672355381546558
+POME,Disease-specific Survival status,AP,0.6391365986954223
+UMAP,Disease-specific Survival status,AP,0.7049023015310175
+POME,Disease-specific Survival status,AP,0.6226258726258727
+UMAP,Disease-specific Survival status,AP,0.5889070273032897
+POME,Disease-specific Survival status,AP,0.6900484364120728
+UMAP,Disease-specific Survival status,AP,0.5394932591682063
+POME,Disease-specific Survival status,AP,0.7313005621829152
+UMAP,Disease-specific Survival status,AP,0.6076378693769998
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.5879240347462119
+UMAP,Progression Free Status,AP,0.6166401242080239
+POME,Progression Free Status,AP,0.7631168923704128
+UMAP,Progression Free Status,AP,0.7282939836840576
+POME,Progression Free Status,AP,0.6531386322840662
+UMAP,Progression Free Status,AP,0.6714106313515464
+POME,Progression Free Status,AP,0.7772157035012179
+UMAP,Progression Free Status,AP,0.6393751416154553
+POME,Progression Free Status,AP,0.5000205616362469
+UMAP,Progression Free Status,AP,0.553022449938806
+POME,Progression Free Status,AP,0.5121856677015469
+UMAP,Progression Free Status,AP,0.6494430750512057
+POME,Progression Free Status,AP,0.6700151112378325
+UMAP,Progression Free Status,AP,0.7434692022835041
+POME,Progression Free Status,AP,0.568942002918648
+UMAP,Progression Free Status,AP,0.5065292260340025
+POME,Progression Free Status,AP,0.6204022776369098
+UMAP,Progression Free Status,AP,0.7122817744683996
+POME,Progression Free Status,AP,0.7508958166202286
+UMAP,Progression Free Status,AP,0.7186312996312618
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.6201498427636483
+UMAP,Disease Free (Months),R2,-1.4554495842838353
+POME,Disease Free (Months),R2,0.049233021301589464
+UMAP,Disease Free (Months),R2,-0.8915577752531687
+POME,Disease Free (Months),R2,-0.07028415213065853
+UMAP,Disease Free (Months),R2,-0.2077650285033179
+POME,Disease Free (Months),R2,0.01035627906982306
+UMAP,Disease Free (Months),R2,0.22160747704279393
+POME,Disease Free (Months),R2,-5.929478286285064
+UMAP,Disease Free (Months),R2,-9.065361448996466
+POME,Disease Free (Months),R2,0.07039265489133373
+UMAP,Disease Free (Months),R2,0.3106366726868406
+POME,Disease Free (Months),R2,-0.2655376707856554
+UMAP,Disease Free (Months),R2,-0.3092113347483416
+POME,Disease Free (Months),R2,0.22631961977446002
+UMAP,Disease Free (Months),R2,0.3724762600135695
+POME,Disease Free (Months),R2,-0.1363355738201133
+UMAP,Disease Free (Months),R2,-0.8204574595044067
+POME,Disease Free (Months),R2,0.15622077306791304
+UMAP,Disease Free (Months),R2,-0.7256124339935439
+POME,Months of disease-specific survival,R2,-0.1574040072449614
+UMAP,Months of disease-specific survival,R2,-0.16748570941570828
+POME,Months of disease-specific survival,R2,-0.0005226174261769856
+UMAP,Months of disease-specific survival,R2,-1.9987117836396027
+POME,Months of disease-specific survival,R2,-0.07184328860835643
+UMAP,Months of disease-specific survival,R2,0.04632401886382698
+POME,Months of disease-specific survival,R2,-0.03721080930303278
+UMAP,Months of disease-specific survival,R2,0.3539039774148286
+POME,Months of disease-specific survival,R2,-0.06160282121173499
+UMAP,Months of disease-specific survival,R2,0.06640700766820828
+POME,Months of disease-specific survival,R2,0.1467621100705293
+UMAP,Months of disease-specific survival,R2,-0.329650026311356
+POME,Months of disease-specific survival,R2,-0.03987449793730047
+UMAP,Months of disease-specific survival,R2,-0.2333568493577105
+POME,Months of disease-specific survival,R2,-0.5462018670399784
+UMAP,Months of disease-specific survival,R2,-0.2441943586683435
+POME,Months of disease-specific survival,R2,0.11202755361354866
+UMAP,Months of disease-specific survival,R2,0.09880978004528607
+POME,Months of disease-specific survival,R2,-0.2912720298363398
+UMAP,Months of disease-specific survival,R2,-0.1986939197979507
+POME,Progress Free Survival (Months),R2,-0.42365825109173594
+UMAP,Progress Free Survival (Months),R2,-0.22893620325966757
+POME,Progress Free Survival (Months),R2,-0.07956742544988282
+UMAP,Progress Free Survival (Months),R2,-1.1013361535141915
+POME,Progress Free Survival (Months),R2,-0.1102099839738333
+UMAP,Progress Free Survival (Months),R2,0.18437317875088555
+POME,Progress Free Survival (Months),R2,-0.10097774576172669
+UMAP,Progress Free Survival (Months),R2,0.2468236308351056
+POME,Progress Free Survival (Months),R2,-0.09426782816155943
+UMAP,Progress Free Survival (Months),R2,-0.02106786309046793
+POME,Progress Free Survival (Months),R2,-0.08430699155293953
+UMAP,Progress Free Survival (Months),R2,-0.09522750641820732
+POME,Progress Free Survival (Months),R2,-0.5245343926969546
+UMAP,Progress Free Survival (Months),R2,-0.9326468123571159
+POME,Progress Free Survival (Months),R2,-0.6329662961199283
+UMAP,Progress Free Survival (Months),R2,-0.12366747580486925
+POME,Progress Free Survival (Months),R2,0.06187684989751363
+UMAP,Progress Free Survival (Months),R2,-0.03890712148355058
+POME,Progress Free Survival (Months),R2,-0.236073638399537
+UMAP,Progress Free Survival (Months),R2,-0.3166080480942981
+POME,Disease Free Status,AP,0.3644776216632224
+UMAP,Disease Free Status,AP,0.35957916389605193
+POME,Disease Free Status,AP,0.5088460868171012
+UMAP,Disease Free Status,AP,0.5762040428707096
+POME,Disease Free Status,AP,0.2972297941077417
+UMAP,Disease Free Status,AP,0.4383581260392855
+POME,Disease Free Status,AP,0.5504717676544302
+UMAP,Disease Free Status,AP,0.40203059144630027
+POME,Disease Free Status,AP,0.425741687560778
+UMAP,Disease Free Status,AP,0.3762741011107024
+POME,Disease Free Status,AP,0.40860160078426333
+UMAP,Disease Free Status,AP,0.6162892662892663
+POME,Disease Free Status,AP,0.32981705395498495
+UMAP,Disease Free Status,AP,0.6747399296418903
+POME,Disease Free Status,AP,0.6340666847913226
+UMAP,Disease Free Status,AP,0.4967401483010358
+POME,Disease Free Status,AP,0.5523037626485903
+UMAP,Disease Free Status,AP,0.5075217991884658
+POME,Disease Free Status,AP,0.4306029040404041
+UMAP,Disease Free Status,AP,0.8440656565656566
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.5436005514952884
+UMAP,Disease-specific Survival status,AP,0.7352383483962432
+POME,Disease-specific Survival status,AP,0.8002235982112142
+UMAP,Disease-specific Survival status,AP,0.6729803318598244
+POME,Disease-specific Survival status,AP,0.39904517610648693
+UMAP,Disease-specific Survival status,AP,0.3926437748832427
+POME,Disease-specific Survival status,AP,0.46282859064799575
+UMAP,Disease-specific Survival status,AP,0.7721041584677948
+POME,Disease-specific Survival status,AP,0.5858448984845539
+UMAP,Disease-specific Survival status,AP,0.5788521595506889
+POME,Disease-specific Survival status,AP,0.6877372556400689
+UMAP,Disease-specific Survival status,AP,0.6431208228905597
+POME,Disease-specific Survival status,AP,0.5071710577145359
+UMAP,Disease-specific Survival status,AP,0.7321854450175326
+POME,Disease-specific Survival status,AP,0.6327362996480643
+UMAP,Disease-specific Survival status,AP,0.6519430732666026
+POME,Disease-specific Survival status,AP,0.5051546471012873
+UMAP,Disease-specific Survival status,AP,0.4469170069482368
+POME,Disease-specific Survival status,AP,0.5334714975477439
+UMAP,Disease-specific Survival status,AP,0.6197856379820437
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.629782077820898
+UMAP,Progression Free Status,AP,0.5845131946427464
+POME,Progression Free Status,AP,0.5798447652970931
+UMAP,Progression Free Status,AP,0.7468687739889643
+POME,Progression Free Status,AP,0.5685445441507283
+UMAP,Progression Free Status,AP,0.6547808421021064
+POME,Progression Free Status,AP,0.5388480806033997
+UMAP,Progression Free Status,AP,0.6202238958371047
+POME,Progression Free Status,AP,0.5220221015569017
+UMAP,Progression Free Status,AP,0.5127192468896553
+POME,Progression Free Status,AP,0.5858059245945633
+UMAP,Progression Free Status,AP,0.6799143048907021
+POME,Progression Free Status,AP,0.5754971223427585
+UMAP,Progression Free Status,AP,0.7659222010498055
+POME,Progression Free Status,AP,0.7620193309125776
+UMAP,Progression Free Status,AP,0.5327173975774175
+POME,Progression Free Status,AP,0.6820557904561422
+UMAP,Progression Free Status,AP,0.7485516737722757
+POME,Progression Free Status,AP,0.7177839666078083
+UMAP,Progression Free Status,AP,0.6904899839111491
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.3066048286912231
+UMAP,Disease Free (Months),R2,-0.5367964947813662
+POME,Disease Free (Months),R2,-0.3157145920747022
+UMAP,Disease Free (Months),R2,-0.21553300765022176
+POME,Disease Free (Months),R2,0.1721566806323671
+UMAP,Disease Free (Months),R2,-1.284760066369981
+POME,Disease Free (Months),R2,0.12171009568321811
+UMAP,Disease Free (Months),R2,0.5110694521751187
+POME,Disease Free (Months),R2,-5.653315543494069
+UMAP,Disease Free (Months),R2,-3.280223245910939
+POME,Disease Free (Months),R2,0.07538062881505869
+UMAP,Disease Free (Months),R2,-0.16190279895332194
+POME,Disease Free (Months),R2,-1.0022113431114543
+UMAP,Disease Free (Months),R2,-0.2757795732312125
+POME,Disease Free (Months),R2,-0.004606291984890598
+UMAP,Disease Free (Months),R2,0.11427435320301327
+POME,Disease Free (Months),R2,-0.3148617957014934
+UMAP,Disease Free (Months),R2,-0.08490971345185083
+POME,Disease Free (Months),R2,-0.29450567232677227
+UMAP,Disease Free (Months),R2,-1.6756660083589368
+POME,Months of disease-specific survival,R2,0.12755838110693918
+UMAP,Months of disease-specific survival,R2,-0.042006283808717404
+POME,Months of disease-specific survival,R2,-0.4579646340057566
+UMAP,Months of disease-specific survival,R2,0.16285962043900215
+POME,Months of disease-specific survival,R2,-0.34976694867987046
+UMAP,Months of disease-specific survival,R2,-0.24558083638939388
+POME,Months of disease-specific survival,R2,-0.09674143381302747
+UMAP,Months of disease-specific survival,R2,0.25344472563579434
+POME,Months of disease-specific survival,R2,0.069840958884688
+UMAP,Months of disease-specific survival,R2,-0.06260308967265504
+POME,Months of disease-specific survival,R2,-0.160406696810393
+UMAP,Months of disease-specific survival,R2,-0.1355375860710868
+POME,Months of disease-specific survival,R2,-0.0502398452422359
+UMAP,Months of disease-specific survival,R2,-0.07379888245493893
+POME,Months of disease-specific survival,R2,-0.5037887769504135
+UMAP,Months of disease-specific survival,R2,-0.08055353086097528
+POME,Months of disease-specific survival,R2,0.015135739298571926
+UMAP,Months of disease-specific survival,R2,0.2550420655420532
+POME,Months of disease-specific survival,R2,0.1588809936969411
+UMAP,Months of disease-specific survival,R2,-0.24078989225136094
+POME,Progress Free Survival (Months),R2,-0.05276342043163229
+UMAP,Progress Free Survival (Months),R2,-0.206355025280325
+POME,Progress Free Survival (Months),R2,-0.5818211197336014
+UMAP,Progress Free Survival (Months),R2,0.16181926081446618
+POME,Progress Free Survival (Months),R2,-0.2876052806716938
+UMAP,Progress Free Survival (Months),R2,-0.09160424978013926
+POME,Progress Free Survival (Months),R2,-0.42370142858138427
+UMAP,Progress Free Survival (Months),R2,0.004546556365540022
+POME,Progress Free Survival (Months),R2,-0.025841194099951448
+UMAP,Progress Free Survival (Months),R2,-0.08227823737721485
+POME,Progress Free Survival (Months),R2,-0.24100928566230317
+UMAP,Progress Free Survival (Months),R2,-0.15569619164963378
+POME,Progress Free Survival (Months),R2,-0.5805170715663814
+UMAP,Progress Free Survival (Months),R2,-0.30639724652430367
+POME,Progress Free Survival (Months),R2,-0.38993379456700894
+UMAP,Progress Free Survival (Months),R2,-0.014864095289391033
+POME,Progress Free Survival (Months),R2,-0.04002582149473688
+UMAP,Progress Free Survival (Months),R2,0.19162771362329423
+POME,Progress Free Survival (Months),R2,0.12966875114881016
+UMAP,Progress Free Survival (Months),R2,-0.46115637470724336
+POME,Disease Free Status,AP,0.6189542483660131
+UMAP,Disease Free Status,AP,0.3653784042154161
+POME,Disease Free Status,AP,0.6464085297418631
+UMAP,Disease Free Status,AP,0.6455707872374539
+POME,Disease Free Status,AP,0.5440058479532164
+UMAP,Disease Free Status,AP,0.43190915938042374
+POME,Disease Free Status,AP,0.6287970743853095
+UMAP,Disease Free Status,AP,0.5021201136904314
+POME,Disease Free Status,AP,0.5379848002397023
+UMAP,Disease Free Status,AP,0.326466710677237
+POME,Disease Free Status,AP,0.49468897216023655
+UMAP,Disease Free Status,AP,0.5497372120738133
+POME,Disease Free Status,AP,0.5867907328691643
+UMAP,Disease Free Status,AP,0.5619131161236424
+POME,Disease Free Status,AP,0.4110247575827286
+UMAP,Disease Free Status,AP,0.6217171717171717
+POME,Disease Free Status,AP,0.6256055562321547
+UMAP,Disease Free Status,AP,0.5243589743589744
+POME,Disease Free Status,AP,0.5249660062160062
+UMAP,Disease Free Status,AP,0.8354166666666667
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.6193154090283277
+UMAP,Disease-specific Survival status,AP,0.7375343954291322
+POME,Disease-specific Survival status,AP,0.5477926707873232
+UMAP,Disease-specific Survival status,AP,0.6644495310205496
+POME,Disease-specific Survival status,AP,0.4881150127655478
+UMAP,Disease-specific Survival status,AP,0.39446358849863383
+POME,Disease-specific Survival status,AP,0.43478689040889995
+UMAP,Disease-specific Survival status,AP,0.7029018470942245
+POME,Disease-specific Survival status,AP,0.6937288073123986
+UMAP,Disease-specific Survival status,AP,0.7411706349206348
+POME,Disease-specific Survival status,AP,0.5369114977127147
+UMAP,Disease-specific Survival status,AP,0.6440416300320926
+POME,Disease-specific Survival status,AP,0.5107191552763803
+UMAP,Disease-specific Survival status,AP,0.6946415987971839
+POME,Disease-specific Survival status,AP,0.6641251332169986
+UMAP,Disease-specific Survival status,AP,0.607237963561493
+POME,Disease-specific Survival status,AP,0.599907744760686
+UMAP,Disease-specific Survival status,AP,0.5148476052453803
+POME,Disease-specific Survival status,AP,0.5983378957643664
+UMAP,Disease-specific Survival status,AP,0.6740600308782128
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.558856092130714
+UMAP,Progression Free Status,AP,0.6030025863486608
+POME,Progression Free Status,AP,0.6813526306173365
+UMAP,Progression Free Status,AP,0.6467751921731586
+POME,Progression Free Status,AP,0.8959153357860774
+UMAP,Progression Free Status,AP,0.6600004057481965
+POME,Progression Free Status,AP,0.591692763707931
+UMAP,Progression Free Status,AP,0.7448245014150778
+POME,Progression Free Status,AP,0.5751845153429385
+UMAP,Progression Free Status,AP,0.48971774458575695
+POME,Progression Free Status,AP,0.5321695846216087
+UMAP,Progression Free Status,AP,0.6366045839920668
+POME,Progression Free Status,AP,0.7508943026527788
+UMAP,Progression Free Status,AP,0.7279618189032326
+POME,Progression Free Status,AP,0.7016739317146543
+UMAP,Progression Free Status,AP,0.44913928055574615
+POME,Progression Free Status,AP,0.5794946537251779
+UMAP,Progression Free Status,AP,0.7037053905423911
+POME,Progression Free Status,AP,0.7407351278143706
+UMAP,Progression Free Status,AP,0.7744542853878695
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.5559817571422376
+UMAP,Disease Free (Months),R2,-0.3315573773810516
+POME,Disease Free (Months),R2,0.12123981126788785
+UMAP,Disease Free (Months),R2,-0.09118715319147253
+POME,Disease Free (Months),R2,-0.5710562404273309
+UMAP,Disease Free (Months),R2,0.008103669543937597
+POME,Disease Free (Months),R2,0.1157983416569831
+UMAP,Disease Free (Months),R2,0.2618244228360498
+POME,Disease Free (Months),R2,-2.562578990432186
+UMAP,Disease Free (Months),R2,-5.4841332841890384
+POME,Disease Free (Months),R2,0.2370190292535459
+UMAP,Disease Free (Months),R2,0.18654154445577675
+POME,Disease Free (Months),R2,-0.4307169651187177
+UMAP,Disease Free (Months),R2,-0.21132623356881597
+POME,Disease Free (Months),R2,-0.10032035296133612
+UMAP,Disease Free (Months),R2,0.19242811609149613
+POME,Disease Free (Months),R2,-0.5491983125063951
+UMAP,Disease Free (Months),R2,-0.10549187791621217
+POME,Disease Free (Months),R2,-0.3101587657924165
+UMAP,Disease Free (Months),R2,-1.3586546558263897
+POME,Months of disease-specific survival,R2,-0.018767115560199166
+UMAP,Months of disease-specific survival,R2,-0.04401849372632527
+POME,Months of disease-specific survival,R2,-0.36700115109179454
+UMAP,Months of disease-specific survival,R2,0.2137948958612904
+POME,Months of disease-specific survival,R2,-0.03160320751532164
+UMAP,Months of disease-specific survival,R2,-0.08513782052074159
+POME,Months of disease-specific survival,R2,0.011063756755035459
+UMAP,Months of disease-specific survival,R2,0.2923775061489723
+POME,Months of disease-specific survival,R2,0.06576863080866646
+UMAP,Months of disease-specific survival,R2,0.033493147680631496
+POME,Months of disease-specific survival,R2,-0.10373405795088653
+UMAP,Months of disease-specific survival,R2,-0.29766235477331526
+POME,Months of disease-specific survival,R2,-0.1021988692074407
+UMAP,Months of disease-specific survival,R2,0.026260748716053106
+POME,Months of disease-specific survival,R2,-0.236588935873719
+UMAP,Months of disease-specific survival,R2,0.053278258595266026
+POME,Months of disease-specific survival,R2,0.03391488999295611
+UMAP,Months of disease-specific survival,R2,0.15453380008060214
+POME,Months of disease-specific survival,R2,-0.06083634008857297
+UMAP,Months of disease-specific survival,R2,-0.1717622530491083
+POME,Progress Free Survival (Months),R2,-0.3571398784417612
+UMAP,Progress Free Survival (Months),R2,-0.3159071872535866
+POME,Progress Free Survival (Months),R2,-0.2523834125000688
+UMAP,Progress Free Survival (Months),R2,0.22168571653986646
+POME,Progress Free Survival (Months),R2,-0.006720955891352798
+UMAP,Progress Free Survival (Months),R2,-0.16361767425760276
+POME,Progress Free Survival (Months),R2,-0.26757336756694006
+UMAP,Progress Free Survival (Months),R2,0.08196757447326009
+POME,Progress Free Survival (Months),R2,0.04862995998956443
+UMAP,Progress Free Survival (Months),R2,0.019422643525679018
+POME,Progress Free Survival (Months),R2,-0.1340027685272911
+UMAP,Progress Free Survival (Months),R2,-0.067593701812382
+POME,Progress Free Survival (Months),R2,-0.5750414644215573
+UMAP,Progress Free Survival (Months),R2,-0.22710551181605476
+POME,Progress Free Survival (Months),R2,-0.3217516377437959
+UMAP,Progress Free Survival (Months),R2,4.7501316163378604e-05
+POME,Progress Free Survival (Months),R2,0.01398454983059172
+UMAP,Progress Free Survival (Months),R2,0.03437278154815904
+POME,Progress Free Survival (Months),R2,-0.2079854534826886
+UMAP,Progress Free Survival (Months),R2,-0.22154005255186227
+POME,Disease Free Status,AP,0.48177266633148985
+UMAP,Disease Free Status,AP,0.36244989578322906
+POME,Disease Free Status,AP,0.7329781329781331
+UMAP,Disease Free Status,AP,0.5725156325156324
+POME,Disease Free Status,AP,0.32727168201517975
+UMAP,Disease Free Status,AP,0.4936897086019893
+POME,Disease Free Status,AP,0.6603390660559445
+UMAP,Disease Free Status,AP,0.522940757499581
+POME,Disease Free Status,AP,0.7508072174738842
+UMAP,Disease Free Status,AP,0.37062594268476623
+POME,Disease Free Status,AP,0.5476179765653449
+UMAP,Disease Free Status,AP,0.5557707553008432
+POME,Disease Free Status,AP,0.5678497428497429
+UMAP,Disease Free Status,AP,0.6157953329779955
+POME,Disease Free Status,AP,0.5947089947089947
+UMAP,Disease Free Status,AP,0.5388195682313329
+POME,Disease Free Status,AP,0.4122945827655973
+UMAP,Disease Free Status,AP,0.5260313559226603
+POME,Disease Free Status,AP,0.6253434065934066
+UMAP,Disease Free Status,AP,0.8463541666666666
+Naive,Disease Free Status,AP,0.29276315789473684
+POME,Disease-specific Survival status,AP,0.61210222526012
+UMAP,Disease-specific Survival status,AP,0.6543019480519481
+POME,Disease-specific Survival status,AP,0.5772859378636188
+UMAP,Disease-specific Survival status,AP,0.6699784304623014
+POME,Disease-specific Survival status,AP,0.5715026320105117
+UMAP,Disease-specific Survival status,AP,0.3817792839802409
+POME,Disease-specific Survival status,AP,0.5845414869462057
+UMAP,Disease-specific Survival status,AP,0.7194209707513477
+POME,Disease-specific Survival status,AP,0.741246099579433
+UMAP,Disease-specific Survival status,AP,0.6394510582010582
+POME,Disease-specific Survival status,AP,0.6962607440868309
+UMAP,Disease-specific Survival status,AP,0.6532069258441209
+POME,Disease-specific Survival status,AP,0.5572975270712884
+UMAP,Disease-specific Survival status,AP,0.7173541384684796
+POME,Disease-specific Survival status,AP,0.6108223133976091
+UMAP,Disease-specific Survival status,AP,0.664145807895808
+POME,Disease-specific Survival status,AP,0.41941168024055725
+UMAP,Disease-specific Survival status,AP,0.5049969044621451
+POME,Disease-specific Survival status,AP,0.4765347265347265
+UMAP,Disease-specific Survival status,AP,0.5761112134854092
+Naive,Disease-specific Survival status,AP,0.2384937238493724
+POME,Progression Free Status,AP,0.5730890543970268
+UMAP,Progression Free Status,AP,0.5939581603592778
+POME,Progression Free Status,AP,0.6184668805133009
+UMAP,Progression Free Status,AP,0.7655725488756344
+POME,Progression Free Status,AP,0.7760835789917506
+UMAP,Progression Free Status,AP,0.6854219935681418
+POME,Progression Free Status,AP,0.6785130684678709
+UMAP,Progression Free Status,AP,0.6981964582220783
+POME,Progression Free Status,AP,0.617124334720598
+UMAP,Progression Free Status,AP,0.5202130608919086
+POME,Progression Free Status,AP,0.6340457912708928
+UMAP,Progression Free Status,AP,0.676392218437492
+POME,Progression Free Status,AP,0.6471007126855459
+UMAP,Progression Free Status,AP,0.7483792870636208
+POME,Progression Free Status,AP,0.7412269966263823
+UMAP,Progression Free Status,AP,0.5075912625338431
+POME,Progression Free Status,AP,0.63851816719249
+UMAP,Progression Free Status,AP,0.7374396662038258
+POME,Progression Free Status,AP,0.7148397404533813
+UMAP,Progression Free Status,AP,0.7084980882380982
+Naive,Progression Free Status,AP,0.4046692607003891
+POME,Disease Free (Months),R2,-0.08193390310744553
+UMAP,Disease Free (Months),R2,-0.7515921620460306
+POME,Disease Free (Months),R2,0.1702357097255005
+UMAP,Disease Free (Months),R2,-0.17009610645795092
+POME,Disease Free (Months),R2,-0.12126946353106072
+UMAP,Disease Free (Months),R2,-2.6011591976696935
+POME,Disease Free (Months),R2,0.06743975879455966
+UMAP,Disease Free (Months),R2,0.27216129797534727
+POME,Disease Free (Months),R2,-3.538918208453209
+UMAP,Disease Free (Months),R2,-2.5829265888726707
+POME,Disease Free (Months),R2,-0.49766690739368125
+UMAP,Disease Free (Months),R2,0.131597071039547
+POME,Disease Free (Months),R2,-1.2848925523612187
+UMAP,Disease Free (Months),R2,-0.10306620377095044
+POME,Disease Free (Months),R2,-0.15739392590492995
+UMAP,Disease Free (Months),R2,-0.2755478916399299
+POME,Disease Free (Months),R2,-0.17821987732984623
+UMAP,Disease Free (Months),R2,0.3668559722433261
+POME,Disease Free (Months),R2,-0.4286271007843705
+UMAP,Disease Free (Months),R2,-0.5611758577768584
+POME,Months of disease-specific survival,R2,0.1853188889429297
+UMAP,Months of disease-specific survival,R2,0.06767405335049315
+POME,Months of disease-specific survival,R2,-0.1053588104951304
+UMAP,Months of disease-specific survival,R2,0.20113932462418782
+POME,Months of disease-specific survival,R2,-0.15204461337434494
+UMAP,Months of disease-specific survival,R2,-0.07500600966784843
+POME,Months of disease-specific survival,R2,0.14548464471560374
+UMAP,Months of disease-specific survival,R2,-0.0852576608739628
+POME,Months of disease-specific survival,R2,0.006629298304482445
+UMAP,Months of disease-specific survival,R2,-0.012370879320916739
+POME,Months of disease-specific survival,R2,0.009441487687480099
+UMAP,Months of disease-specific survival,R2,-0.14668088892154896
+POME,Months of disease-specific survival,R2,-0.2319245479912131
+UMAP,Months of disease-specific survival,R2,0.03325103229939341
+POME,Months of disease-specific survival,R2,-0.3980401656205401
+UMAP,Months of disease-specific survival,R2,-0.001300520079025036
+POME,Months of disease-specific survival,R2,-0.006893166181721311
+UMAP,Months of disease-specific survival,R2,0.1666801069310051
+POME,Months of disease-specific survival,R2,0.09336083325769318
+UMAP,Months of disease-specific survival,R2,-0.2951668187249139
+POME,Progress Free Survival (Months),R2,0.04024249864171214
+UMAP,Progress Free Survival (Months),R2,-0.24128566383828454
+POME,Progress Free Survival (Months),R2,-0.1060106320077856
+UMAP,Progress Free Survival (Months),R2,0.12363349266692347
+POME,Progress Free Survival (Months),R2,-0.08738870843141022
+UMAP,Progress Free Survival (Months),R2,-0.01206925147661475
+POME,Progress Free Survival (Months),R2,-0.0016010919935445234
+UMAP,Progress Free Survival (Months),R2,-0.2749793372297058
+POME,Progress Free Survival (Months),R2,0.03269522484443477
+UMAP,Progress Free Survival (Months),R2,-0.09965322278314348
+POME,Progress Free Survival (Months),R2,-0.35764097753569235
+UMAP,Progress Free Survival (Months),R2,-0.11308789706704014
+POME,Progress Free Survival (Months),R2,-0.4798285631702133
+UMAP,Progress Free Survival (Months),R2,-0.33864361036230695
+POME,Progress Free Survival (Months),R2,-0.5013028708566873
+UMAP,Progress Free Survival (Months),R2,-0.10807058060258323
+POME,Progress Free Survival (Months),R2,-0.040290197184141396
+UMAP,Progress Free Survival (Months),R2,0.07168255848622229
+POME,Progress Free Survival (Months),R2,0.012349733079073832
+UMAP,Progress Free Survival (Months),R2,-0.4004025176135506

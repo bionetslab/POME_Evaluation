@@ -8,11 +8,13 @@ import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 from matplotlib.lines import Line2D
 import seaborn as sns
+from statannotations.Annotator import Annotator
+from itertools import combinations
 
 from .imputation_analysis import POME_DATASET_LABELS, POME_DATASET_ORDER, POME_DIM_ORDER
 
 
-def _plot_rank_panel(ax, ranks_df, title, xylabelsize, ticklabelsize, titlefontsize):
+def _plot_rank_panel(ax, ranks_df, title, xylabelsize, ticklabelsize, titlefontsize,palette):
     sns.lineplot(
         data=ranks_df,
         x="na_ratio",
@@ -22,6 +24,7 @@ def _plot_rank_panel(ax, ranks_df, title, xylabelsize, ticklabelsize, titlefonts
         legend=False,
         marker="o",
         markersize=9,
+        palette=palette
     )
     ax.set_xlabel("Simulated missingness ratio", fontsize=xylabelsize)
     ax.set_ylabel("Average rank ↓", fontsize=xylabelsize)
@@ -43,11 +46,13 @@ def _plot_violin_panel(
     xylabelsize,
     ticklabelsize,
     titlefontsize,
+    mode,
+    panel='b'
 ):
     subset_plot = subset.copy()
     subset_plot["method_display"] = subset_plot["method"].map(method_label_map).fillna(subset_plot["method"])
     display_order = [method_label_map.get(method, method) for method in method_order]
-
+    print(subset_plot)
     sns.violinplot(
         data=subset_plot,
         x="method_display",
@@ -63,12 +68,102 @@ def _plot_violin_panel(
         linewidth=1,
         legend=False,
     )
+    
+    #pairs = list(combinations(display_order, 2))
+    baseline = display_order[0]
+    pairs = [(baseline, m) for m in display_order[1:]]
+
+    annotator = Annotator(
+        ax,
+        pairs,
+        data=subset_plot,
+        x="method_display",
+        y=y,
+        order=display_order,
+    )
+
+    if mode == 1:
+        if panel != "b":
+            y_max = subset_plot[y].max()
+            ax.set_ylim(top=y_max * 1.01)
+        
+        
+            annotator.configure(
+                test="Mann-Whitney",  # or "t-test_ind", etc.
+                text_format="star",
+                loc="inside",
+                hide_non_significant=False,
+                #line_offset=(y_max * 0.01),   # ALL brackets start above max violin
+                #line_height=(y_max * 0.01),
+            )
+        else:
+            y_max = subset_plot[y].max()
+            ax.set_ylim(top=y_max * 1.01)
+        
+        
+            annotator.configure(
+                test="Mann-Whitney",  # or "t-test_ind", etc.
+                text_format="star",
+                loc="inside",
+                hide_non_significant=False,
+                #line_offset=(y_max * 0.01),   # ALL brackets start above max violin
+                #line_height=(y_max * 0.01),
+            )
+        
+    else:
+        if panel == 'f':
+            y_max = subset_plot[subset_plot["dataset"] == "HANCOCK"][y].max()
+            #print(y_max)
+            ax.set_ylim(top=y_max * 1.01)
+    
+            #print(y_max)
+            annotator.configure(
+                test="Mann-Whitney",  # or "t-test_ind", etc.
+                text_format="star",
+                loc="inside",
+                hide_non_significant=False,
+                #line_offset=(y_max*0.5),   # ALL brackets start above max violin
+                #line_height=0.02,
+            )
+        elif panel == "g":
+            y_max = subset_plot[y].max()
+            ax.set_ylim(top=y_max * 1.01)
+    
+    
+            annotator.configure(
+                test="Mann-Whitney",  # or "t-test_ind", etc.
+                text_format="star",
+                loc="inside",
+                hide_non_significant=False,
+                #line_offset=(y_max * 0.1 + 1000),   # ALL brackets start above max violin
+                #line_height=(y_max * 0.01),
+            )
+        elif panel == "h":
+            y_max = subset_plot[y].max()
+            ax.set_ylim(top=y_max * 1.01)
+    
+    
+            annotator.configure(
+                test="Mann-Whitney",  # or "t-test_ind", etc.
+                text_format="star",
+                loc="inside",
+                hide_non_significant=False,
+                #line_offset=(y_max * 0.01),   # ALL brackets start above max violin
+                #line_height=(y_max * 0.01),
+            )
+
+    annotator.apply_and_annotate()
+    
     ax.set_xlabel("")
     ax.set_ylabel(ylabel, fontsize=xylabelsize)
     ax.tick_params(axis="x", labelsize=ticklabelsize, rotation=45)
     for tick in ax.get_xticklabels():
         tick.set_ha("right")
     ax.tick_params(axis="y", labelsize=ticklabelsize)
+    print(title)
+    if title.endswith("IV)"):
+        title = title[:-4] + "-IV)"
+
     ax.set_title(title, fontsize=titlefontsize)
 
 
@@ -88,8 +183,9 @@ def plot_imputation_results(
 
     dataset_order = ["HANCOCK", "MIMIC IV", "TCGA-LUAD"]
     method_order = sorted(metric_distributions["method"].unique())
+    method_order.reverse()
     method_label_map = {"KNN": r"$k$-NN"}
-    palette = dict(zip(method_order, sns.color_palette("tab10", n_colors=len(method_order))))
+    palette = dict(zip(method_order, sns.color_palette("Set2", n_colors=len(method_order))))
 
     labelfontsize = 20
     titlefontsize = 20
@@ -106,6 +202,7 @@ def plot_imputation_results(
         xylabelsize=xylabelsize,
         ticklabelsize=ticklabelsize,
         titlefontsize=titlefontsize,
+        palette=palette
     )
 
     b_axes = ["b", "c", "d"]
@@ -125,6 +222,8 @@ def plot_imputation_results(
             xylabelsize=xylabelsize,
             ticklabelsize=ticklabelsize,
             titlefontsize=titlefontsize,
+            mode=1,
+            panel=axis_name
         )
 
     _plot_rank_panel(
@@ -134,6 +233,7 @@ def plot_imputation_results(
         xylabelsize=xylabelsize,
         ticklabelsize=ticklabelsize,
         titlefontsize=titlefontsize,
+        palette=palette
     )
 
     for axis_name, dataset in zip(d_axes, dataset_order):
@@ -150,6 +250,8 @@ def plot_imputation_results(
             xylabelsize=xylabelsize,
             ticklabelsize=ticklabelsize,
             titlefontsize=titlefontsize,
+            mode=2,
+            panel=axis_name
         )
 
     handles = [
