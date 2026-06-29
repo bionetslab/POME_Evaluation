@@ -41,4 +41,6 @@ data/imputation_data/pome_based/MIMIC
 data/imputation_data/knn/MIMIC
 data/imputation_data/autocomplete/MIMIC
 data/imputation_data/missforest/MIMIC
-
+data/train_test_splits/mimic
+data/feature_ranks_NF.csv
+data/feature_ranks_aplasia.csv
