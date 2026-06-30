@@ -154,6 +154,17 @@ def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
     X_te = test_emb.loc[te_mask].to_numpy()
     y_te = y_te.loc[te_mask].astype(int).to_numpy()
 
+    # A logistic regression cannot consume non-finite embedding coordinates,
+    # which the inductive transform can occasionally produce (notably UMAP for a
+    # held-out sample with no usable neighbours). Drop those rows from both fit
+    # and evaluation and record how many were dropped so it stays visible.
+    tr_finite = np.isfinite(X_tr).all(axis=1)
+    te_finite = np.isfinite(X_te).all(axis=1)
+    n_train_nonfinite = int((~tr_finite).sum())
+    n_test_nonfinite = int((~te_finite).sum())
+    X_tr, y_tr = X_tr[tr_finite], y_tr[tr_finite]
+    X_te, y_te = X_te[te_finite], y_te[te_finite]
+
     if len(y_tr) == 0 or len(y_te) == 0 or len(np.unique(y_tr)) < 2:
         return None
 
@@ -170,6 +181,8 @@ def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
     return {
         "n_train": len(y_tr),
         "n_test": len(y_te),
+        "n_train_nonfinite": n_train_nonfinite,
+        "n_test_nonfinite": n_test_nonfinite,
         "train_pos_ratio": float(y_tr.mean()),
         "test_pos_ratio": float(y_te.mean()),
         "average_precision": float(average_precision_score(y_te, proba)),
@@ -219,6 +232,7 @@ def main() -> None:
                 print(f"  [warn] no {method} embeddings found")
                 continue
             n_done = 0
+            n_nonfinite = 0  # total non-finite embedding rows dropped (train+test)
             for split, dim, run, train_csv, test_csv in run_pairs:
                 train_emb = pd.read_csv(train_csv, index_col=0)
                 test_emb = pd.read_csv(test_csv, index_col=0)
@@ -229,14 +243,20 @@ def main() -> None:
                                         args.standardize)
                     if metrics is None:
                         continue
+                    n_nonfinite += (metrics["n_train_nonfinite"]
+                                    + metrics["n_test_nonfinite"])
                     rows.append({
                         "dataset": dataset, "method": method.upper(),
                         "target": label, "dim": dim, "split": split,
                         "run": run, **metrics,
                     })
                 n_done += 1
-            print(f"  {method:4s}: probed {n_done} embedding pairs "
-                  f"x {len(targets)} targets")
+            msg = (f"  {method:4s}: probed {n_done} embedding pairs "
+                   f"x {len(targets)} targets")
+            if n_nonfinite:
+                msg += (f"  [warn] dropped {n_nonfinite} non-finite embedding "
+                        f"rows (see n_*_nonfinite columns)")
+            print(msg)
 
     if not rows:
         print("\nNo results produced -- check --emb-root has embeddings.")
