@@ -166,11 +166,11 @@ def split_numeric_categorical(df: pd.DataFrame, dataset: str):
     For numeric-only datasets the categorical block is empty regardless of the
     cat-var file.
     """
-    cat_path = INPUT_DATASETS / CAT_VAR_FILES[dataset]
-    cat_vars = set(pd.read_csv(cat_path)["cat_var"])
     if dataset in NUMERIC_ONLY_DATASETS:
         cat_cols = []
     else:
+        cat_path = INPUT_DATASETS / CAT_VAR_FILES[dataset]
+        cat_vars = set(pd.read_csv(cat_path)["cat_var"])
         cat_cols = [c for c in df.columns if c in cat_vars]
     cont_cols = [c for c in df.columns if c not in set(cat_cols)]
     return cont_cols, cat_cols
