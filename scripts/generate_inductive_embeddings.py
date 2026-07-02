@@ -14,18 +14,17 @@ UMAP  (``*_train_umap.csv`` / ``*_test_umap.csv``, sample format)
     Mirrors ``src/pome_evaluation/embed_UMAP_combined.py`` but inductively:
 
     - HANCOCK / TCGA-LUAD: a numeric UMAP (euclidean, on RobustScaler-scaled
-      continuous features) and a categorical UMAP (hamming) are fit
-      *separately*. Train and test embeddings are both formed by *concatenating*
-      the two modalities' outputs -- train from each mapper's ``embedding_``,
-      test from each mapper's ``transform()``. The original transductive
-      pipeline intersected the two fuzzy graphs (``numeric_mapper * cat_mapper``),
-      but an intersection model cannot ``transform()`` unseen samples, and using
-      it for train while concatenating for test would make the test embeddings
-      out-of-distribution. Concatenating *both* keeps them in the same space.
-      Each mapper is fit at ``dim // 2`` components so the concatenated
-      embedding has exactly ``dim`` columns (matching POME).
+      continuous features) and a categorical UMAP (hamming) are fit *separately*,
+      each at the full ``dim`` components, then combined by intersecting their
+      fuzzy graphs (``numeric_mapper * cat_mapper``) -- exactly as the original
+      transductive pipeline. The train embedding is the intersected model's
+      ``embedding_``; the test embedding is produced by ``umap.transform_combined``,
+      which rebuilds that intersection for unseen samples (per-modality bipartite
+      graphs -> graph intersection -> optimise against the joint embedding). Train
+      and test therefore share the same ``dim``-column intersected space.
     - MIMIC IV: numeric-only (its UMAP data has no categorical columns), so a
-      single numeric mapper is used at full ``dim``. => output has ``dim`` columns.
+      single numeric mapper is used at full ``dim``; the test set is embedded with
+      the mapper's ordinary inductive ``transform()``. => output has ``dim`` columns.
 
 For each split and method, embeddings are computed for dimensions 16, 32, 64,
 and for each dimension over 10 independent runs (distinct random seeds).
@@ -51,7 +50,6 @@ import sys
 import warnings
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from sklearn.preprocessing import RobustScaler
 
@@ -201,11 +199,9 @@ def embed_umap_split(dataset: str, split_id: int, dims, n_runs: int,
         test_cat = test_df[cat_cols].to_numpy()
 
     for dim in dims:
-        # Split the target dimensionality across the two modalities so the
-        # concatenated embedding has exactly `dim` columns (matching POME).
-        # Numeric-only datasets put the full budget on the single mapper.
-        cat_dim = dim // 2 if use_cat else 0
-        num_dim = dim - cat_dim
+        # Both modalities are fit at the full `dim`; the fuzzy-graph intersection
+        # produces a single `dim`-column joint embedding (np.min of the two
+        # n_components), so no dimensionality splitting is needed.
         for run in range(n_runs):
             train_out, test_out = run_paths(
                 out_root, "umap", dataset, split_id, dim, run)
@@ -214,22 +210,32 @@ def embed_umap_split(dataset: str, split_id: int, dims, n_runs: int,
                       f"dim {dim} run {run:02d}")
                 continue
 
-            num_mapper = umap.UMAP(n_components=num_dim, random_state=run).fit(
+            # Numeric UMAP (euclidean) at the full target dimensionality.
+            num_mapper = umap.UMAP(n_components=dim, random_state=run).fit(
                 train_num.copy(), ensure_all_finite="allow-nan")
-            train_blocks = [num_mapper.embedding_]
-            test_blocks = [num_mapper.transform(
-                test_num.copy(), ensure_all_finite="allow-nan")]
 
             if use_cat:
+                # Categorical UMAP (hamming), also at full `dim`, then combine the
+                # two fuzzy graphs by intersection (matching the transductive
+                # pipeline). transform_combined() reproduces that intersection for
+                # unseen test samples, so train and test share the same joint space.
                 cat_mapper = umap.UMAP(
-                    n_components=cat_dim, metric="hamming", random_state=run).fit(
+                    n_components=dim, metric="hamming", random_state=run).fit(
                     train_cat.copy(), ensure_all_finite="allow-nan")
-                train_blocks.append(cat_mapper.embedding_)
-                test_blocks.append(cat_mapper.transform(
-                    test_cat.copy(), ensure_all_finite="allow-nan"))
+                combined = num_mapper * cat_mapper
+                train_arr = combined.embedding_
+                test_arr = umap.transform_combined(
+                    [num_mapper, cat_mapper], combined,
+                    [test_num.copy(), test_cat.copy()],
+                    ensure_all_finite="allow-nan")
+            else:
+                # Numeric-only dataset: single mapper, plain inductive transform.
+                train_arr = num_mapper.embedding_
+                test_arr = num_mapper.transform(
+                    test_num.copy(), ensure_all_finite="allow-nan")
 
-            train_emb = pd.DataFrame(np.hstack(train_blocks), index=train_df.index)
-            test_emb = pd.DataFrame(np.hstack(test_blocks), index=test_df.index)
+            train_emb = pd.DataFrame(train_arr, index=train_df.index)
+            test_emb = pd.DataFrame(test_arr, index=test_df.index)
 
             train_out.parent.mkdir(parents=True, exist_ok=True)
             standardize_columns(train_emb).to_csv(train_out)
