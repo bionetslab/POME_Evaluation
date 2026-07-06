@@ -57,7 +57,7 @@ from sklearn.preprocessing import RobustScaler
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
-DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_embeddings"
+DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive"
 
 DATASETS = ("hancock", "luad", "mimic")
 METHODS = ("pome", "umap")
