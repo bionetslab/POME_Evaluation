@@ -131,7 +131,7 @@ def _build_rank_tables_from_frames(
     """Build numeric and categorical average-rank tables from already loaded frames."""
     cont_ranks = compute_average_ranks_across_cohorts(
         frames=frames,
-        score_column="mae_cont",
+        score_column="nmae_cont",
         higher_is_better=False,
     )
     cat_ranks = compute_average_ranks_across_cohorts(
@@ -148,7 +148,7 @@ def _build_metric_distributions(
     """Build long-form metric distributions per dataset and method."""
     distributions = []
     for cohort, frame in frames.items():
-        dist_frame = frame[["tool", "acc_cat", "mae_cont", "na_ratio", "run"]].copy()
+        dist_frame = frame[["tool", "acc_cat", "mae_cont", "nmae_cont", "na_ratio", "run"]].copy()
         dist_frame = dist_frame.rename(columns={"tool": "method"})
         dist_frame["dataset"] = COHORT_LABELS.get(cohort, cohort)
         distributions.append(dist_frame)
@@ -175,10 +175,11 @@ def build_imputation_figure_data(
     """Build all data objects needed for the imputation figure.
 
     Returns:
-        cont_ranks: Average-rank table for numeric variables (mae_cont)
+        cont_ranks: Average-rank table for numeric variables (nmae_cont,
+            per-variable IQR-normalized MAE)
         cat_ranks: Average-rank table for categorical variables (acc_cat)
         metric_distributions: Long-form raw metrics with columns
-            [dataset, method, acc_cat, mae_cont, na_ratio, run]
+            [dataset, method, acc_cat, mae_cont, nmae_cont, na_ratio, run]
             aggregated over all missingness ratios (no filtering by na_ratio).
     """
     frames = load_imputation_benchmark_data(dim=dim, bins=bins, mode=mode, data_dir=data_dir)

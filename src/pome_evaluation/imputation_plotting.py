@@ -241,8 +241,8 @@ def plot_imputation_results(
         _plot_violin_panel(
             ax=axes[axis_name],
             subset=subset,
-            y="mae_cont",
-            ylabel="Mean absolute error",
+            y="nmae_cont",
+            ylabel="Norm. MAE (per-variable IQR)",
             title=f"Numeric variables\n({dataset})",
             method_order=method_order,
             method_label_map=method_label_map,
