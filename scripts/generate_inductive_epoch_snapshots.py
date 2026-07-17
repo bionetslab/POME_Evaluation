@@ -131,9 +131,13 @@ def extract_from_weights(embedder, state_dict, test_df, dim: int):
     embedder.model.load_state_dict(state_dict)
     embedder.model.eval()
 
+    # `_graph_data` is left on CPU by fit(), but the model may be on GPU; align the
+    # edge_index to the model's device before the forward pass. (transform() does
+    # this alignment internally, so the test side needs no such handling.)
+    device = next(embedder.model.parameters()).device
     with torch.no_grad():
         node_emb, _, _ = embedder.model.get_embeddings(
-            embedder._graph_data.edge_index)
+            embedder._graph_data.edge_index.to(device))
     sample_rows = list(embedder._sample_node_dict.values())
     train_arr = node_emb[sample_rows].detach().cpu().numpy()
     train_emb = pd.DataFrame(
