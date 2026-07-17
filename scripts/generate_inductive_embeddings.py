@@ -4,10 +4,22 @@ and train/test split under ``data/train_test_splits/``.
 For each split we produce embeddings with two methods:
 
 POME  (``*_train_pome.tsv`` / ``*_test_pome.tsv``, graph format)
-    Fit an ``Embedder`` on the training split, read off the transductive
-    embeddings for the training samples via ``get_embeddings()``, and embed the
-    unseen test samples inductively via ``transform()`` (single forward pass of
-    the frozen trained encoder, no retraining).
+    Fit an ``Embedder`` in **inductive mode** (``inductive=True``) on the
+    training split, read off the transductive embeddings for the training
+    samples via ``get_embeddings()``, and embed the unseen test samples
+    inductively via ``transform()`` (single forward pass of the frozen trained
+    encoder, no retraining).
+
+    Inductive mode changes only *how many* epochs POME trains for: before
+    training on all samples, ``fit()`` runs a sample-holdout K-fold CV that
+    injects each fold's held-out samples exactly like ``transform()`` and scores
+    their link prediction (ROC-AUC), early-stopping when the mean validation AUC
+    plateaus. The CV-selected epoch count generalizes to unseen samples instead
+    of overfitting the training graph. ``--epochs`` is therefore now an upper
+    *cap* on the tuned epoch count, not a fixed value. Because the CV's model
+    initialisation draws from the (per-run seeded) global RNG, each of the
+    ``N_RUNS`` runs tunes independently, so the selected epoch count contributes
+    to the across-run variance just like the trained weights do.
 
 UMAP  (``*_train_umap.csv`` / ``*_test_umap.csv``, sample format)
     Fit UMAP on the training split and apply it to the unseen test samples.
@@ -34,11 +46,19 @@ Run from the project root with the POME-enabled environment, e.g.:
     conda run -n torch python scripts/generate_inductive_embeddings.py
     conda run -n torch python scripts/generate_inductive_embeddings.py --dry-run
     conda run -n torch python scripts/generate_inductive_embeddings.py \
-        --datasets hancock --methods umap --epochs 200
+        --datasets hancock --methods pome --epochs 200 --cv-folds 3
 
 Outputs (each run writes a ``_train`` and a ``_test`` CSV, sample-indexed):
 
     output/inductive_embeddings/{method}/{dataset}/split_{NN}/dim_{D}/run_{R}_{train,test}.csv
+
+For POME, the CV-selected epoch count of every run is additionally logged to
+
+    <output-dir>/pome/tuned_epochs.csv
+
+with columns ``dataset, split, dim, run, optimal_epochs, max_epochs``. It is
+upserted once per computed run (so it survives an interrupted run), and skipped
+runs leave their existing rows untouched.
 
 Existing outputs are skipped unless ``--overwrite`` is passed, so the script is
 resumable.
@@ -61,7 +81,7 @@ DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive"
 
 DATASETS = ("hancock", "luad", "mimic")
 METHODS = ("pome", "umap")
-DIMENSIONS = (16, 32, 64)
+DIMENSIONS = (16, 32, 64, 128)
 N_RUNS = 10
 
 # Per-dataset categorical-variable lists (column `cat_var`), used to split the
@@ -77,10 +97,16 @@ NUMERIC_ONLY_DATASETS = {"mimic"}
 
 # POME hyperparameters (mirrors evaluate_inductive_ood.py in the POME repo).
 NA_ENCODING = -99.0
-DEFAULT_EPOCHS = 1000
+DEFAULT_EPOCHS = 2000  # upper cap on the CV-tuned epoch count (inductive mode)
 DEFAULT_BINS = 15
 DEFAULT_DISCRETIZATION = "z"
 DEFAULT_SEED = 42
+
+# Inductive epoch-tuning CV (POME `Embedder(inductive=True, ...)` defaults).
+DEFAULT_CV_FOLDS = 3
+DEFAULT_CV_EVAL_EVERY = 10
+DEFAULT_CV_PATIENCE = 3
+DEFAULT_CV_SEED = 42
 
 _SPLIT_RE = re.compile(r"split_(\d+)_train_(pome|umap)\.(tsv|csv)$")
 
@@ -112,6 +138,40 @@ def run_paths(out_root: Path, method: str, dataset: str,
     return d / f"run_{run:02d}_train.csv", d / f"run_{run:02d}_test.csv"
 
 
+# Columns of the tuned-epochs log written for inductive POME runs.
+EPOCHS_LOG_COLS = ["dataset", "split", "dim", "run",
+                   "optimal_epochs", "max_epochs"]
+
+
+def epochs_log_path(out_root: Path) -> Path:
+    """Path of the CSV that records the CV-tuned epoch count of each POME run."""
+    return out_root / "pome" / "tuned_epochs.csv"
+
+
+def record_tuned_epochs(out_root: Path, dataset: str, split_id: int, dim: int,
+                        run: int, optimal: int, cap: int) -> None:
+    """Upsert one (dataset, split, dim, run) row into the tuned-epochs log.
+
+    Loads the existing CSV (if any), replaces any prior row with the same key,
+    appends the new record, and rewrites the sorted file. Written incrementally
+    (once per computed run) so the information survives an interrupted run.
+    """
+    log_path = epochs_log_path(out_root)
+    row = {"dataset": dataset, "split": split_id, "dim": dim, "run": run,
+           "optimal_epochs": int(optimal), "max_epochs": int(cap)}
+    if log_path.exists():
+        df = pd.read_csv(log_path)
+        key = ((df["dataset"] == dataset) & (df["split"] == split_id)
+               & (df["dim"] == dim) & (df["run"] == run))
+        df = df[~key]
+        df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    else:
+        df = pd.DataFrame([row], columns=EPOCHS_LOG_COLS)
+    df = df.sort_values(["dataset", "split", "dim", "run"]).reset_index(drop=True)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(log_path, index=False)
+
+
 # --- POME --------------------------------------------------------------------
 def load_graph(path: Path) -> pd.DataFrame:
     """Load a graph-format split: rows = variables, cols = samples + 'type'."""
@@ -120,8 +180,10 @@ def load_graph(path: Path) -> pd.DataFrame:
 
 def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                      epochs: int, bins: int, discretization: str,
-                     seed_base: int, device: str, out_root: Path,
-                     overwrite: bool) -> None:
+                     seed_base: int, cv_folds: int, cv_eval_every: int,
+                     cv_patience: int, cv_seed: int, device: str,
+                     out_root: Path, overwrite: bool,
+                     early_stopping: bool = True) -> None:
     from pome.gnn_embedding import Embedder, make_deterministic
 
     split_dir = SPLITS_ROOT / dataset
@@ -138,6 +200,13 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                 continue
 
             make_deterministic(seed_base + run)
+            # `inductive=True` enables POME's early stopping: fit() runs a
+            # sample-holdout CV to pick the epochs that best generalize to unseen
+            # samples (capped at `epochs`) before training on all samples. With
+            # early stopping disabled (`inductive=False`) fit() trains for the
+            # full `epochs` on all training samples, no CV. Either way the test
+            # samples are embedded inductively via transform() (a single frozen
+            # forward pass), which does not depend on the `inductive` flag.
             embedder = Embedder(
                 embedding_dimension=dim,
                 epochs=epochs,
@@ -145,6 +214,11 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                 discretization_type=discretization,
                 na_encoding=NA_ENCODING,
                 device=device,
+                inductive=early_stopping,
+                cv_folds=cv_folds,
+                cv_eval_every=cv_eval_every,
+                cv_patience=cv_patience,
+                cv_seed=cv_seed,
             )
             embedder.fit(train_df)
             train_emb, *_ = embedder.get_embeddings()  # transductive (train)
@@ -153,8 +227,16 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
             train_out.parent.mkdir(parents=True, exist_ok=True)
             standardize_columns(train_emb).to_csv(train_out)
             standardize_columns(test_emb).to_csv(test_out)
+            if early_stopping:
+                tuned = getattr(embedder, "_optimal_epochs", epochs)
+                record_tuned_epochs(out_root, dataset, split_id, dim, run,
+                                    tuned, epochs)
+                epoch_note = f"epochs {tuned}/{epochs}"
+            else:
+                epoch_note = f"epochs {epochs} (full, no early stopping)"
             print(f"    [ok]   pome {dataset} split {split_id:02d} dim {dim} "
-                  f"run {run:02d}  train {train_emb.shape} test {test_emb.shape}")
+                  f"run {run:02d}  {epoch_note}  "
+                  f"train {train_emb.shape} test {test_emb.shape}")
 
 
 # --- UMAP --------------------------------------------------------------------
@@ -258,7 +340,28 @@ def main() -> None:
     parser.add_argument("--splits", nargs="+", type=int, default=None,
                         help="split ids to process (default: all discovered)")
     parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS,
-                        help="POME training epochs (default: 1000)")
+                        help="POME epoch count: upper cap on the CV-tuned value "
+                             "when early stopping is on, or the fixed number of "
+                             "training epochs when --no-early-stopping is set "
+                             "(default: 2000)")
+    parser.add_argument("--no-early-stopping", dest="early_stopping",
+                        action="store_false",
+                        help="disable POME's inductive epoch-tuning CV and train "
+                             "for the full --epochs on all training samples "
+                             "(test set is still embedded inductively via "
+                             "transform()); the cv-* options are then ignored")
+    parser.set_defaults(early_stopping=True)
+    parser.add_argument("--cv-folds", type=int, default=DEFAULT_CV_FOLDS,
+                        help="inductive epoch-tuning CV folds (default: 3)")
+    parser.add_argument("--cv-eval-every", type=int,
+                        default=DEFAULT_CV_EVAL_EVERY,
+                        help="evaluate validation AUC every N epochs during "
+                             "epoch tuning (default: 10)")
+    parser.add_argument("--cv-patience", type=int, default=DEFAULT_CV_PATIENCE,
+                        help="early-stop patience (in eval steps) during epoch "
+                             "tuning (default: 3)")
+    parser.add_argument("--cv-seed", type=int, default=DEFAULT_CV_SEED,
+                        help="seed for the epoch-tuning CV folds (default: 42)")
     parser.add_argument("--bins", type=int, default=DEFAULT_BINS,
                         help="POME bins_per_continuous (default: 15)")
     parser.add_argument("--discretization", default=DEFAULT_DISCRETIZATION,
@@ -285,8 +388,17 @@ def main() -> None:
     print(f"Datasets: {args.datasets} | methods: {args.methods} | "
           f"dims: {args.dims} | runs: {args.runs}")
     if "pome" in args.methods:
-        print(f"POME: epochs={args.epochs} bins={args.bins} "
-              f"discretization={args.discretization} device={device}")
+        if args.early_stopping:
+            print(f"POME: inductive epoch tuning (cap epochs={args.epochs}, "
+                  f"cv_folds={args.cv_folds}, cv_eval_every={args.cv_eval_every}, "
+                  f"cv_patience={args.cv_patience}, cv_seed={args.cv_seed}) "
+                  f"bins={args.bins} discretization={args.discretization} "
+                  f"device={device}")
+        else:
+            print(f"POME: full training, no early stopping "
+                  f"(epochs={args.epochs}) "
+                  f"bins={args.bins} discretization={args.discretization} "
+                  f"device={device}")
 
     plan = []  # (method, dataset, [split_ids])
     for method in args.methods:
@@ -315,8 +427,10 @@ def main() -> None:
             if method == "pome":
                 embed_pome_split(
                     dataset, split_id, args.dims, args.runs, args.epochs,
-                    args.bins, args.discretization, args.seed, device,
-                    args.output_dir, args.overwrite)
+                    args.bins, args.discretization, args.seed,
+                    args.cv_folds, args.cv_eval_every, args.cv_patience,
+                    args.cv_seed, device, args.output_dir, args.overwrite,
+                    early_stopping=args.early_stopping)
             else:
                 embed_umap_split(
                     dataset, split_id, args.dims, args.runs,

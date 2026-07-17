@@ -2,32 +2,19 @@
 
 Reproduces the layout of scripts/plot_fig3_linear_probing.ipynb (3x3 mosaic:
 one aggregated bar panel + eight per-target boxplot panels), using the
-inductive linear probing results.
+inductive linear probing results (embeddings fit on the train split and
+transformed onto the held-out test split).
 
-In addition to the inductive scores (embeddings fit on the train split and
-transformed onto the test split), each per-target panel overlays the
-*full-dataset* scores produced by
-``scripts/linear_probe_full_dataset_embeddings.py`` -- embeddings trained on the
-whole dataset, probed on the *same* train/test splits. Each embedding size
-therefore shows up to four boxes: POME / UMAP x inductive / full. Only the
-embedding sizes present in *both* analyses are drawn so the comparison is
-matched; if the full-dataset results file is missing, the plot falls back to the
-inductive-only layout.
+Only the inductive scores are shown: each embedding size draws two boxes,
+POME and UMAP.
 """
 
 import os
 
-import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import pandas as pd
 import seaborn as sns
-
-
-def lighten(color, amount):
-    """Blend ``color`` toward white by ``amount`` in [0, 1] (0 = unchanged)."""
-    r, g, b = mcolors.to_rgb(color)
-    return (r + (1 - r) * amount, g + (1 - g) * amount, b + (1 - b) * amount)
 
 # ---------------------------------------------------------------------------
 # Load data
@@ -35,9 +22,6 @@ def lighten(color, amount):
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULTS_PATH = os.path.join(
     SCRIPT_DIR, "..", "output", "linear_probing", "inductive_linear_probing_results.csv"
-)
-FULL_RESULTS_PATH = os.path.join(
-    SCRIPT_DIR, "..", "output", "linear_probing", "full_dataset_linear_probing_results.csv"
 )
 OUT_PATH = os.path.join(
     SCRIPT_DIR, "..", "output", "linear_probing", "inductive_linear_probing_results.pdf"
@@ -49,47 +33,17 @@ df = pd.read_csv(RESULTS_PATH)
 # of the original figure.
 df = df.rename(columns={"average_precision": "Score", "method": "Method", "target": "Target"})
 
-# Full-dataset probing results (optional). Same schema as the inductive results;
-# tag each source so inductive and full boxes can share a single hue dimension.
-full_df = None
-if os.path.exists(FULL_RESULTS_PATH):
-    full_df = pd.read_csv(FULL_RESULTS_PATH).rename(
-        columns={"average_precision": "Score", "method": "Method", "target": "Target"}
-    )
-
-# "Setting" = method x training regime, used as the boxplot hue in the per-target
-# panels. Colours pair by method (POME vs UMAP), light = full, dark = inductive.
-df["Setting"] = df["Method"] + " (inductive)"
-if full_df is not None:
-    full_df["Setting"] = full_df["Method"] + " (full)"
-    # Restrict to embedding sizes present in both analyses for a matched comparison.
-    common_dims = sorted(set(df["dim"]) & set(full_df["dim"]))
-    panel_df = pd.concat(
-        [df[df["dim"].isin(common_dims)], full_df[full_df["dim"].isin(common_dims)]],
-        ignore_index=True,
-    )
-    setting_order = ["POME (inductive)", "POME (full)", "UMAP (inductive)", "UMAP (full)"]
-    # Keep POME/UMAP identity by hue family (POME = Set2 mint-green, UMAP = Set2
-    # orange, matching the paper); inductive uses the canonical Set2 colour and
-    # full a lighter tint of the same hue.
-    set2 = sns.color_palette("Set2")
-    pome_color, umap_color = set2[0], set2[1]
-    setting_palette = {
-        "POME (inductive)": pome_color,
-        "POME (full)": lighten(pome_color, 0.55),
-        "UMAP (inductive)": umap_color,
-        "UMAP (full)": lighten(umap_color, 0.55),
-    }
-else:
-    panel_df = df
-    setting_order = ["POME (inductive)", "UMAP (inductive)"]
-    setting_palette = dict(zip(setting_order, sns.color_palette("Set2")))
+# "Setting" = method, used as the boxplot hue in the per-target panels
+# (POME = Set2 mint-green, UMAP = Set2 orange, matching the paper).
+df["Setting"] = df["Method"]
+panel_df = df
+setting_order = ["POME", "UMAP"]
+setting_palette = dict(zip(setting_order, sns.color_palette("Set2")))
 
 # ---------------------------------------------------------------------------
-# Panel a: aggregate over targets and embedding sizes, separately per regime.
-# For each (Method, Target, dim) take the median score, then the best median
-# per (Method, Target), and count how often each method wins -- computed
-# independently for the inductive and full-dataset results.
+# Panel a: aggregate over targets and embedding sizes. For each (Method, Target,
+# dim) take the median score, then the best median per (Method, Target), and
+# count how often each method wins.
 # ---------------------------------------------------------------------------
 def method_win_counts(frame):
     """(#targets POME wins, #targets UMAP wins) by best-across-dim median score."""
@@ -100,17 +54,10 @@ def method_win_counts(frame):
 
 
 pome_ind, umap_ind = method_win_counts(df)
-agg_rows = [
-    {"Setting": "POME (inductive)", "count": pome_ind},
-    {"Setting": "UMAP (inductive)", "count": umap_ind},
-]
-if full_df is not None:
-    pome_full, umap_full = method_win_counts(full_df)
-    agg_rows += [
-        {"Setting": "POME (full)", "count": pome_full},
-        {"Setting": "UMAP (full)", "count": umap_full},
-    ]
-agg_df = pd.DataFrame(agg_rows)
+agg_df = pd.DataFrame([
+    {"Setting": "POME", "count": pome_ind},
+    {"Setting": "UMAP", "count": umap_ind},
+])
 
 # ---------------------------------------------------------------------------
 # Per-target panels. (dataset, target, panel key, title)
@@ -140,16 +87,10 @@ legendfontsize = 16
 
 palette = sns.color_palette("Set2")
 
-# Panel a: aggregated bar plot, one bar per method x regime. Bars are grouped by
-# regime (both inductive bars, then both full bars), with tighter spacing within
-# a regime pair than between the pairs.
+# Panel a: aggregated bar plot, one bar per method.
 counts = dict(zip(agg_df["Setting"], agg_df["count"]))
-if full_df is not None:
-    panel_a_order = ["POME (inductive)", "UMAP (inductive)", "POME (full)", "UMAP (full)"]
-    bar_positions = [0.0, 0.95, 2.4, 3.35]  # within-pair gap << between-pair gap
-else:
-    panel_a_order = ["POME (inductive)", "UMAP (inductive)"]
-    bar_positions = [0.0, 0.95]
+panel_a_order = ["POME", "UMAP"]
+bar_positions = [0.0, 0.95]
 bar_width = 0.85
 
 axes["a"].bar(
@@ -159,18 +100,8 @@ axes["a"].bar(
     color=[setting_palette[s] for s in panel_a_order],
 )
 axes["a"].set_xlabel("")
-# Per-bar tick labels show the method; the regime is annotated once per pair.
 axes["a"].set_xticks(bar_positions)
-axes["a"].set_xticklabels(
-    [s.split(" (")[0] for s in panel_a_order], fontsize=ticklabelsize
-)
-_blend = transforms.blended_transform_factory(axes["a"].transData, axes["a"].transAxes)
-for regime, pair in (("inductive", bar_positions[:2]), ("full", bar_positions[2:])):
-    if pair:
-        axes["a"].text(
-            sum(pair) / len(pair), -0.16, regime, transform=_blend,
-            ha="center", va="top", fontsize=ticklabelsize,
-        )
+axes["a"].set_xticklabels(panel_a_order, fontsize=ticklabelsize)
 axes["a"].set_ylabel("Number of targets with \nbest median score", fontsize=labelfontsize)
 axes["a"].tick_params(axis="y", labelsize=ticklabelsize)
 axes["a"].set_title("Results aggregated over \ntargets and embedding sizes", fontsize=titlefontsize)
