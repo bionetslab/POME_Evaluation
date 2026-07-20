@@ -16,6 +16,12 @@ Run from the project root (any env with pandas + scikit-learn):
     conda run -n torch python scripts/linear_probe_inductive_epoch_snapshots.py \
         --datasets hancock --dims 32
 
+Each row is also stamped with the label-free **RankMe** effective rank (Garrido
+et al. 2023) of the train and test embedding matrices (``rankme_train`` /
+``rankme_test``) -- a candidate unsupervised early-stopping metric. RankMe is a
+property of the embedding, not of the target, so it is identical across the
+target rows of a given (epoch, dataset, dim, split, run).
+
 Output: one tidy long-format CSV with an ``epoch`` column (one row per
 epoch/dataset/target/dim/split/run), ready to plot quality vs. epochs:
 
@@ -26,6 +32,7 @@ import argparse
 import warnings
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from sklearn.exceptions import UndefinedMetricWarning
 
@@ -38,6 +45,22 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_EMB_ROOT = PROJECT_ROOT / "output" / "inductive_epochs"
 DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "linear_probing" / \
     "inductive_epoch_snapshots_results.csv"
+
+
+def rankme(emb: pd.DataFrame, eps: float = 1e-7) -> float:
+    """RankMe effective rank (Garrido et al. 2023): the entropy of the normalized
+    singular-value spectrum of the embedding matrix, ``exp(-sum p_k log p_k)`` with
+    ``p_k = sigma_k / sum(sigma) + eps``. A label-free proxy for representation
+    quality (higher = the embedding uses more of its dimensions). Non-finite rows
+    are dropped; returns NaN if fewer than two usable rows remain.
+    """
+    Z = emb.to_numpy(dtype=np.float64)
+    Z = Z[np.isfinite(Z).all(axis=1)]
+    if Z.shape[0] < 2:
+        return float("nan")
+    sigma = np.linalg.svd(Z, compute_uv=False)
+    p = sigma / (sigma.sum() + eps) + eps
+    return float(np.exp(-(p * np.log(p)).sum()))
 
 
 def discover_epoch_dirs(emb_root: Path, epochs) -> list[tuple[int, Path]]:
@@ -101,6 +124,9 @@ def main() -> None:
                 test_emb = pd.read_csv(test_csv, index_col=0)
                 train_emb.index = train_emb.index.astype(str)
                 test_emb.index = test_emb.index.astype(str)
+                # RankMe is target-independent -> compute once per embedding pair.
+                rk_train = rankme(train_emb)
+                rk_test = rankme(test_emb)
                 for label, y_full in targets.items():
                     metrics = probe_one(train_emb, test_emb, y_full,
                                         args.standardize)
@@ -109,7 +135,8 @@ def main() -> None:
                     rows.append({
                         "epoch": epoch, "dataset": dataset, "method": "POME",
                         "target": label, "dim": dim, "split": split,
-                        "run": run, **metrics,
+                        "run": run, "rankme_train": rk_train,
+                        "rankme_test": rk_test, **metrics,
                     })
                 n_done += 1
             print(f"  {dataset:8s}: probed {n_done} embedding pairs "
