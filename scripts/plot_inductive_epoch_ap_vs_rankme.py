@@ -60,6 +60,18 @@ datasets = [d for d in ["hancock", "luad", "mimic"] if d in set(df["dataset"])]
 dims = sorted(df["dim"].unique())
 epochs = sorted(df["epoch"].unique())
 
+# Stopping-rule epochs per (dataset, dim): prefer the CSV written by the probe
+# script (reflects the thresholds it was run with); otherwise recompute here with
+# defaults. Overlaid as vertical lines so the rules can be judged against AP.
+RULES_PATH = RESULTS_PATH.replace("_results.csv", "_stopping_rules.csv")
+if os.path.exists(RULES_PATH):
+    rules_df = pd.read_csv(RULES_PATH)
+else:
+    from linear_probe_inductive_epoch_snapshots import stopping_rules_table
+    rules_df = stopping_rules_table(df)
+rules = {(r["dataset"], int(r["dim"])): r
+         for _, r in rules_df.iterrows()}
+
 
 def epoch_mean_sem(frame, col):
     """Per-epoch mean and SEM of `col`, reindexed onto the global epoch axis."""
@@ -116,6 +128,18 @@ for r, dataset in enumerate(datasets):
         ax.set_title(f"{DATASET_LABELS.get(dataset, dataset)}: dim {dim}{rho_txt}",
                      fontsize=titlefontsize)
 
+        # Stopping-rule epochs as vertical lines (color-matched to their source
+        # signal): AP-peak oracle (green), RankMe-plateau (orange, from test
+        # RankMe), train-test-gap onset (purple, from the train/test gap).
+        rule = rules.get((dataset, dim))
+        if rule is not None:
+            for col, color, style in [
+                    ("oracle_ap_peak", AP_COLOR, "-"),
+                    ("rankme_plateau", RK_TEST_COLOR, "--"),
+                    ("traintest_gap", RK_TRAIN_COLOR, ":")]:
+                ax.axvline(float(rule[col]), color=color, linestyle=style,
+                           linewidth=1.6, alpha=0.7, zorder=0)
+
         if c == 0:
             ax.set_ylabel("Average precision", color=AP_COLOR,
                           fontsize=labelfontsize)
@@ -125,7 +149,7 @@ for r, dataset in enumerate(datasets):
         if r == nrows - 1:
             ax.set_xlabel("Training epochs", fontsize=labelfontsize)
 
-# Shared legend.
+# Shared legend: three curves + three stopping-rule vertical lines.
 handles = [
     mlines.Line2D([], [], color=AP_COLOR, marker="o", linewidth=2,
                   label="Probe average precision"),
@@ -133,6 +157,12 @@ handles = [
                   linewidth=2, label="RankMe (test / inductive)"),
     mlines.Line2D([], [], color=RK_TRAIN_COLOR, marker="s", linestyle=":",
                   linewidth=2, label="RankMe (train)"),
+    mlines.Line2D([], [], color=AP_COLOR, linestyle="-", linewidth=1.6,
+                  alpha=0.7, label="stop: AP peak (oracle)"),
+    mlines.Line2D([], [], color=RK_TEST_COLOR, linestyle="--", linewidth=1.6,
+                  alpha=0.7, label="stop: RankMe plateau"),
+    mlines.Line2D([], [], color=RK_TRAIN_COLOR, linestyle=":", linewidth=1.6,
+                  alpha=0.7, label="stop: train–test gap"),
 ]
 fig.legend(handles=handles, loc="outside upper center", ncol=3,
            fontsize=labelfontsize, frameon=True)

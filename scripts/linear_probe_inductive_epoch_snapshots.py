@@ -63,6 +63,88 @@ def rankme(emb: pd.DataFrame, eps: float = 1e-7) -> float:
     return float(np.exp(-(p * np.log(p)).sum()))
 
 
+# --- Label-free stopping rules ----------------------------------------------
+# All three operate on per-epoch aggregated curves (mean over splits x runs) and
+# return the selected epoch. The first two are unsupervised (RankMe only); the
+# oracle uses the probe AP and is only for comparison -- you couldn't use it at
+# training time.
+
+def stop_rankme_plateau(epochs, rankme_test, rel_tol: float = 0.2) -> int:
+    """RankMe-plateau rule: stop when the effective rank stops meaningfully
+    growing -- the first epoch whose marginal RankMe gain drops below ``rel_tol``
+    times the largest gain observed (the knee of the curve). Returns the last
+    epoch if RankMe never flattens (still climbing = the overshoot case).
+    """
+    e = np.asarray(epochs)
+    d = np.diff(np.asarray(rankme_test, dtype=float))
+    if d.size == 0 or not np.isfinite(d).any() or np.nanmax(d) <= 0:
+        return int(e[-1])
+    thresh = rel_tol * np.nanmax(d)
+    for i, gain in enumerate(d):
+        if np.isfinite(gain) and gain < thresh:
+            return int(e[i + 1])
+    return int(e[-1])
+
+
+def stop_traintest_gap(epochs, rankme_train, rankme_test,
+                       rel_tol: float = 0.15) -> int:
+    """Train-test gap rule (overfitting guard): stop when the (train - test)
+    RankMe gap, normalized by test RankMe, first rises ``rel_tol`` above its
+    running minimum -- i.e. the training-graph spread starts outstripping the
+    inductive spread. Returns the last epoch if the gap never widens.
+    """
+    e = np.asarray(epochs)
+    tr = np.asarray(rankme_train, dtype=float)
+    te = np.asarray(rankme_test, dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        gap = (tr - te) / te
+    run_min = np.inf
+    for i, g in enumerate(gap):
+        if not np.isfinite(g):
+            continue
+        if g < run_min:
+            run_min = g
+        elif g > run_min + rel_tol:
+            return int(e[i])
+    return int(e[-1])
+
+
+def oracle_ap_peak(epochs, ap) -> int:
+    """Reference (supervised) stop: the epoch of maximum mean probe AP."""
+    e = np.asarray(epochs)
+    a = np.asarray(ap, dtype=float)
+    if not np.isfinite(a).any():
+        return int(e[-1])
+    return int(e[int(np.nanargmax(a))])
+
+
+def stopping_rules_table(result_df, rankme_plateau_tol: float = 0.2,
+                         gap_tol: float = 0.15):
+    """Per (dataset, dim) selected epoch for each rule, from the aggregated
+    (mean over splits x runs) per-epoch AP / RankMe curves.
+    """
+    out = []
+    for (dataset, dim), sub in result_df.groupby(["dataset", "dim"]):
+        epochs = sorted(sub["epoch"].unique())
+        ap = sub.groupby("epoch")["average_precision"].mean().reindex(epochs)
+        # RankMe is target-independent -> one value per (split, run, epoch).
+        rk = sub.drop_duplicates(["split", "run", "epoch"])
+        rk_te = rk.groupby("epoch")["rankme_test"].mean().reindex(epochs)
+        rk_tr = rk.groupby("epoch")["rankme_train"].mean().reindex(epochs)
+        e_plateau = stop_rankme_plateau(epochs, rk_te.to_numpy(),
+                                        rankme_plateau_tol)
+        e_gap = stop_traintest_gap(epochs, rk_tr.to_numpy(), rk_te.to_numpy(),
+                                   gap_tol)
+        out.append({
+            "dataset": dataset, "dim": dim,
+            "oracle_ap_peak": oracle_ap_peak(epochs, ap.to_numpy()),
+            "rankme_plateau": e_plateau,
+            "traintest_gap": e_gap,
+            "combined": min(e_plateau, e_gap),  # earlier of the two unsup. rules
+        })
+    return pd.DataFrame(out).sort_values(["dataset", "dim"]).reset_index(drop=True)
+
+
 def discover_epoch_dirs(emb_root: Path, epochs) -> list[tuple[int, Path]]:
     """Return sorted (epoch, dir) for each epoch_* snapshot dir under emb_root."""
     out = []
@@ -96,6 +178,12 @@ def main() -> None:
     parser.add_argument("--standardize", action="store_true",
                         help="z-score embedding features (fit on train) before "
                              "logistic regression (default: off)")
+    parser.add_argument("--rankme-plateau-tol", type=float, default=0.2,
+                        help="RankMe-plateau rule: marginal-gain threshold as a "
+                             "fraction of the largest gain (default: 0.2)")
+    parser.add_argument("--gap-tol", type=float, default=0.15,
+                        help="train-test-gap rule: normalized-gap rise above its "
+                             "running minimum that triggers a stop (default: 0.15)")
     args = parser.parse_args()
 
     warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
@@ -159,6 +247,18 @@ def main() -> None:
                .unstack("epoch"))
     with pd.option_context("display.max_rows", None, "display.width", 160):
         print(summary)
+
+    # Label-free stopping rules vs. the (supervised) AP-peak oracle, per
+    # dataset/dim. Written next to the results CSV for the plot to overlay.
+    rules_df = stopping_rules_table(
+        result_df, args.rankme_plateau_tol, args.gap_tol)
+    rules_path = args.output.with_name(
+        args.output.stem.replace("_results", "") + "_stopping_rules.csv")
+    rules_df.to_csv(rules_path, index=False)
+    print(f"\nWrote stopping-rule epochs to {rules_path}")
+    print("\n=== Selected stopping epoch per rule (vs. AP-peak oracle) ===")
+    with pd.option_context("display.max_rows", None, "display.width", 160):
+        print(rules_df.to_string(index=False))
 
 
 if __name__ == "__main__":
