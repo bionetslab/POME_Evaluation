@@ -133,10 +133,12 @@ for r, dataset in enumerate(datasets):
         # RankMe), train-test-gap onset (purple, from the train/test gap).
         rule = rules.get((dataset, dim))
         if rule is not None:
-            for col, color, style in [
-                    ("oracle_ap_peak", AP_COLOR, "-"),
-                    ("rankme_plateau", RK_TEST_COLOR, "--"),
-                    ("traintest_gap", RK_TRAIN_COLOR, ":")]:
+            vlines = [("oracle_ap_peak", AP_COLOR, "-"),
+                      ("rankme_plateau", RK_TEST_COLOR, "--"),
+                      ("traintest_gap", RK_TRAIN_COLOR, ":")]
+            if "gap_matched" in rule:
+                vlines.append(("gap_matched", "black", "-."))
+            for col, color, style in vlines:
                 ax.axvline(float(rule[col]), color=color, linestyle=style,
                            linewidth=1.6, alpha=0.7, zorder=0)
 
@@ -162,9 +164,11 @@ handles = [
     mlines.Line2D([], [], color=RK_TEST_COLOR, linestyle="--", linewidth=1.6,
                   alpha=0.7, label="stop: RankMe plateau"),
     mlines.Line2D([], [], color=RK_TRAIN_COLOR, linestyle=":", linewidth=1.6,
-                  alpha=0.7, label="stop: train–test gap"),
+                  alpha=0.7, label="stop: train–test gap (raw)"),
+    mlines.Line2D([], [], color="black", linestyle="-.", linewidth=1.6,
+                  alpha=0.7, label="stop: matched gap (N/D-aware)"),
 ]
-fig.legend(handles=handles, loc="outside upper center", ncol=3,
+fig.legend(handles=handles, loc="outside upper center", ncol=4,
            fontsize=labelfontsize, frameon=True)
 
 fig.savefig(OUT_PATH, bbox_inches="tight")
