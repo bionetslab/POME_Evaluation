@@ -107,6 +107,9 @@ DEFAULT_CV_FOLDS = 3
 DEFAULT_CV_EVAL_EVERY = 10
 DEFAULT_CV_PATIENCE = 3
 DEFAULT_CV_SEED = 42
+# Matched-gap stopping criterion (POME `Embedder` defaults).
+DEFAULT_OVERFIT_TOL = 0.05
+DEFAULT_GAP_DRAWS = 10
 
 _SPLIT_RE = re.compile(r"split_(\d+)_train_(pome|umap)\.(tsv|csv)$")
 
@@ -183,7 +186,9 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                      seed_base: int, cv_folds: int, cv_eval_every: int,
                      cv_patience: int, cv_seed: int, device: str,
                      out_root: Path, overwrite: bool,
-                     early_stopping: bool = True) -> None:
+                     early_stopping: bool = True,
+                     overfit_tol: float = DEFAULT_OVERFIT_TOL,
+                     gap_draws: int = DEFAULT_GAP_DRAWS) -> None:
     from pome.gnn_embedding import Embedder, make_deterministic
 
     split_dir = SPLITS_ROOT / dataset
@@ -219,6 +224,8 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                 cv_eval_every=cv_eval_every,
                 cv_patience=cv_patience,
                 cv_seed=cv_seed,
+                overfit_tol=overfit_tol,
+                gap_draws=gap_draws,
             )
             embedder.fit(train_df)
             train_emb, *_ = embedder.get_embeddings()  # transductive (train)
@@ -355,13 +362,21 @@ def main() -> None:
                         help="inductive epoch-tuning CV folds (default: 3)")
     parser.add_argument("--cv-eval-every", type=int,
                         default=DEFAULT_CV_EVAL_EVERY,
-                        help="evaluate validation AUC every N epochs during "
-                             "epoch tuning (default: 10)")
+                        help="evaluate the matched-gap stopping index every N "
+                             "epochs during epoch tuning (default: 10)")
     parser.add_argument("--cv-patience", type=int, default=DEFAULT_CV_PATIENCE,
                         help="early-stop patience (in eval steps) during epoch "
                              "tuning (default: 3)")
     parser.add_argument("--cv-seed", type=int, default=DEFAULT_CV_SEED,
                         help="seed for the epoch-tuning CV folds (default: 42)")
+    parser.add_argument("--overfit-tol", type=float, default=DEFAULT_OVERFIT_TOL,
+                        help="matched-gap stopping tolerance: rise of the "
+                             "sample-matched, ceiling-normalized train-vs-held-out "
+                             "RankMe gap above its running minimum that triggers a "
+                             "stop (POME default: 0.05)")
+    parser.add_argument("--gap-draws", type=int, default=DEFAULT_GAP_DRAWS,
+                        help="subsampling draws for the sample-matched RankMe gap "
+                             "(POME default: 10)")
     parser.add_argument("--bins", type=int, default=DEFAULT_BINS,
                         help="POME bins_per_continuous (default: 15)")
     parser.add_argument("--discretization", default=DEFAULT_DISCRETIZATION,
@@ -391,7 +406,8 @@ def main() -> None:
         if args.early_stopping:
             print(f"POME: inductive epoch tuning (cap epochs={args.epochs}, "
                   f"cv_folds={args.cv_folds}, cv_eval_every={args.cv_eval_every}, "
-                  f"cv_patience={args.cv_patience}, cv_seed={args.cv_seed}) "
+                  f"cv_patience={args.cv_patience}, cv_seed={args.cv_seed}, "
+                  f"overfit_tol={args.overfit_tol}, gap_draws={args.gap_draws}) "
                   f"bins={args.bins} discretization={args.discretization} "
                   f"device={device}")
         else:
@@ -430,7 +446,8 @@ def main() -> None:
                     args.bins, args.discretization, args.seed,
                     args.cv_folds, args.cv_eval_every, args.cv_patience,
                     args.cv_seed, device, args.output_dir, args.overwrite,
-                    early_stopping=args.early_stopping)
+                    early_stopping=args.early_stopping,
+                    overfit_tol=args.overfit_tol, gap_draws=args.gap_draws)
             else:
                 embed_umap_split(
                     dataset, split_id, args.dims, args.runs,
