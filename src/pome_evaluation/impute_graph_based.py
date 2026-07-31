@@ -3,10 +3,10 @@
 For every graph-format ``.tsv`` under ``input_directory`` an
 :class:`pome.gnn_embedding.Embedder` is fitted with imputation enabled and the
 missing entries (encoded by ``na_encoding``) are filled in via
-``impute_all()``. Continuous variables are imputed with
-``numeric_imputation="regression"`` (a regression head trained on the frozen
-embeddings predicts the value directly, instead of falling back to the selected
-bin's mean); categorical variables use the decoder's nearest-category rule.
+``impute_all()``. Continuous variables are imputed by POME's regression head (the
+only continuous-imputation path in the current implementation): a head trained on
+the frozen embeddings predicts the value directly. Categorical variables use the
+decoder's nearest-category rule.
 
 Outputs mirror the input file names: ``{name}.tsv`` (imputed matrix) plus a
 ``{name}.pkl`` sidecar storing the run's hyperparameters and AP score.
@@ -15,6 +15,7 @@ Run from the project root with the POME-enabled environment (conda env ``torch``
 
     conda run -n torch python src/pome_evaluation/impute_graph_based.py
 """
+import argparse
 import os
 import pickle
 from pathlib import Path
@@ -26,11 +27,6 @@ from pome.gnn_embedding import Embedder, make_deterministic
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 POME_IMPUTATION_ROOT = PROJECT_ROOT / "data" / "imputation_data" / "pome_based"
-
-# Continuous imputation strategy exposed by the current POME implementation.
-# "regression" trains a regression head on the frozen embeddings; the
-# alternative is "bin_mean".
-NUMERIC_IMPUTATION = "regression"
 
 # Per-dataset non-informative NA encoding used to mask simulated missingness.
 DATASET_NA_ENCODING = {
@@ -48,7 +44,6 @@ def impute_graph_based(input_directory: str,
                        num_dimensions: int,
                        num_bins: int,
                        discretization_type: str,
-                       numeric_imputation: str = NUMERIC_IMPUTATION,
                        device: str = "cuda"):
 
     # Iterate over all files in the directory.
@@ -69,8 +64,8 @@ def impute_graph_based(input_directory: str,
         # Load graph-format dataframe (rows = variables, cols = samples + type).
         df = pd.read_csv(file_path, sep='\t', index_col=0)
 
-        # Fit the embedder with imputation enabled. numeric_imputation selects
-        # how continuous variables are filled in (here: "regression").
+        # Fit the embedder with imputation enabled. Continuous variables are
+        # filled in by POME's regression head (the only path in current POME).
         embedder_params = {
             'na_encoding': na_encoding,
             'informative_nas': informative_nas,
@@ -79,7 +74,6 @@ def impute_graph_based(input_directory: str,
             'bins_per_continuous': num_bins,
             'discretization_type': discretization_type,
             'enable_imputation': True,
-            'numeric_imputation': numeric_imputation,
         }
         embedder = Embedder(**embedder_params,
                             embedding_dimension=num_dimensions)
@@ -102,32 +96,62 @@ def impute_graph_based(input_directory: str,
         del embedder
 
 
-if __name__ == "__main__":
+def main():
+    """Run the POME imputation grid, scoped by CLI flags.
 
-    dims = [16, 32, 64]
-    bins = [15]
-    discretizations = ["z"]
-    number_of_epochs = 2000
+    The full grid is ``{z,nonlinear} x {7,11,15} x {16,32,64}`` per dataset.
+    To parallelise across Slurm jobs (each capped at 24h), submit one job per
+    ``(discretization, bins)`` cell -- 6 jobs cover the whole grid, each doing
+    all dims x datasets for its cell:
+
+        for disc in z nonlinear; do for b in 7 11 15; do
+            STAGE_OUT="data/imputation_data/pome_based" sbatch --time=24:00:00 \\
+                container/submit.sh src/pome_evaluation/impute_graph_based.py \\
+                --discretizations $disc --bins $b
+        done; done
+
+    Existing imputed ``.tsv`` files are skipped, so jobs are resumable.
+    """
+    parser = argparse.ArgumentParser(
+        description="POME graph-based imputation over a (discretization, bins, "
+                    "dim) grid; scope one cell per Slurm job with the flags below.")
+    parser.add_argument("--discretizations", nargs="+", default=["z", "nonlinear"],
+                        choices=["z", "nonlinear"],
+                        help="discretization strategies (default: both)")
+    parser.add_argument("--bins", nargs="+", type=int, default=[7, 11, 15],
+                        help="bin counts per continuous variable (default: 7 11 15)")
+    parser.add_argument("--dims", nargs="+", type=int, default=[16, 32, 64],
+                        help="POME embedding dimensions (default: 16 32 64)")
+    parser.add_argument("--datasets", nargs="+", default=list(DATASET_NA_ENCODING),
+                        choices=list(DATASET_NA_ENCODING),
+                        help="datasets to impute (default: all with simulated_data)")
+    parser.add_argument("--epochs", type=int, default=2000,
+                        help="training epochs per fit (default: 2000)")
+    args = parser.parse_args()
+
     informative_na = []
+    print(f"Datasets: {args.datasets} | discretizations: {args.discretizations} "
+          f"| bins: {args.bins} | dims: {args.dims} | epochs: {args.epochs}")
 
-    for dataset, na_encoding in DATASET_NA_ENCODING.items():
+    for dataset in args.datasets:
+        na_encoding = DATASET_NA_ENCODING[dataset]
         input_directory = POME_IMPUTATION_ROOT / dataset / "simulated_data"
         if not input_directory.is_dir():
             print(f"[skip] no simulated_data for {dataset} ({input_directory})")
             continue
 
-        for discretization in discretizations:
-            for bin_count in bins:
-                for dim in dims:
+        for discretization in args.discretizations:
+            for bin_count in args.bins:
+                for dim in args.dims:
                     make_deterministic(42)
                     output_directory = (POME_IMPUTATION_ROOT / dataset /
-                                        f"imputed_{discretization}_{bin_count}_{dim}_regression")
+                                        f"imputed_{discretization}_{bin_count}_{dim}")
                     output_directory.mkdir(parents=True, exist_ok=True)
 
                     impute_graph_based(
                         str(input_directory),
                         str(output_directory),
-                        number_of_epochs,
+                        args.epochs,
                         na_encoding,
                         informative_na,
                         num_dimensions=dim,
@@ -135,3 +159,7 @@ if __name__ == "__main__":
                         discretization_type=discretization,
                     )
         print(f"Finished {dataset} imputation!")
+
+
+if __name__ == "__main__":
+    main()

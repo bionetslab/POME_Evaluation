@@ -13,12 +13,12 @@ Scored tools:
 - **POME** for every requested embedding dimension, read from
   ``imputed_{discretization}_{bins}_{dim}`` directories.
 
-Metrics: MAE, MAPE (``mre_cont``) and per-variable IQR-normalized MAE
+Metrics: MAE, MAPE (``mre_cont``) and per-variable range-normalized MAE
 (``nmae_cont``) on the continuous entries and accuracy on the categorical
 entries. ``nmae_cont`` divides each continuous variable's MAE by that variable's
-interquartile range (from the original unmasked data) and macro-averages across
-variables, so every variable contributes on a common, outlier-robust scale with
-equal weight. One CSV is written per (dataset, discretization, bins):
+min-max range (``max - min`` from the original unmasked data) and macro-averages
+across variables, so every variable contributes on a common, unit-free scale
+with equal weight. One CSV is written per (dataset, discretization, bins):
 ``data/{DATASET}_imputation_{discretization}_bins_{bins}.csv``, holding rows for
 every tool / dim / masked file. Any tool whose imputed files are missing is
 skipped with a warning (e.g. MIMIC baselines when that data is not present
@@ -57,15 +57,15 @@ INPUT_ROOT = DATA_ROOT / "input_datasets"
 NA_SENTINEL = -99.0
 
 # label -> original unmasked sample-format CSV (samples x variables) used to
-# derive per-variable IQR. Naming is irregular across datasets, so it is explicit.
+# derive the per-variable range. Naming is irregular across datasets, so explicit.
 INPUT_FILES = {
     "HANCOCK": "hancock_with_targets.csv",
     "TCGA_LUAD": "TCGA_LUAD_with_targets.csv",
     "MIMIC": "mimic_with_targets_patientIDs.csv",
 }
 
-# label -> {variable: IQR} computed once from the original unmasked data.
-_IQR_CACHE: dict = {}
+# label -> {variable: range} computed once from the original unmasked data.
+_RANGE_CACHE: dict = {}
 
 # dataset CLI key -> on-disk dataset label (directory / output-file name).
 DATASETS = {
@@ -128,18 +128,18 @@ def _load_variable_by_sample(path: Path):
     return pd.read_csv(path, sep="\t", index_col=0)
 
 
-def _load_variable_iqr(label: str) -> dict:
-    """Return ``{variable: IQR}`` from the original unmasked data for ``label``.
+def _load_variable_range(label: str) -> dict:
+    """Return ``{variable: range}`` from the original unmasked data for ``label``.
 
     Reads the sample-format ``{stem}_with_targets.csv`` (rows = samples, columns =
     variables), excluding ``NaN`` and the ``NA_SENTINEL`` mask value, and computes
-    ``Q3 - Q1`` per column. Used to per-variable normalize the continuous MAE. The
-    result is cached per label. Returns ``{}`` (with a warning) when the input
-    file is absent (e.g. gitignored MIMIC), so scoring degrades to ``NaN`` rather
-    than crashing.
+    the min-max range ``max - min`` per column. Used to per-variable normalize the
+    continuous MAE. The result is cached per label. Returns ``{}`` (with a warning)
+    when the input file is absent (e.g. gitignored MIMIC), so scoring degrades to
+    ``NaN`` rather than crashing.
     """
-    if label in _IQR_CACHE:
-        return _IQR_CACHE[label]
+    if label in _RANGE_CACHE:
+        return _RANGE_CACHE[label]
 
     candidates = []
     if label in INPUT_FILES:
@@ -149,24 +149,24 @@ def _load_variable_iqr(label: str) -> dict:
     path = next((c for c in candidates if c.exists()), None)
     if path is None:
         print(f"    [warn] no input dataset for {label}; nmae_cont will be NaN")
-        _IQR_CACHE[label] = {}
-        return _IQR_CACHE[label]
+        _RANGE_CACHE[label] = {}
+        return _RANGE_CACHE[label]
 
     df = pd.read_csv(path, index_col=0)
     df = df.mask(df == NA_SENTINEL)
-    quantiles = df.quantile([0.25, 0.75], numeric_only=True)
-    iqr = (quantiles.loc[0.75] - quantiles.loc[0.25]).to_dict()
-    _IQR_CACHE[label] = iqr
-    return iqr
+    numeric = df.select_dtypes("number")
+    vrange = (numeric.max() - numeric.min()).to_dict()
+    _RANGE_CACHE[label] = vrange
+    return vrange
 
 
 def _macro_nmae(gt_cont: np.ndarray, pred_cont: np.ndarray,
                 cont_vars: np.ndarray, scales: dict) -> float:
-    """Per-variable IQR-normalized, macro-averaged MAE over continuous entries.
+    """Per-variable range-normalized, macro-averaged MAE over continuous entries.
 
-    Computes each variable's MAE, divides by that variable's IQR, then averages
-    across variables (equal weight per variable). Variables with a missing or
-    non-positive IQR are skipped; returns ``np.nan`` if none remain.
+    Computes each variable's MAE, divides by that variable's min-max range, then
+    averages across variables (equal weight per variable). Variables with a
+    missing or non-positive range are skipped; returns ``np.nan`` if none remain.
     """
     if len(gt_cont) == 0:
         return np.nan
@@ -255,7 +255,7 @@ def process_groundtruth_file(gt_path: Path, label: str, dims, bins: int,
 
     gt_cont_array = np.array(gt_cont, dtype=float)
     cont_var_array = np.array(cont_vars)
-    scales = _load_variable_iqr(label)
+    scales = _load_variable_range(label)
 
     # --- Score each predictor ----------------------------------------------
     for idx, (name, _lookup, _round_cat, dim) in enumerate(predictors):

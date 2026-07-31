@@ -242,7 +242,7 @@ def plot_imputation_results(
             ax=axes[axis_name],
             subset=subset,
             y="nmae_cont",
-            ylabel="Norm. MAE (per-variable IQR)",
+            ylabel="Norm. MAE (per-variable range)",
             title=f"Numeric variables\n({dataset})",
             method_order=method_order,
             method_label_map=method_label_map,
