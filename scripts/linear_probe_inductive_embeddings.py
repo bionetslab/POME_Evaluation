@@ -4,8 +4,8 @@
 For every computed embedding (dataset x method x split x dim x run) a logistic
 regression is *fit on the training-split embedding* and *evaluated on the
 held-out test-split embedding*, for each binary held-out target variable of the
-dataset. This mirrors the targets and classifier configuration of the
-transductive notebooks ``src/pome_evaluation/analyze_<DATASET>_embedding_separability.ipynb``
+dataset. This mirrors the targets and classifier configuration of the transductive
+notebooks ``src/pome_evaluation/analyze_<DATASET>_embedding_separability.ipynb``
 but uses the inductive train/test structure instead of within-embedding k-fold CV.
 
 Binary targets per dataset (numeric/regression targets from the notebooks are
@@ -24,12 +24,24 @@ The classifier matches the notebooks: LogisticRegression(penalty="l2",
 solver="liblinear", max_iter=1000), and embeddings are NOT rescaled (use
 --standardize to z-score features before fitting).
 
+Variable-type modes (``--modes``)
+---------------------------------
+``scripts/generate_inductive_embeddings.py --modes`` can embed a variable-type
+subset of the same splits (``numeric_only`` / ``cat_only``) next to the default
+``combined`` embeddings. All discovered modes are probed by default and tagged
+in the ``mode`` column, so the data-integration comparison (does combining
+continuous and categorical variables beat either type alone?) uses the *exact*
+same targets, classifier and splits as the headline combined probing --
+``scripts/plot_inductive_type_combination.py`` draws it.
+
 Run from the project root (any env with pandas + scikit-learn):
 
     conda run -n torch python scripts/linear_probe_inductive_embeddings.py
     conda run -n torch python scripts/linear_probe_inductive_embeddings.py --datasets hancock --dims 32
+    conda run -n torch python scripts/linear_probe_inductive_embeddings.py --modes combined numeric_only cat_only
 
-Output: one tidy long-format CSV (one row per dataset/method/target/dim/split/run)
+Output: one tidy long-format CSV (one row per
+dataset/method/mode/target/dim/split/run)
 
     output/linear_probing/inductive_linear_probing_results.csv
 
@@ -59,6 +71,9 @@ DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "linear_probing" / \
 
 DATASETS = ("hancock", "luad", "mimic")
 METHODS = ("pome", "umap")
+# Variable-type subsets written by generate_inductive_embeddings.py --modes.
+# `combined` keeps the original mode-less directory layout.
+MODES = ("combined", "numeric_only", "cat_only")
 
 # Per-dataset target file and the binary targets to probe (raw column ->
 # display label, mirroring the notebooks).
@@ -114,9 +129,17 @@ def load_binary_targets(dataset: str) -> dict[str, pd.Series]:
 
 # --- Embedding discovery -----------------------------------------------------
 def discover_runs(emb_root: Path, method: str, dataset: str,
-                  dims, splits, runs):
-    """Yield (split, dim, run, train_csv, test_csv) for existing run pairs."""
+                  dims, splits, runs, mode: str = "combined"):
+    """Yield (split, dim, run, train_csv, test_csv) for existing run pairs.
+
+    Mirrors ``generate_inductive_embeddings.run_paths``: ``combined`` lives
+    directly under ``{method}/{dataset}``, restricted modes one level deeper.
+    Because the mode directories are not named ``split_*`` they never leak into
+    the combined listing.
+    """
     base = emb_root / method / dataset
+    if mode != "combined":
+        base = base / mode
     if not base.is_dir():
         return
     for split_dir in sorted(base.glob("split_*")):
@@ -201,6 +224,10 @@ def main() -> None:
                         default=list(DATASETS))
     parser.add_argument("--methods", nargs="+", choices=METHODS,
                         default=list(METHODS))
+    parser.add_argument("--modes", nargs="+", choices=MODES,
+                        default=list(MODES),
+                        help="variable-type subsets to probe (default: all; "
+                             "modes without embeddings are skipped)")
     parser.add_argument("--dims", nargs="+", type=int, default=None,
                         help="dims to probe (default: all found)")
     parser.add_argument("--splits", nargs="+", type=int, default=None,
@@ -218,45 +245,46 @@ def main() -> None:
     warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
     print(f"Embedding root: {args.emb_root}")
     print(f"Datasets: {args.datasets} | methods: {args.methods} | "
-          f"standardize: {args.standardize}")
+          f"modes: {args.modes} | standardize: {args.standardize}")
 
     rows = []
     for dataset in args.datasets:
         targets = load_binary_targets(dataset)
         print(f"\n[{dataset}] targets: {list(targets)}")
         for method in args.methods:
-            run_pairs = list(discover_runs(
-                args.emb_root, method, dataset,
-                args.dims, args.splits, args.runs))
-            if not run_pairs:
-                print(f"  [warn] no {method} embeddings found")
-                continue
-            n_done = 0
-            n_nonfinite = 0  # total non-finite embedding rows dropped (train+test)
-            for split, dim, run, train_csv, test_csv in run_pairs:
-                train_emb = pd.read_csv(train_csv, index_col=0)
-                test_emb = pd.read_csv(test_csv, index_col=0)
-                train_emb.index = train_emb.index.astype(str)
-                test_emb.index = test_emb.index.astype(str)
-                for label, y_full in targets.items():
-                    metrics = probe_one(train_emb, test_emb, y_full,
-                                        args.standardize)
-                    if metrics is None:
-                        continue
-                    n_nonfinite += (metrics["n_train_nonfinite"]
-                                    + metrics["n_test_nonfinite"])
-                    rows.append({
-                        "dataset": dataset, "method": method.upper(),
-                        "target": label, "dim": dim, "split": split,
-                        "run": run, **metrics,
-                    })
-                n_done += 1
-            msg = (f"  {method:4s}: probed {n_done} embedding pairs "
-                   f"x {len(targets)} targets")
-            if n_nonfinite:
-                msg += (f"  [warn] dropped {n_nonfinite} non-finite embedding "
-                        f"rows (see n_*_nonfinite columns)")
-            print(msg)
+            for mode in args.modes:
+                run_pairs = list(discover_runs(
+                    args.emb_root, method, dataset,
+                    args.dims, args.splits, args.runs, mode))
+                if not run_pairs:
+                    print(f"  [warn] no {method}/{mode} embeddings found")
+                    continue
+                n_done = 0
+                n_nonfinite = 0  # non-finite embedding rows dropped (train+test)
+                for split, dim, run, train_csv, test_csv in run_pairs:
+                    train_emb = pd.read_csv(train_csv, index_col=0)
+                    test_emb = pd.read_csv(test_csv, index_col=0)
+                    train_emb.index = train_emb.index.astype(str)
+                    test_emb.index = test_emb.index.astype(str)
+                    for label, y_full in targets.items():
+                        metrics = probe_one(train_emb, test_emb, y_full,
+                                            args.standardize)
+                        if metrics is None:
+                            continue
+                        n_nonfinite += (metrics["n_train_nonfinite"]
+                                        + metrics["n_test_nonfinite"])
+                        rows.append({
+                            "dataset": dataset, "method": method.upper(),
+                            "mode": mode, "target": label, "dim": dim,
+                            "split": split, "run": run, **metrics,
+                        })
+                    n_done += 1
+                msg = (f"  {method:4s} {mode:12s}: probed {n_done} embedding "
+                       f"pairs x {len(targets)} targets")
+                if n_nonfinite:
+                    msg += (f"  [warn] dropped {n_nonfinite} non-finite "
+                            f"embedding rows (see n_*_nonfinite columns)")
+                print(msg)
 
     if not rows:
         print("\nNo results produced -- check --emb-root has embeddings.")
@@ -269,8 +297,11 @@ def main() -> None:
 
     # Compact summary: mean AP across splits x runs per dataset/target/dim/method.
     print("\n=== Mean Average Precision (across splits x runs) ===")
+    group_cols = ["dataset", "target", "dim", "method"]
+    if result_df["mode"].nunique() > 1:
+        group_cols.insert(2, "mode")
     summary = (result_df
-               .groupby(["dataset", "target", "dim", "method"])
+               .groupby(group_cols)
                ["average_precision"].mean().round(4)
                .unstack("method"))
     with pd.option_context("display.max_rows", None, "display.width", 120):

@@ -219,6 +219,10 @@ def main() -> None:
                                             + metrics["n_test_nonfinite"])
                             rows.append({
                                 "dataset": dataset, "method": method.upper(),
+                                # Only the combined embeddings exist in full-
+                                # dataset form; the column keeps the schema
+                                # identical to the inductive results.
+                                "mode": "combined",
                                 "target": label, "dim": dim, "split": split,
                                 "run": run, **metrics,
                             })

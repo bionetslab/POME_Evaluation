@@ -3,7 +3,8 @@
 Reproduces the layout of scripts/plot_fig3_linear_probing.ipynb (3x3 mosaic:
 one aggregated bar panel + eight per-target boxplot panels), using the
 inductive linear probing results (embeddings fit on the train split and
-transformed onto the held-out test split).
+transformed onto the held-out test split) instead of that notebook's
+transductive k-fold scores.
 
 Only the inductive scores are shown: each embedding size draws two boxes,
 POME and UMAP.
@@ -28,6 +29,12 @@ OUT_PATH = os.path.join(
 )
 
 df = pd.read_csv(RESULTS_PATH)
+
+# The results file may also carry the variable-type-restricted runs (mode
+# numeric_only / cat_only) that feed plot_inductive_type_combination.py. This
+# figure is the all-variables comparison only.
+if "mode" in df.columns:
+    df = df[df["mode"] == "combined"].copy()
 
 # Use average precision as the score, mirroring the "Average precision" y-axis
 # of the original figure.
