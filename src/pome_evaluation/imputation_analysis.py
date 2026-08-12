@@ -215,7 +215,7 @@ def load_pome_binning_results(data_dir: str = "data") -> pd.DataFrame:
         pome_df["dataset"] = dataset_key
         pome_df["strategy"] = strategy
         pome_df["nbins"] = nbins
-        records.append(pome_df[["dataset", "strategy", "nbins", "dim", "acc_cat", "mae_cont"]])
+        records.append(pome_df[["dataset", "strategy", "nbins", "dim", "acc_cat", "mae_cont", "nmae_cont"]])
 
     if not records:
         raise ValueError(f"No POME rows were loaded from {data_dir}.")

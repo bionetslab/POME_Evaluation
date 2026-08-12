@@ -331,8 +331,8 @@ def plot_binning_effects_results(
     col_specs = [
         ("acc_cat", "Multiclass accuracy", "z"),
         ("acc_cat", "Multiclass accuracy", "nonlinear"),
-        ("mae_cont", "Mean absolute error", "z"),
-        ("mae_cont", "Mean absolute error", "nonlinear"),
+        ("nmae_cont", "Norm. MAE (per-variable range)", "z"),
+        ("nmae_cont", "Norm. MAE (per-variable range)", "nonlinear"),
     ]
 
     for row, dataset_key in enumerate(dataset_order):
