@@ -17,8 +17,12 @@ frozen state is used to impute the masked entries exactly as at the end of a
 normal fit: categorical variables via the decoder's nearest-category rule and
 continuous variables via POME's regression head re-fit on that epoch's
 embeddings. The imputed values are scored against the held-out ground truth in
-``data/imputation_groundtruth/{DATASET}`` -- raw MAE on the continuous entries
-(``mae_cont``) and accuracy on the categorical entries (``acc_cat``).
+``data/imputation_groundtruth/{DATASET}`` -- raw MAE (``mae_cont``) and
+per-variable range-normalized MAE (``nmae_cont``) on the continuous entries, and
+accuracy on the categorical entries (``acc_cat``). ``nmae_cont`` reuses the
+normalization helpers of ``generate_imputation_results.py`` verbatim, so the
+per-epoch numbers are on exactly the same scale as the competitor and binning
+figures.
 
 Reusing one training run for all snapshots (instead of one fit per epoch count)
 keeps compute proportional to the number of masked files, not files x epochs. The
@@ -29,7 +33,7 @@ One CSV is written per dataset, holding one row per (masked file x snapshot
 epoch):
 
     data/{DATASET}_imputation_per_epoch.csv
-        columns: run, na_ratio, epoch, mae_cont, acc_cat, dataset
+        columns: run, na_ratio, epoch, mae_cont, nmae_cont, acc_cat, dataset
 
 The script is resumable: a masked file is retrained only if some of its snapshot
 rows are missing from the existing CSV (unless ``--overwrite``).
@@ -39,17 +43,23 @@ Run from the project root with the POME-enabled environment (conda env ``torch``
     conda run -n torch python scripts/generate_imputation_epoch_results.py
     conda run -n torch python scripts/generate_imputation_epoch_results.py --dry-run
     conda run -n torch python scripts/generate_imputation_epoch_results.py \
-        --datasets hancock --dim 32 --epochs 100 400 700 1000 1500 2000
+        --datasets hancock --dim 32 --epochs 100 500 1000 1500 2000
 """
 
 import argparse
 import pickle
+import sys
 import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, mean_absolute_error
+
+# Reuse the *exact* normalization of the competitor/binning figures rather than
+# reimplementing it, so nmae_cont is comparable across all imputation figures.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from generate_imputation_results import _load_variable_range, _macro_nmae
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -72,7 +82,7 @@ DATASET_NA_ENCODING = {
     "MIMIC": -99.0,
 }
 
-DEFAULT_EPOCHS = (100, 400, 700, 1000, 1500, 2000)
+DEFAULT_EPOCHS = (100, 500, 1000, 1500, 2000)
 DEFAULT_DIM = 32
 DEFAULT_BINS = 15
 DEFAULT_DISCRETIZATION = "z"
@@ -95,26 +105,33 @@ def groundtruth_path(label: str, na_ratio: str, run: str) -> Path:
     return GROUNDTRUTH_ROOT / label / f"masked_values_{na_ratio}_{run_int}.pkl"
 
 
-def score_imputation(imputed_df: pd.DataFrame, gt_dict: dict) -> tuple[float, float]:
+def score_imputation(imputed_df: pd.DataFrame, gt_dict: dict,
+                     scales: dict) -> tuple[float, float, float]:
     """Score one imputed matrix (variables x samples) against ground truth.
 
-    Returns (mae_cont, acc_cat): raw mean-absolute-error over the held-out
-    continuous entries and accuracy over the categorical entries. POME emits
-    exact category codes, so categoricals are compared without rounding.
+    Returns (mae_cont, nmae_cont, acc_cat): raw mean-absolute-error over the
+    held-out continuous entries, the same error per-variable normalized by that
+    variable's min-max range and macro-averaged (``scales`` maps variable ->
+    range), and accuracy over the categorical entries. POME emits exact category
+    codes, so categoricals are compared without rounding.
     """
-    gt_cont, pred_cont, gt_cat, pred_cat = [], [], [], []
+    gt_cont, pred_cont, cont_vars, gt_cat, pred_cat = [], [], [], [], []
     for (sample, variable), (gt_value, gt_type) in gt_dict.items():
         pred = imputed_df.loc[variable, sample]
         if gt_type == "cont":
             gt_cont.append(gt_value)
             pred_cont.append(pred)
+            cont_vars.append(variable)
         else:
             gt_cat.append(gt_value)
             pred_cat.append(pred)
 
     mae_cont = mean_absolute_error(gt_cont, pred_cont) if gt_cont else np.nan
+    nmae_cont = _macro_nmae(np.array(gt_cont, dtype=float),
+                            np.array(pred_cont, dtype=float),
+                            np.array(cont_vars), scales)
     acc_cat = accuracy_score(gt_cat, pred_cat) if gt_cat else np.nan
-    return float(mae_cont), float(acc_cat)
+    return float(mae_cont), float(nmae_cont), float(acc_cat)
 
 
 def impute_at_snapshot(embedder, state_dict, na_encoding: float) -> pd.DataFrame:
@@ -168,6 +185,8 @@ def process_masked_file(label: str, graph_path: Path, epochs_list: list[int],
         gt_dict = pickle.load(f)
 
     na_encoding = DATASET_NA_ENCODING.get(label, -99.0)
+    # {variable: min-max range} from the original unmasked data; cached per label.
+    scales = _load_variable_range(label)
     df = pd.read_csv(graph_path, sep="\t", index_col=0)
 
     # In-memory weight snapshots: {epoch -> cloned CPU state_dict}. Cloning is
@@ -203,17 +222,18 @@ def process_masked_file(label: str, graph_path: Path, epochs_list: list[int],
         # deterministic and independent of snapshot order.
         make_deterministic(seed)
         imputed_df = impute_at_snapshot(embedder, snaps[epoch], na_encoding)
-        mae_cont, acc_cat = score_imputation(imputed_df, gt_dict)
+        mae_cont, nmae_cont, acc_cat = score_imputation(imputed_df, gt_dict, scales)
         rows.append({
             "run": int(float(run)),
             "na_ratio": na_ratio,
             "epoch": epoch,
             "mae_cont": mae_cont,
+            "nmae_cont": nmae_cont,
             "acc_cat": acc_cat,
             "dataset": label,
         })
         print(f"      [ok]   epoch {epoch:04d}  mae_cont={mae_cont:.3f}  "
-              f"acc_cat={acc_cat:.3f}")
+              f"nmae_cont={nmae_cont:.4f}  acc_cat={acc_cat:.3f}")
     return rows
 
 
@@ -222,7 +242,8 @@ def load_existing(out_path: Path) -> pd.DataFrame:
     if out_path.exists():
         return pd.read_csv(out_path)
     return pd.DataFrame(
-        columns=["run", "na_ratio", "epoch", "mae_cont", "acc_cat", "dataset"])
+        columns=["run", "na_ratio", "epoch", "mae_cont", "nmae_cont", "acc_cat",
+                 "dataset"])
 
 
 def file_done(existing: pd.DataFrame, na_ratio: str, run: str,

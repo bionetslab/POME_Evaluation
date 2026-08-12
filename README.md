@@ -63,6 +63,9 @@ Simply use the notebook located at `scripts/plot_supplement_resource_benchmark.i
 ### Supplement imputation across epochs
 
 Simply use the notebook located at `scripts/plot_supplement_imputation_epochs.ipynb`.
+It reads `data/{DATASET}_imputation_per_epoch.csv`, produced by the GPU script
+`scripts/generate_imputation_epoch_results.py` (see
+`REPRODUCE_IMPUTATION_FIGURES.md`, Step 3).
 
 ## Analysis scripts for POME Evaluation
 All of the following scripts for re-running the performed analyses on POME are located in the directory `src/pome_evaluation`.

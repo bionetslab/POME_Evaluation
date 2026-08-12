@@ -23,7 +23,8 @@ Almost every figure follows the same two-phase pattern, and the two phases run i
 1. **Generate** (`scripts/generate_*.py`, `src/pome_evaluation/impute_graph_based.py`) —
    produce CSVs under `data/` and `output/`. The ones that `import pome`/torch are
    GPU-heavy (`generate_embeddings.py`, `generate_inductive_embeddings.py`,
-   `generate_inductive_epoch_snapshots.py`, `impute_graph_based.py`); the rest only read
+   `generate_inductive_epoch_snapshots.py`, `generate_imputation_epoch_results.py`,
+   `impute_graph_based.py`); the rest only read
    CSVs and are CPU-only.
 2. **Plot** (`scripts/plot_*.ipynb`, `scripts/generate_*_figure.py`) — read the generated
    CSVs and render PDFs into `output/` (and `scripts/` for some supplements).
