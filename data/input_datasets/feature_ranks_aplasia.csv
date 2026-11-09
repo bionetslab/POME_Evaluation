@@ -1,0 +1,101 @@
+clinical_name,imp_mean
+Neutrophils,6.35
+Absolute Monocyte Count,5.14
+Uric Acid,4.27
+Methotrexate,3.49
+Monocytes (%),3.33
+Absolute Lymphocyte Count,3.27
+Lactate Dehydrogenase (LD),3.16
+Glucose,2.87
+Urea Nitrogen,2.81
+White Blood Cells,2.65
+"Bilirubin, Total",2.32
+Albumin,2.32
+"Calcium, Total",2.29
+Absolute Eosinophil Count,2.29
+Red Blood Cells,2.05
+Eosinophils,1.96
+Absolute Neutrophil Count,1.94
+Lymphocytes,1.85
+Platelet Count,1.74
+Phosphate,1.67
+MCHC,1.67
+Chloride,1.65
+Basophils,1.64
+Hematocrit,1.62
+Absolute Basophil Count,1.59
+RDW,1.56
+Sodium,1.54
+Bicarbonate,1.47
+Alkaline Phosphatase,1.45
+Globulin,1.41
+Immature Granulocytes,1.34
+Potassium,1.28
+Creatinine,1.21
+MCH,1.14
+RDW-SD,1.13
+PT,1.12
+Asparate Aminotransferase (AST),1.12
+Anion Gap,1.07
+Hemoglobin,1.07
+Alanine Aminotransferase (ALT),1.01
+Metamyelocytes,0.93
+Magnesium,0.86
+MCV,0.82
+PTT,0.81
+pH,0.8
+Nucleated Red Cells,0.75
+age,0.72
+"Protein, Total",0.72
+Ketone,0.68
+Bands,0.68
+Myelocytes,0.64
+Specific Gravity,0.52
+INR(PT),0.51
+"Bilirubin, Indirect",0.41
+C-Reactive Protein,0.41
+Immunoglobulin G,0.41
+Atypical Lymphocytes,0.36
+RBC,0.32
+ARCH-1,0.29
+Protein,0.27
+Creatine Kinase (CK),0.25
+"Fibrinogen, Functional",0.24
+Triglycerides,0.18
+HPE1,0.13
+Blasts,0.13
+Epithelial Cells,0.12
+"Osmolality, Urine",0.12
+"Sodium, Urine",0.12
+"Reticulocyte Count, Absolute",0.1
+Haptoglobin,0.1
+Vitamin B12,0.09
+Thyroid Stimulating Hormone,0.09
+Lactate,0.09
+Promyelocytes,0.09
+NTproBNP,0.09
+Lipase,0.09
+Calculated Total CO2,0.09
+"Reticulocyte Count, Automated",0.09
+Ferritin,0.09
+HPE3,0.08
+HPE7,0.08
+pCO2,0.07
+"Creatine Kinase, MB Isoenzyme",0.07
+WBC,0.07
+"Creatinine, Urine",0.07
+Hyaline Casts,0.07
+pO2,0.05
+Free Calcium,0.05
+Urobilinogen,0.05
+"Iron Binding Capacity, Total",0.04
+Base Excess,0.04
+"Urea Nitrogen, Urine",0.03
+Transferrin,0.03
+Other Cells,0.03
+Iron,0.03
+Vancomycin,0.02
+"Potassium, Urine",0.02
+"Potassium, Whole Blood",0.02
+"Bilirubin, Direct",0.02
+gender,0.01

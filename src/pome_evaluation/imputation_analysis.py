@@ -45,11 +45,16 @@ def load_imputation_benchmark_data(
     bins: int = 15,
     mode: str = "z",
     data_dir: str = "data",
+    suffix: str = "",
 ) -> dict[str, pd.DataFrame]:
-    """Load and filter imputation benchmark CSV files for all cohorts."""
+    """Load and filter imputation benchmark CSV files for all cohorts.
+
+    ``suffix`` selects a result variant, e.g. ``"_invariant"`` reads
+    ``{DATASET}_imputation_{mode}_bins_{bins}_invariant.csv``.
+    """
     frames = {}
     for cohort, pattern in COHORT_FILENAMES.items():
-        filename = pattern.format(mode=mode, bins=bins)
+        filename = pattern.format(mode=mode, bins=bins).replace(".csv", f"{suffix}.csv")
         file_path = _resolve_input_file(filename, data_dir=data_dir)
         frame = pd.read_csv(file_path, index_col=0)
         frame = frame[frame["dim"].isin([dim, -1])].sort_values(by="tool", ascending=False)
@@ -171,6 +176,7 @@ def build_imputation_figure_data(
     bins: int = 15,
     mode: str = "z",
     data_dir: str = "data",
+    suffix: str = "",
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Build all data objects needed for the imputation figure.
 
@@ -182,7 +188,8 @@ def build_imputation_figure_data(
             [dataset, method, acc_cat, mae_cont, nmae_cont, na_ratio, run]
             aggregated over all missingness ratios (no filtering by na_ratio).
     """
-    frames = load_imputation_benchmark_data(dim=dim, bins=bins, mode=mode, data_dir=data_dir)
+    frames = load_imputation_benchmark_data(dim=dim, bins=bins, mode=mode, data_dir=data_dir,
+                                            suffix=suffix)
     cont_ranks, cat_ranks = _build_rank_tables_from_frames(frames)
     metric_distributions = _build_metric_distributions(frames)
     return cont_ranks, cat_ranks, metric_distributions

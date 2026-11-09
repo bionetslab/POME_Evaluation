@@ -44,7 +44,8 @@ def impute_graph_based(input_directory: str,
                        num_dimensions: int,
                        num_bins: int,
                        discretization_type: str,
-                       device: str = "cuda"):
+                       device: str = "cuda",
+                       regressor_inputs: str = "invariant"):
 
     # Iterate over all files in the directory.
     for filename in os.listdir(input_directory):
@@ -74,6 +75,7 @@ def impute_graph_based(input_directory: str,
             'bins_per_continuous': num_bins,
             'discretization_type': discretization_type,
             'enable_imputation': True,
+            'regressor_inputs': regressor_inputs,
         }
         embedder = Embedder(**embedder_params,
                             embedding_dimension=num_dimensions)
@@ -127,6 +129,11 @@ def main():
                         help="datasets to impute (default: all with simulated_data)")
     parser.add_argument("--epochs", type=int, default=2000,
                         help="training epochs per fit (default: 2000)")
+    parser.add_argument("--regressor-inputs", default="invariant", choices=["invariant", "raw"],
+                        help="inputs of POME's numeric regression head (default: invariant; "
+                             "'raw' reproduces POME <= 1.1)")
+    parser.add_argument("--output-suffix", default="",
+                        help="appended to imputed_{disc}_{bins}_{dim}, e.g. _invariant")
     args = parser.parse_args()
 
     informative_na = []
@@ -145,7 +152,8 @@ def main():
                 for dim in args.dims:
                     make_deterministic(42)
                     output_directory = (POME_IMPUTATION_ROOT / dataset /
-                                        f"imputed_{discretization}_{bin_count}_{dim}")
+                                        f"imputed_{discretization}_{bin_count}_{dim}"
+                                        f"{args.output_suffix}")
                     output_directory.mkdir(parents=True, exist_ok=True)
 
                     impute_graph_based(
@@ -157,6 +165,7 @@ def main():
                         num_dimensions=dim,
                         num_bins=bin_count,
                         discretization_type=discretization,
+                        regressor_inputs=args.regressor_inputs,
                     )
         print(f"Finished {dataset} imputation!")
 

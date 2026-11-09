@@ -23,6 +23,12 @@ def parse_args() -> argparse.Namespace:
         default=32,
         help="Embedding size to plot (default: 32).",
     )
+    parser.add_argument(
+        "--suffix",
+        default="",
+        help="Result variant, e.g. _invariant: reads {DATASET}_imputation_z_bins_15{suffix}.csv "
+             "and writes output/imputation_ranks_with_competitors_{dim}{suffix}.pdf.",
+    )
     return parser.parse_args()
 
 
@@ -37,10 +43,11 @@ def main() -> None:
     output_dir = Path("output")
     output_dir.mkdir(exist_ok=True)
 
-    output_pdf = output_dir / f"imputation_ranks_with_competitors_{dim}.pdf"
-    cont_path = output_dir / f"imputation_cont_ranks_dim_{dim}.csv"
-    cat_path = output_dir / f"imputation_cat_ranks_dim_{dim}.csv"
-    dist_path = output_dir / f"imputation_metric_distributions_dim_{dim}.csv"
+    sfx = args.suffix
+    output_pdf = output_dir / f"imputation_ranks_with_competitors_{dim}{sfx}.pdf"
+    cont_path = output_dir / f"imputation_cont_ranks_dim_{dim}{sfx}.csv"
+    cat_path = output_dir / f"imputation_cat_ranks_dim_{dim}{sfx}.csv"
+    dist_path = output_dir / f"imputation_metric_distributions_dim_{dim}{sfx}.csv"
 
     legacy_cont_path = output_dir / "imputation_cont_ranks.csv"
     legacy_cat_path = output_dir / "imputation_cat_ranks.csv"
@@ -51,7 +58,7 @@ def main() -> None:
         cont_ranks = pd.read_csv(cont_path)
         cat_ranks = pd.read_csv(cat_path)
         metric_distributions = pd.read_csv(dist_path)
-    elif dim == 32 and legacy_cont_path.exists() and legacy_cat_path.exists() and legacy_dist_path.exists():
+    elif not sfx and dim == 32 and legacy_cont_path.exists() and legacy_cat_path.exists() and legacy_dist_path.exists():
         print("Loading existing legacy imputation figure inputs for dim=32 from output directory...")
         cont_ranks = pd.read_csv(legacy_cont_path)
         cat_ranks = pd.read_csv(legacy_cat_path)
@@ -67,6 +74,7 @@ def main() -> None:
             bins=bins,
             mode=mode,
             data_dir=data_dir,
+            suffix=sfx,
         )
         cont_ranks.to_csv(cont_path, index=False)
         cat_ranks.to_csv(cat_path, index=False)

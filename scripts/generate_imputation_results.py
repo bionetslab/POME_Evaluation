@@ -183,7 +183,7 @@ def _macro_nmae(gt_cont: np.ndarray, pred_cont: np.ndarray,
 
 def process_groundtruth_file(gt_path: Path, label: str, dims, bins: int,
                              discretization: str, results: dict,
-                             regression: bool = False) -> None:
+                             suffix: str = "") -> None:
     """Score every available tool for one copy-masked ground-truth file."""
     with open(gt_path, "rb") as f:
         gt_dict = pickle.load(f)
@@ -218,7 +218,6 @@ def process_groundtruth_file(gt_path: Path, label: str, dims, bins: int,
         predictors.append(
             ("MissForest", lambda s, v, d=miss_df: d.loc[s, v], True, -1))
 
-    suffix = "_regression" if regression else ""
     for dim in dims:
         graph_dir = f"imputed_{discretization}_{bins}_{dim}{suffix}"
         graph_df = _load_variable_by_sample(
@@ -298,7 +297,7 @@ def process_groundtruth_file(gt_path: Path, label: str, dims, bins: int,
 
 
 def build_dataset_results(label: str, dims, bins: int, discretization: str,
-                          regression: bool = False):
+                          suffix: str = ""):
     """Return the imputation-error DataFrame for one (dataset, disc, bins)."""
     groundtruth_dir = GROUNDTRUTH_ROOT / label
     if not groundtruth_dir.is_dir():
@@ -312,7 +311,7 @@ def build_dataset_results(label: str, dims, bins: int, discretization: str,
         if gt_path.suffix != ".pkl":
             continue
         process_groundtruth_file(
-            gt_path, label, dims, bins, discretization, results, regression)
+            gt_path, label, dims, bins, discretization, results, suffix)
 
     df = pd.DataFrame(results)
     if df.empty:
@@ -339,6 +338,10 @@ def main() -> None:
                         help="use POME regression-mode imputed files "
                              "(imputed_{disc}_{bins}_{dim}_regression), and write "
                              "to {DATASET}_imputation_{disc}_bins_{bins}_regression.csv")
+    parser.add_argument("--pome-suffix", default=None,
+                        help="read POME files from imputed_{disc}_{bins}_{dim}{suffix} and write "
+                             "{DATASET}_imputation_{disc}_bins_{bins}{suffix}.csv, e.g. "
+                             "_invariant for the invariant regression-head inputs")
     parser.add_argument("--overwrite", action="store_true",
                         help="recompute and overwrite existing result CSVs")
     parser.add_argument("--dry-run", action="store_true",
@@ -350,7 +353,8 @@ def main() -> None:
     print(f"Datasets: {args.datasets} | discretization: {args.discretization} | "
           f"bins: {args.bins} | dims: {args.dims} | regression: {args.regression}")
 
-    out_suffix = "_regression" if args.regression else ""
+    out_suffix = (args.pome_suffix if args.pome_suffix is not None
+                  else "_regression" if args.regression else "")
     for key in args.datasets:
         label = DATASETS[key]
         for discretization in args.discretization:
@@ -366,7 +370,7 @@ def main() -> None:
 
                 print(f"  [build] {label} | {discretization} | bins={bins}")
                 df = build_dataset_results(
-                    label, args.dims, bins, discretization, args.regression)
+                    label, args.dims, bins, discretization, out_suffix)
                 if df is None:
                     print(f"    [warn] no results for {out_path.name}, not written")
                     continue
