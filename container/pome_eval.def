@@ -1,0 +1,61 @@
+# Apptainer definition for POME_Evaluation on Helma (NVIDIA H200, CUDA 12.1).
+#
+# Build (on a Helma frontend, e.g. helma4/helma5):
+#     bash container/build.sh
+#
+# This is a superset of the POME runtime container: it bakes in the heavier
+# evaluation/plotting/analysis dependency set AND imports `pome`. As in the
+# POME setup, the slow-changing heavy deps are baked in, while BOTH project
+# sources -- POME_Evaluation and POME -- are bind-mounted at run time
+# (PYTHONPATH), so editing code never requires a rebuild.
+#
+# Provisioning `pome`: bind-mount POME.git/src on PYTHONPATH (default; keeps
+# both repos editable). Frozen alternative: uncomment `pip install pome-py`.
+
+Bootstrap: docker
+From: dockerhub-mirror.rrze.uni-erlangen.de/pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
+
+%files
+    requirements.txt /opt/requirements.txt
+
+%post
+    pip install --no-cache-dir --upgrade pip
+    pip install --no-cache-dir -r /opt/requirements.txt
+
+    # napypi hard-pins an abandoned numba-scipy it never imports; install it
+    # without deps -- its real needs (numpy 1.26 + numba 0.60) are already met.
+    pip install --no-cache-dir --no-deps napypi==1.1.9
+
+    # Frozen alternative (uncomment to bake POME into the image instead of
+    # bind-mounting POME.git/src at run time):
+    # pip install --no-cache-dir pome-py
+
+    # Sanity check: fail the build early if the stack is broken.
+    python - <<'PY'
+import torch, torch_geometric, numpy, scipy, pandas, sklearn, numba
+import matplotlib, seaborn, statannotations, adjustText
+import umap, igraph, leidenalg, lifelines, missforest, napypi
+import nbconvert
+print("torch", torch.__version__, "| PyG", torch_geometric.__version__)
+print("numpy", numpy.__version__, "| scipy", scipy.__version__,
+      "| pandas", pandas.__version__, "| numba", numba.__version__)
+print("umap/igraph/leidenalg/lifelines/missforest/napypi/statannotations OK")
+PY
+
+%environment
+    export PYTHONNOUSERSITE=1
+    export OMP_NUM_THREADS=${OMP_NUM_THREADS:-8}
+
+%runscript
+    # `apptainer run pome_eval.sif <args>` behaves like `python <args>`.
+    exec python "$@"
+
+%labels
+    Application POME_Evaluation
+    Maintainer  fabian.woller@fau.de
+
+%help
+    POME_Evaluation runtime for Helma (figures, analyses, imputation, survival).
+    Prefer the wrappers:
+      container/run.sh    <script.py|notebook.ipynb> [args]   # local / interactive (CPU default)
+      container/submit.sh <script.py> [args]                  # sbatch to H200 (GPU)

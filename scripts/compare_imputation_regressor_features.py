@@ -33,6 +33,10 @@ import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from pome_evaluation.pome_configs import pome_config  # noqa: E402
+# Published POME training settings (POME >= 1.3 defaults to the stable_k8 settings).
+PUBLISHED_POME = pome_config("default")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generate_imputation_results import _load_variable_range, _macro_nmae  # noqa: E402
 
@@ -150,7 +154,7 @@ def run(args):
                         continue
                     print(f"[fit] {dataset} dim {dim} ratio {ratio} run {r}", flush=True)
                     make_deterministic(42)                 # as in impute_graph_based.py
-                    embedder = Embedder(na_encoding=NA_ENCODING[dataset], informative_nas=[],
+                    embedder = Embedder(**PUBLISHED_POME, na_encoding=NA_ENCODING[dataset], informative_nas=[],
                                         device=device, epochs=args.epochs,
                                         bins_per_continuous=args.bins,
                                         discretization_type=args.discretization,

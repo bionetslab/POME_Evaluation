@@ -8,8 +8,14 @@ transductive k-fold scores.
 
 Only the inductive scores are shown: each embedding size draws two boxes,
 POME and UMAP.
+
+Usage:
+    container/run.sh scripts/plot_inductive_linear_probing.py \
+        [--results CSV] [--output PDF] [--dims 16 32 64]
+Defaults reproduce the original figure (all dims in the results file).
 """
 
+import argparse
 import os
 
 import matplotlib.pyplot as plt
@@ -27,8 +33,17 @@ RESULTS_PATH = os.path.join(
 OUT_PATH = os.path.join(
     SCRIPT_DIR, "..", "output", "linear_probing", "inductive_linear_probing_results.pdf"
 )
+parser = argparse.ArgumentParser(description="Plot inductive linear probing results.")
+parser.add_argument("--results", default=RESULTS_PATH, help="probing results CSV")
+parser.add_argument("--output", default=OUT_PATH, help="output PDF")
+parser.add_argument("--dims", nargs="+", type=int, default=None,
+                    help="embedding sizes to show (default: all in the results file)")
+args = parser.parse_args()
+RESULTS_PATH, OUT_PATH = args.results, args.output
 
 df = pd.read_csv(RESULTS_PATH)
+if args.dims is not None:
+    df = df[df["dim"].isin(args.dims)].copy()
 
 # The results file may also carry the variable-type-restricted runs (mode
 # numeric_only / cat_only) that feed plot_inductive_type_combination.py. This

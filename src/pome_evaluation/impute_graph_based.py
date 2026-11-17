@@ -24,6 +24,8 @@ import pandas as pd
 
 from pome.gnn_embedding import Embedder, make_deterministic
 
+from pome_evaluation.pome_configs import POME_CONFIGS, pome_config
+
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 POME_IMPUTATION_ROOT = PROJECT_ROOT / "data" / "imputation_data" / "pome_based"
@@ -45,7 +47,8 @@ def impute_graph_based(input_directory: str,
                        num_bins: int,
                        discretization_type: str,
                        device: str = "cuda",
-                       regressor_inputs: str = "invariant"):
+                       regressor_inputs: str = "invariant",
+                       pome_kwargs: dict = None):
 
     # Iterate over all files in the directory.
     for filename in os.listdir(input_directory):
@@ -76,6 +79,7 @@ def impute_graph_based(input_directory: str,
             'discretization_type': discretization_type,
             'enable_imputation': True,
             'regressor_inputs': regressor_inputs,
+            **(pome_kwargs or {}),
         }
         embedder = Embedder(**embedder_params,
                             embedding_dimension=num_dimensions)
@@ -132,13 +136,17 @@ def main():
     parser.add_argument("--regressor-inputs", default="invariant", choices=["invariant", "raw"],
                         help="inputs of POME's numeric regression head (default: invariant; "
                              "'raw' reproduces POME <= 1.1)")
+    parser.add_argument("--pome-config", default="default", choices=list(POME_CONFIGS),
+                        help="named POME training configuration (src/pome_evaluation/"
+                             "pome_configs.py); pair a non-default one with --output-suffix")
     parser.add_argument("--output-suffix", default="",
                         help="appended to imputed_{disc}_{bins}_{dim}, e.g. _invariant")
     args = parser.parse_args()
 
     informative_na = []
     print(f"Datasets: {args.datasets} | discretizations: {args.discretizations} "
-          f"| bins: {args.bins} | dims: {args.dims} | epochs: {args.epochs}")
+          f"| bins: {args.bins} | dims: {args.dims} | epochs: {args.epochs} "
+          f"| POME config: {args.pome_config} {pome_config(args.pome_config)}")
 
     for dataset in args.datasets:
         na_encoding = DATASET_NA_ENCODING[dataset]
@@ -166,6 +174,7 @@ def main():
                         num_bins=bin_count,
                         discretization_type=discretization,
                         regressor_inputs=args.regressor_inputs,
+                        pome_kwargs=pome_config(args.pome_config),
                     )
         print(f"Finished {dataset} imputation!")
 

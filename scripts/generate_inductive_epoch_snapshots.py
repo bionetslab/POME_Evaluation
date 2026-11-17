@@ -55,6 +55,11 @@ import pandas as pd
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+import sys  # noqa: E402
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from pome_evaluation.pome_configs import pome_config  # noqa: E402
+# Published POME training settings (POME >= 1.3 defaults to the stable_k8 settings).
+PUBLISHED_POME = pome_config("default")
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_epochs"
 
@@ -178,7 +183,7 @@ def process_config(dataset: str, split_id: int, dim: int, run: int,
                             for k, v in autoencoder.state_dict().items()}
 
     make_deterministic(seed_base + run)
-    embedder = Embedder(
+    embedder = Embedder(**PUBLISHED_POME, 
         embedding_dimension=dim,
         epochs=epochs,
         bins_per_continuous=bins,

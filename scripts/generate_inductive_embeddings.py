@@ -137,6 +137,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive"
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from pome_evaluation.pome_configs import POME_CONFIGS, pome_config  # noqa: E402
 
 DATASETS = ("hancock", "luad", "mimic")
 METHODS = ("pome", "umap")
@@ -294,7 +296,8 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                      early_stopping: bool = True,
                      overfit_tol: float = DEFAULT_OVERFIT_TOL,
                      gap_draws: int = DEFAULT_GAP_DRAWS,
-                     mode: str = "combined", log_tag: str = "") -> None:
+                     mode: str = "combined", log_tag: str = "",
+                     pome_kwargs: dict = None) -> None:
     from pome.gnn_embedding import Embedder, make_deterministic
 
     split_dir = SPLITS_ROOT / dataset
@@ -339,6 +342,7 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                 cv_seed=cv_seed,
                 overfit_tol=overfit_tol,
                 gap_draws=gap_draws,
+                **(pome_kwargs or {}),
             )
             embedder.fit(train_df)
             train_emb, *_ = embedder.get_embeddings()  # transductive (train)
@@ -561,6 +565,9 @@ def main() -> None:
                              "every run, so a shared file loses rows. Merge the "
                              "shards with scripts/merge_tuned_epochs.py")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument("--pome-config", default="default", choices=list(POME_CONFIGS),
+                        help="named POME training configuration (src/pome_evaluation/"
+                             "pome_configs.py); pair a non-default one with --output-dir")
     parser.add_argument("--overwrite", action="store_true",
                         help="recompute and overwrite existing embedding files")
     parser.add_argument("--dry-run", action="store_true",
@@ -592,6 +599,9 @@ def main() -> None:
                   f"(epochs={args.epochs}) "
                   f"bins={args.bins} discretization={args.discretization} "
                   f"device={device}")
+
+    if "pome" in args.methods:
+        print(f"POME config: {args.pome_config} {pome_config(args.pome_config)}")
 
     plan = []  # (method, dataset, mode, [split_ids])
     for method in args.methods:
@@ -626,7 +636,8 @@ def main() -> None:
                     args.cv_seed, device, args.output_dir, args.overwrite,
                     early_stopping=args.early_stopping,
                     overfit_tol=args.overfit_tol, gap_draws=args.gap_draws,
-                    mode=mode, log_tag=args.log_tag)
+                    mode=mode, log_tag=args.log_tag,
+                    pome_kwargs=pome_config(args.pome_config))
             else:
                 embed_umap_split(
                     dataset, split_id, args.dims, args.runs,
