@@ -45,6 +45,10 @@ Outputs: output/training_noise/{dataset}/imputation_mask.csv           (masked c
          output/training_noise/{dataset}/epochs_{E}/{config}/seed_{SS}_imputed.csv
          output/training_noise/runs.csv                                 (run log, wall clock)
 Analysis: scripts/analyze_training_noise_variance.py
+
+Requires POME <= 1.3 (commit cdc77be for the learnvar configs): the training options compared here
+(init, anchor_weight, train_variable_encodings) were removed in POME 1.4, whose fixed defaults
+equal anchorinf_learnvar_a0.1_gram10_k8_lr_decay.
 """
 
 import argparse

@@ -47,7 +47,7 @@ def impute_graph_based(input_directory: str,
                        num_bins: int,
                        discretization_type: str,
                        device: str = "cuda",
-                       regressor_inputs: str = "invariant",
+                       regressor_inputs: str = None,
                        pome_kwargs: dict = None):
 
     # Iterate over all files in the directory.
@@ -78,7 +78,7 @@ def impute_graph_based(input_directory: str,
             'bins_per_continuous': num_bins,
             'discretization_type': discretization_type,
             'enable_imputation': True,
-            'regressor_inputs': regressor_inputs,
+            **({'regressor_inputs': regressor_inputs} if regressor_inputs else {}),
             **(pome_kwargs or {}),
         }
         embedder = Embedder(**embedder_params,
@@ -133,9 +133,9 @@ def main():
                         help="datasets to impute (default: all with simulated_data)")
     parser.add_argument("--epochs", type=int, default=2000,
                         help="training epochs per fit (default: 2000)")
-    parser.add_argument("--regressor-inputs", default="invariant", choices=["invariant", "raw"],
-                        help="inputs of POME's numeric regression head (default: invariant; "
-                             "'raw' reproduces POME <= 1.1)")
+    parser.add_argument("--regressor-inputs", default=None, choices=["invariant", "raw"],
+                        help="inputs of POME's numeric regression head, POME 1.2-1.3 only "
+                             "(default: POME's own default; 'raw' reproduces POME <= 1.1)")
     parser.add_argument("--pome-config", default="default", choices=list(POME_CONFIGS),
                         help="named POME training configuration (src/pome_evaluation/"
                              "pome_configs.py); pair a non-default one with --output-suffix")

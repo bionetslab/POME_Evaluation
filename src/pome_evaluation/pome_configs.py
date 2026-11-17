@@ -27,6 +27,9 @@ configuration with a separate output location (``--embeddings-root``, ``--output
            variable representation.
   stable_k8_learnvar_a{w}  ``stable_k8_learnvar`` with the trainable e_j anchored to their init
            (variable_anchor_weight=w; scan w in 0.1, 1, 10, 100).
+  pome_1.4 POME >= 1.4 defaults (fixed spectral table, learned e_j with w = 0.1, imputation from
+           the learned e_j); same model as stable_k8_learnvar_a0.1_rawreg. The only config that
+           runs with POME 1.4; all others need POME <= 1.3 (see the note above pome_config).
 """
 
 # Explicit values for every training option: POME >= 1.3 uses the stable_k8 settings as its
@@ -55,8 +58,31 @@ POME_CONFIGS["stable_k8_learnvar_a0.1_rawreg"] = dict(POME_CONFIGS["stable_k8_le
                                                       regressor_inputs="raw")
 
 
+# POME >= 1.4 (main, 44b30a6): fixed spectral encoding table, learned e_j anchored with w = 0.1,
+# numeric imputation from the learned e_j -- the Embedder defaults, equivalent to
+# stable_k8_learnvar_a0.1_rawreg. All other configs use options removed in POME 1.4 (init,
+# anchor_weight, train_variable_encodings, regressor_inputs) and need POME <= 1.3: the published
+# "default" runs with any POME 1.2 / 1.3, the stable* configs with POME commit cdc77be (branch
+# learnable-variable-encodings, last commit before 1.4).
+POME_CONFIGS["pome_1.4"] = {}
+
+
 def pome_config(name: str) -> dict:
-    """Return a copy of the Embedder kwargs of configuration ``name``."""
+    """Return a copy of the Embedder kwargs of configuration ``name``.
+
+    Raises a clear error if the installed POME does not accept one of the config's options.
+    """
     if name not in POME_CONFIGS:
         raise ValueError(f"unknown POME config {name!r}; choose from {list(POME_CONFIGS)}")
+    import inspect
+    try:
+        from pome import Embedder
+    except ImportError:  # POME not importable here (e.g. plotting-only environment)
+        return dict(POME_CONFIGS[name])
+    accepted = set(inspect.signature(Embedder.__init__).parameters)
+    unknown = sorted(set(POME_CONFIGS[name]) - accepted)
+    if unknown:
+        raise RuntimeError(f"POME config {name!r} needs Embedder options {unknown}, which the "
+                           "installed POME does not have (removed in POME 1.4). Run it with "
+                           "POME <= 1.3 (see src/pome_evaluation/pome_configs.py).")
     return dict(POME_CONFIGS[name])
