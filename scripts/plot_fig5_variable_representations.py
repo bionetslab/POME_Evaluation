@@ -5,16 +5,18 @@ each variable's normalized value-node inputs) on the 10 seeds x 3 encoding sizes
 generate_variable_representations.py and analyzed by analyze_variable_representation_stability.py.
 
     a  Spearman correlation between CatBoost feature importance and target-to-lab cosine
-       similarity, one point per seed; k/10 = seeds with one-sided permutation p < 0.05.
+       similarity across the 10 seeds.
     b  Cross-seed reproducibility: Spearman correlation of the target-to-lab cosine profiles
        between all 45 pairs of seeds.
     c  Cluster reproducibility: fraction of seeds in which a lab variable falls into the Leiden
-       cluster of Aplasia (top labs, largest encoding size).
+       cluster of Aplasia (top labs, encoding size 32).
 
-CPU only:  container/run.sh scripts/plot_fig5_variable_representations.py
-Output:    output/variable_embeddings/variable_results_revised.pdf (+ .png)
+CPU only:  container/run.sh scripts/plot_fig5_variable_representations.py [--pome-config CONFIG]
+Output:    output/variable_embeddings/variable_results_revised[_{CONFIG}].pdf (+ .png)
+           (no suffix for the published ``default`` config)
 """
 
+import argparse
 import itertools
 from pathlib import Path
 
@@ -29,7 +31,7 @@ STAB_DIR = PROJECT_ROOT / "output" / "variable_embeddings" / "representation_sta
 OUT = PROJECT_ROOT / "output" / "variable_embeddings" / "variable_results_revised"
 LABITEMS = PROJECT_ROOT / "data" / "input_datasets" / "d_labitems.csv.gz"
 OPTION = "centroid_input"
-COCLUSTER_DIM = 64
+COCLUSTER_DIM = 32
 TOP_LABS = 12
 TARGET_NAMES = {"Aplasia": "Aplasia", "NF": "Neutropenic Fever"}
 HUE_ORDER = list(TARGET_NAMES.values())
@@ -39,12 +41,12 @@ labelfontsize, titlefontsize, ticklabelsize = 20, 19, 16
 xylabelsize, legendfontsize = 18, 15
 
 
-def load():
+def load(option=OPTION):
     imp = pd.read_csv(STAB_DIR / "importance_correlation.csv")
-    imp = imp[imp["option"] == OPTION].replace({"target": TARGET_NAMES})
+    imp = imp[imp["option"] == option].replace({"target": TARGET_NAMES})
 
     prof = pd.read_csv(STAB_DIR / "target_profiles.csv", dtype={"lab": str})
-    prof = prof[prof["option"] == OPTION]
+    prof = prof[prof["option"] == option]
     rows = []
     for (dim, target), grp in prof.groupby(["dim", "target"]):
         p = grp.pivot(index="lab", columns="run", values="cosine")
@@ -53,7 +55,7 @@ def load():
     repro = pd.DataFrame(rows)
 
     co = pd.read_csv(STAB_DIR / "aplasia_coclustering.csv", dtype={"lab": str})
-    co = co[(co["option"] == OPTION) & (co["dim"] == COCLUSTER_DIM)]
+    co = co[(co["option"] == option) & (co["dim"] == COCLUSTER_DIM)]
     labels = pd.read_csv(LABITEMS)
     label_of = dict(zip(labels["itemid"].astype(str), labels["label"] + " (" + labels["fluid"] + ")"))
     co["name"] = co["lab"].map(label_of).str.replace(" (Blood)", "", regex=False)
@@ -80,25 +82,30 @@ def boxes(ax, data, y, show_points):
 
 
 def main():
-    imp, repro, co = load()
+    global STAB_DIR, OUT
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--pome-config", default="default",
+                        help="POME config tag of the analyzed runs")
+    parser.add_argument("--option", default=OPTION,
+                        help="variable representation (centroid_input, or raw = learned e_j, "
+                             "identifiable when the value rows are fixed); non-default adds "
+                             "_{option} to the output name")
+    args = parser.parse_args()
+    if args.pome_config != "default":
+        STAB_DIR = STAB_DIR.with_name(f"{STAB_DIR.name}_{args.pome_config}")
+        OUT = OUT.with_name(f"{OUT.name}_{args.pome_config}")
+    if args.option != OPTION:
+        OUT = OUT.with_name(f"{OUT.name}_{args.option}")
+    imp, repro, co = load(args.option)
     fig, axes = plt.subplot_mosaic([["a", "b", "c"]], figsize=(18, 5.5), layout="constrained",
                                    width_ratios=[1, 1, 1.15])
     offset = transforms.ScaledTranslation(-36 / 72, 27 / 72, fig.dpi_scale_trans)
 
     ax = axes["a"]
-    boxes(ax, imp, "spearman", show_points=True)
+    boxes(ax, imp, "spearman", show_points=False)
     ax.set_ylabel("Spearman correlation", fontsize=xylabelsize)
     ax.set_title("Correlation of encoding similarities\nwith feature importances",
                  fontsize=titlefontsize)
-    dims = sorted(imp["dim"].unique())
-    top = imp["spearman"].max()
-    for i, dim in enumerate(dims):
-        for j, target in enumerate(HUE_ORDER):
-            sub = imp[(imp["dim"] == dim) & (imp["target"] == target)]
-            k = int((sub["perm_p"] < 0.05).sum())
-            ax.text(i + (j - 0.5) * 0.4, top + 0.06, f"{k}/{len(sub)}", ha="center",
-                    va="bottom", fontsize=ticklabelsize * 0.8, color="0.25")
-    ax.set_ylim(top=top + 0.2)
     panel_label(ax, "a", offset)
 
     ax = axes["b"]
@@ -124,9 +131,9 @@ def main():
                frameon=False)
     for ax in axes.values():
         ax.spines[["top", "right"]].set_visible(False)
-    fig.savefig(OUT.with_suffix(".pdf"))
-    fig.savefig(OUT.with_suffix(".png"), dpi=150)
-    print(f"Wrote {OUT.with_suffix('.pdf')}")
+    fig.savefig(OUT.parent / (OUT.name + ".pdf"))
+    fig.savefig(OUT.parent / (OUT.name + ".png"), dpi=150)
+    print(f"Wrote {OUT}.pdf")
 
 
 if __name__ == "__main__":

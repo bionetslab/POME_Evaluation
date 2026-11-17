@@ -21,6 +21,12 @@ configuration with a separate output location (``--embeddings-root``, ``--output
            published clustering range while keeping the stability gains (top-k grid, see
            generate_training_noise_runs.py --gram-ref-components). Adopted configuration;
            the Embedder defaults since POME 1.3.
+  stable_k8_learnvar  ``stable_k8`` with trainable variable encodings e_j (spectral init); sample
+           and value rows stay frozen (train_variable_encodings=True; POME branch
+           learnable-variable-encodings). Tests whether the stability gains survive a learned
+           variable representation.
+  stable_k8_learnvar_a{w}  ``stable_k8_learnvar`` with the trainable e_j anchored to their init
+           (variable_anchor_weight=w; scan w in 0.1, 1, 10, 100).
 """
 
 # Explicit values for every training option: POME >= 1.3 uses the stable_k8 settings as its
@@ -33,6 +39,20 @@ POME_CONFIGS = {
                    gram_reference_components=None, lr_schedule="cosine", negatives="sampled"),
 }
 POME_CONFIGS["stable_k8"] = dict(POME_CONFIGS["stable"], gram_reference_components=8)
+# The POME defaults on branch learnable-variable-encodings train e_j (anchored, w = 0.1), so the
+# frozen-table configs state train_variable_encodings=False explicitly.
+for _name in ("default", "stable", "stable_k8"):
+    POME_CONFIGS[_name]["train_variable_encodings"] = False
+POME_CONFIGS["stable_k8_learnvar"] = dict(POME_CONFIGS["stable_k8"], train_variable_encodings=True,
+                                          variable_anchor_weight=0.0)
+# e_j anchor scan: penalty w * mean_j ||e_j - e_j_init||^2 (POME variable_anchor_weight).
+for _w in (0.1, 1, 10, 100):
+    POME_CONFIGS[f"stable_k8_learnvar_a{_w:g}"] = dict(POME_CONFIGS["stable_k8_learnvar"],
+                                                       variable_anchor_weight=float(_w))
+# stable_k8_learnvar_a0.1 with numeric imputation from the raw e_j (regressor_inputs="raw"; with
+# fixed value rows the raw e_j are identifiable, so the concept normalization is not needed).
+POME_CONFIGS["stable_k8_learnvar_a0.1_rawreg"] = dict(POME_CONFIGS["stable_k8_learnvar_a0.1"],
+                                                      regressor_inputs="raw")
 
 
 def pome_config(name: str) -> dict:

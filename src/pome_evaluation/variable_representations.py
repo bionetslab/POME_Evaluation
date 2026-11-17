@@ -5,7 +5,7 @@ POME README, "Note on variable encodings"), so per-variable vectors are summarie
 variable's value nodes. The options compared here:
 
     raw              raw learned encodings e_j (POME <= 1.1 behaviour; NOT identifiable)
-    centroid_input   option 1: mean of normalized value-node inputs (POME's default variable_df)
+    centroid_input   option 1: mean of normalized value-node inputs (POME 1.2-1.3 default variable_df)
     centroid_latent  option 2: mean of the variable's value-node encoder outputs z
     contrast_latent  option 3: direction in z-space in which the variable separates samples:
                      binary categorical -> z[higher value] - z[lower value];
@@ -64,7 +64,11 @@ def contrast_vectors(latent_df, variable_names, cont_vars, informative_nas=()):
 
 def compute_options(embedder):
     """Return ({option: DataFrame variables x dims}, {option: Series of vector norms})."""
-    _, cen_in, _, _ = embedder.get_embeddings()
+    # Centroid computed explicitly: get_embeddings() returns the learned e_j instead when the
+    # value rows are frozen (POME branch learnable-variable-encodings).
+    _, ref, _, _ = embedder.get_embeddings(raw=True)
+    cen, _ = embedder._variable_centroids()
+    cen_in = pd.DataFrame(cen, index=ref.index, columns=ref.columns)
     # Raw e_j read from the live model (identical to get_embeddings(raw=True) after fit, but also
     # correct if the model weights were modified afterwards, as in the invariance checks).
     model = embedder.model
