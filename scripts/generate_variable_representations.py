@@ -22,6 +22,11 @@ import pandas as pd
 from pome_evaluation.variable_representations import compute_options
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+import sys  # noqa: E402
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from pome_evaluation.pome_configs import pome_config  # noqa: E402
+# Published POME training settings (POME >= 1.3 defaults to the stable_k8 settings).
+PUBLISHED_POME = pome_config("default")
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
 OUT_ROOT = PROJECT_ROOT / "data" / "embeddings" / "MIMIC" / "variable_representations"
 NA_ENCODING = -99.0
@@ -70,7 +75,7 @@ def main() -> None:
             out_dir.mkdir(parents=True, exist_ok=True)
             print(f"[run]  dim {dim} run {run}", flush=True)
             make_deterministic(run)
-            embedder = Embedder(embedding_dimension=dim, epochs=args.epochs,
+            embedder = Embedder(**PUBLISHED_POME, embedding_dimension=dim, epochs=args.epochs,
                                 na_encoding=NA_ENCODING, device=device)
             embedder.fit(df.copy())
             reps, norms = compute_options(embedder)

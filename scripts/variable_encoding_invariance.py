@@ -28,6 +28,10 @@ import numpy as np
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from pome_evaluation.pome_configs import pome_config  # noqa: E402
+# Published POME training settings (POME >= 1.3 defaults to the stable_k8 settings).
+PUBLISHED_POME = pome_config("default")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 OUT = PROJECT_ROOT / "output" / "variable_embeddings" / "variable_encoding_invariance"
 TRANSFORMS = ["cat_shift", "cat_rescale", "num_shift", "global_scale", "rotation", "all"]
@@ -112,7 +116,7 @@ def measure(dims, seeds, epochs, device):
         for seed in seeds:
             print(f"[fit] dim {dim} seed {seed}", flush=True)
             make_deterministic(seed)
-            embedder = Embedder(embedding_dimension=dim, epochs=epochs, na_encoding=NA_ENCODING,
+            embedder = Embedder(**PUBLISHED_POME, embedding_dimension=dim, epochs=epochs, na_encoding=NA_ENCODING,
                                 device=device)
             embedder.fit(data.copy())
             state = {k: v.clone() for k, v in embedder.model.state_dict().items()}

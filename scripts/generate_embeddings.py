@@ -16,12 +16,16 @@ import argparse
 import os
 from pathlib import Path
 
+import sys
+
 import pandas as pd
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
 EMBEDDINGS_ROOT = PROJECT_ROOT / "data" / "embeddings"
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from pome_evaluation.pome_configs import POME_CONFIGS, pome_config  # noqa: E402
 
 # POME embedder hyperparameters (mirror the reference transductive pipeline).
 NA_ENCODING = -99.0
@@ -54,12 +58,13 @@ def resolve_device(requested: str) -> str:
 
 
 def embed_dataset(key: str, dims, n_runs: int, epochs: int, device: str,
-                  overwrite: bool) -> None:
+                  overwrite: bool, embeddings_root: Path = EMBEDDINGS_ROOT,
+                  pome_kwargs: dict = None) -> None:
     from pome.gnn_embedding import Embedder, make_deterministic
 
     file_name, label, out_name = DATASETS[key]
     in_path = INPUT_DATASETS / file_name
-    out_dir = EMBEDDINGS_ROOT / out_name / "embeddings"
+    out_dir = embeddings_root / out_name / "embeddings"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(in_path, index_col=0, sep="\t")
@@ -84,6 +89,7 @@ def embed_dataset(key: str, dims, n_runs: int, epochs: int, device: str,
                 na_encoding=NA_ENCODING,
                 informative_nas=INFORMATIVE_NAS,
                 device=device,
+                **(pome_kwargs or {}),
             )
             embedder.fit(df.copy())
 
@@ -108,19 +114,26 @@ def main() -> None:
                         help=f"training epochs (default: {DEFAULT_EPOCHS})")
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"],
                         help="compute device (default: cuda, falls back to cpu)")
+    parser.add_argument("--pome-config", default="default", choices=list(POME_CONFIGS),
+                        help="named POME training configuration (src/pome_evaluation/"
+                             "pome_configs.py); pair a non-default one with --embeddings-root")
+    parser.add_argument("--embeddings-root", type=Path, default=EMBEDDINGS_ROOT,
+                        help="output root; files go to <root>/<DATASET>/embeddings/ "
+                             "(default: data/embeddings)")
     parser.add_argument("--overwrite", action="store_true",
                         help="recompute and overwrite existing embedding files")
     args = parser.parse_args()
 
     device = resolve_device(args.device)
     print(f"Input datasets: {INPUT_DATASETS}")
-    print(f"Embeddings root: {EMBEDDINGS_ROOT}")
+    print(f"Embeddings root: {args.embeddings_root}")
+    print(f"POME config: {args.pome_config} {pome_config(args.pome_config)}")
     print(f"Datasets: {args.datasets} | dims: {args.dims} | runs: {args.runs} | "
           f"epochs: {args.epochs} | device: {device}")
 
     for key in args.datasets:
         embed_dataset(key, args.dims, args.runs, args.epochs, device,
-                      args.overwrite)
+                      args.overwrite, args.embeddings_root, pome_config(args.pome_config))
 
 
 if __name__ == "__main__":
