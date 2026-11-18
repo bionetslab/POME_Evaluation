@@ -1,20 +1,21 @@
 """Candidate per-variable representations derived from a fitted POME Embedder.
 
-The raw learned variable encodings e_j are not identifiable for categorical variables (see the
-POME README, "Note on variable encodings"), so per-variable vectors are summaries of the
-variable's value nodes. The options compared here:
+In POME >= 1.4 the sample and value encodings are fixed at their spectral initialization and only
+the variable encodings e_j are learned, so the raw e_j are identifiable (up to a global rotation)
+and are POME's variable representation. The alternatives below summarize the variable's value
+nodes instead and are kept for comparison:
 
-    raw              raw learned encodings e_j (POME <= 1.1 behaviour; NOT identifiable)
-    centroid_input   option 1: mean of normalized value-node inputs (POME 1.2-1.3 variable_df)
-    centroid_latent  option 2: mean of the variable's value-node encoder outputs z
+    raw              learned variable encodings e_j (POME's variable representation)
+    centroid_input   mean of the variable's normalized value-node inputs
+    centroid_latent  mean of the variable's value-node encoder outputs z
     contrast_latent  option 3: direction in z-space in which the variable separates samples:
                      binary categorical -> z[higher value] - z[lower value];
                      numeric            -> least-squares slope of the bin-node z over bin index;
                      other categorical  -> undefined (NaN)
     numeric_concept  centred, scale-normalized numeric e_j (numeric variables only)
 
-All options except ``raw`` are invariant to the encoding shifts/rescalings; all are defined up
-to a global rotation, so only cosines/distances (not raw coordinates) are compared across runs.
+All options are defined up to a global rotation, so only cosines/distances (not raw
+coordinates) are compared across runs.
 """
 
 import numpy as np
@@ -65,8 +66,7 @@ def contrast_vectors(latent_df, variable_names, cont_vars, informative_nas=()):
 def compute_options(embedder):
     """Return ({option: DataFrame variables x dims}, {option: Series of vector norms}).
 
-    Computed from the model weights and value-node embeddings only, so it works for every POME
-    version (the centroid / concept normalizations were removed from POME in 1.4).
+    Computed from the model weights and value-node embeddings only.
     """
     model = embedder.model
     names = list(embedder._variable_names)

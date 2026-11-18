@@ -41,7 +41,10 @@ Outputs -- one ``_train`` + ``_test`` CSV per snapshot, laid out so each
 ``epoch_{E}`` directory is structurally identical to ``output/inductive`` and can
 be probed directly by ``scripts/linear_probe_inductive_embeddings.py``:
 
-    output/inductive_epochs/epoch_{E:04d}/pome/{dataset}/split_{NN}/dim_{D}/run_{R:02d}_{train,test}.csv
+    output/inductive_epochs_pome14/epoch_{E:04d}/pome/{dataset}/split_{NN}/dim_{D}/run_{R:02d}_{train,test}.csv
+
+POME is used with its own defaults (POME >= 1.4); the published snapshots under
+``output/inductive_epochs`` are not overwritten.
 
 Existing outputs are skipped unless ``--overwrite`` is passed (a config is
 retrained only if some of its snapshots are missing), so the script is resumable.
@@ -55,13 +58,8 @@ import pandas as pd
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-import sys  # noqa: E402
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-from pome_evaluation.pome_configs import pome_config  # noqa: E402
-# Published POME training settings (POME >= 1.3 defaults to the stable_k8 settings).
-PUBLISHED_POME = pome_config("default")
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
-DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_epochs"
+DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_epochs_pome14"
 
 DATASETS = ("hancock", "luad", "mimic")
 DIMENSIONS = (16, 32, 64, 128)
@@ -183,7 +181,7 @@ def process_config(dataset: str, split_id: int, dim: int, run: int,
                             for k, v in autoencoder.state_dict().items()}
 
     make_deterministic(seed_base + run)
-    embedder = Embedder(**PUBLISHED_POME, 
+    embedder = Embedder(
         embedding_dimension=dim,
         epochs=epochs,
         bins_per_continuous=bins,

@@ -6,10 +6,10 @@ Scriptable port of the legacy chain
     src/pome_evaluation/analyze_distance_preservation_2D.ipynb  (panel h)
     src/pome_evaluation/analyze_cluster_preservation_2D.ipynb   (panels i, j)
     scripts/plot_fig4_unsupervised.ipynb                         (plot, panels a-j)
-with the same metrics and settings, parameterized by the POME embedding root so that a
-re-trained POME variant (e.g. ``generate_embeddings.py --pome-config stable
---embeddings-root data/embeddings_stable``) can be evaluated without touching the published
-results. Panels k-m (HANCOCK case study) are not part of this script.
+with the same metrics and settings, parameterized by the POME embedding root so that
+re-trained POME embeddings (by default the POME 1.4 embeddings of ``generate_embeddings.py``
+under ``data/embeddings_pome14``) can be evaluated without touching the published results.
+Panels k-m (HANCOCK case study) are not part of this script.
 
 Steps (each cached; rerun with --overwrite to recompute):
   1. Clustering scores. Per dataset x dim (16, 32, 64) x run (0-9): Leiden (RBConfiguration)
@@ -28,13 +28,13 @@ Steps (each cached; rerun with --overwrite to recompute):
      (K = 10, 30, 50) in the embedding vs. the projection; cluster preservation: Silhouette /
      Davies-Bouldin of the step-1 Leiden labels computed in the 2D projection.
      -> output/unsupervised/visualization_{distance,cluster}_preservation_results{tag}.csv
-  4. Figure -> output/unsupervised/unsupervised_clustering_{tag-or-published}.pdf
+  4. Figure -> output/unsupervised/unsupervised_clustering{tag}.pdf
 
 Difference to the legacy code: Leiden is seeded (seed = run) so that the scores are
 reproducible, and step 3 reuses the step-1 labels instead of re-running unseeded Leiden.
 
-CPU:  container/run.sh scripts/generate_unsupervised_figure.py \\
-          --embeddings-root data/embeddings_stable --tag _stable
+CPU:  container/run.sh scripts/generate_unsupervised_figure.py
+      (= --embeddings-root data/embeddings_pome14 --tag _pome14)
 """
 
 import argparse
@@ -64,7 +64,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from pome_evaluation.analyze_unsupervised_clustering import (  # noqa: E402
     davies_bouldin_score_custom)
 
-DEFAULT_EMB_ROOT = PROJECT_ROOT / "data" / "embeddings"
+DEFAULT_EMB_ROOT = PROJECT_ROOT / "data" / "embeddings_pome14"
 OUT_DIR = PROJECT_ROOT / "output" / "unsupervised"
 DATASETS = ["HANCOCK", "MIMIC", "TCGA_LUAD"]
 DISPLAY = {"HANCOCK": "HANCOCK", "MIMIC": "MIMIC-IV", "TCGA_LUAD": "TCGA-LUAD"}
@@ -322,8 +322,8 @@ def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--embeddings-root", type=Path, default=DEFAULT_EMB_ROOT,
                    help="POME embedding root (<root>/<DATASET>/embeddings/...)")
-    p.add_argument("--tag", default="_stable",
-                   help="suffix of the result CSVs / figure (default: _stable)")
+    p.add_argument("--tag", default="_pome14",
+                   help="suffix of the result CSVs / figure (default: _pome14)")
     p.add_argument("--datasets", nargs="+", default=DATASETS, choices=DATASETS)
     p.add_argument("--plot-only", action="store_true", help="skip steps 1-3")
     p.add_argument("--no-plot", action="store_true",

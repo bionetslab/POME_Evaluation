@@ -1,5 +1,11 @@
 # Reproducing the imputation figures
 
+> **POME 1.4.** This runbook describes the published imputation results. Since POME 1.4, the
+> POME steps on `main` write `_pome14`-tagged outputs (`imputed_*_pome14`,
+> `data/{DATASET}_imputation_per_epoch_pome14.csv`); score and plot them with
+> `--pome-suffix _pome14` / `--suffix _pome14` (see the README). To regenerate the published
+> files themselves, use this repo's tag `pre-pome-1.4` with POME `v1.3`.
+
 Steps to regenerate the three imputation-related figures after the POME numeric
 imputation changed (normalized MAE + Mean/Mode baseline). Run everything **from
 the project root**. POME steps use conda env `torch`; scoring/plotting use env

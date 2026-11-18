@@ -32,8 +32,11 @@ reused for every snapshot; only the weight tensors differ between epochs.
 One CSV is written per dataset, holding one row per (masked file x snapshot
 epoch):
 
-    data/{DATASET}_imputation_per_epoch.csv
+    data/{DATASET}_imputation_per_epoch_pome14.csv
         columns: run, na_ratio, epoch, mae_cont, nmae_cont, acc_cat, dataset
+
+POME is used with its own defaults (POME >= 1.4); the published per-epoch tables
+(``data/{DATASET}_imputation_per_epoch.csv``) are not overwritten.
 
 The script is resumable: a masked file is retrained only if some of its snapshot
 rows are missing from the existing CSV (unless ``--overwrite``).
@@ -63,10 +66,6 @@ from generate_imputation_results import _load_variable_range, _macro_nmae
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-from pome_evaluation.pome_configs import pome_config  # noqa: E402
-# Published POME training settings (POME >= 1.3 defaults to the stable_k8 settings).
-PUBLISHED_POME = pome_config("default")
 DATA_ROOT = PROJECT_ROOT / "data"
 GROUNDTRUTH_ROOT = DATA_ROOT / "imputation_groundtruth"
 POME_IMPUTATION_ROOT = DATA_ROOT / "imputation_data" / "pome_based"
@@ -204,7 +203,7 @@ def process_masked_file(label: str, graph_path: Path, epochs_list: list[int],
                             for k, v in autoencoder.state_dict().items()}
 
     make_deterministic(seed)
-    embedder = Embedder(**PUBLISHED_POME, 
+    embedder = Embedder(
         embedding_dimension=dim,
         epochs=max(epochs_list),
         bins_per_continuous=bins,
@@ -309,7 +308,7 @@ def main() -> None:
             continue
 
         masked_files = sorted(p for p in sim_dir.glob("*.tsv"))
-        out_path = DATA_ROOT / f"{label}_imputation_per_epoch.csv"
+        out_path = DATA_ROOT / f"{label}_imputation_per_epoch_pome14.csv"
         existing = load_existing(out_path)
 
         print(f"\n[{label}] {len(masked_files)} masked files -> {out_path.name}")

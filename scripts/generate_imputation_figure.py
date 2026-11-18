@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--suffix",
         default="",
-        help="Result variant, e.g. _invariant: reads {DATASET}_imputation_z_bins_15{suffix}.csv "
+        help="Result variant, e.g. _pome14: reads {DATASET}_imputation_z_bins_15{suffix}.csv "
              "and writes output/imputation_ranks_with_competitors_{dim}{suffix}.pdf.",
     )
     return parser.parse_args()

@@ -1,7 +1,7 @@
 """Revised variable-semantics figure (manuscript Sec. 2.6), replacing the best-run panels.
 
-Uses the identifiable variable representation returned by POME >= 1.2 (``centroid_input``: mean of
-each variable's normalized value-node inputs) on the 10 seeds x 3 encoding sizes produced by
+Uses POME's learned variable encodings e_j (``raw``; identifiable in POME >= 1.4, where the sample
+and value encodings are fixed) on the 10 seeds x 3 encoding sizes produced by
 generate_variable_representations.py and analyzed by analyze_variable_representation_stability.py.
 
     a  Spearman correlation between CatBoost feature importance and target-to-lab cosine
@@ -11,9 +11,9 @@ generate_variable_representations.py and analyzed by analyze_variable_representa
     c  Cluster reproducibility: fraction of seeds in which a lab variable falls into the Leiden
        cluster of Aplasia (top labs, encoding size 32).
 
-CPU only:  container/run.sh scripts/plot_fig5_variable_representations.py [--pome-config CONFIG]
-Output:    output/variable_embeddings/variable_results_revised[_{CONFIG}].pdf (+ .png)
-           (no suffix for the published ``default`` config)
+CPU only:  container/run.sh scripts/plot_fig5_variable_representations.py [--tag TAG] [--option OPT]
+Output:    output/variable_embeddings/variable_results_revised{TAG}[_{OPT}].pdf (+ .png)
+           (default tag ``_pome14``; ``_{OPT}`` only for a non-default representation)
 """
 
 import argparse
@@ -30,7 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STAB_DIR = PROJECT_ROOT / "output" / "variable_embeddings" / "representation_stability"
 OUT = PROJECT_ROOT / "output" / "variable_embeddings" / "variable_results_revised"
 LABITEMS = PROJECT_ROOT / "data" / "input_datasets" / "d_labitems.csv.gz"
-OPTION = "centroid_input"
+OPTION = "raw"
 COCLUSTER_DIM = 32
 TOP_LABS = 12
 TARGET_NAMES = {"Aplasia": "Aplasia", "NF": "Neutropenic Fever"}
@@ -84,16 +84,15 @@ def boxes(ax, data, y, show_points):
 def main():
     global STAB_DIR, OUT
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--pome-config", default="default",
-                        help="POME config tag of the analyzed runs")
+    parser.add_argument("--tag", default="_pome14",
+                        help="suffix of the analyzed stability dir and of the output "
+                             "(default: _pome14)")
     parser.add_argument("--option", default=OPTION,
-                        help="variable representation (centroid_input, or raw = learned e_j, "
-                             "identifiable when the value rows are fixed); non-default adds "
-                             "_{option} to the output name")
+                        help="variable representation (default: raw = learned e_j); a "
+                             "non-default one adds _{option} to the output name")
     args = parser.parse_args()
-    if args.pome_config != "default":
-        STAB_DIR = STAB_DIR.with_name(f"{STAB_DIR.name}_{args.pome_config}")
-        OUT = OUT.with_name(f"{OUT.name}_{args.pome_config}")
+    STAB_DIR = STAB_DIR.with_name(f"{STAB_DIR.name}{args.tag}")
+    OUT = OUT.with_name(f"{OUT.name}{args.tag}")
     if args.option != OPTION:
         OUT = OUT.with_name(f"{OUT.name}_{args.option}")
     imp, repro, co = load(args.option)

@@ -18,7 +18,8 @@ representation option x embedding size, quantifies
     used, since importances are unsigned while the contrast direction is signed.
 
 CPU only:  container/run.sh scripts/analyze_variable_representation_stability.py [--importance-dir DIR]
-           [--pome-config CONFIG]   (reads/writes the ``_{CONFIG}``-suffixed dirs; none for default)
+           [--tag TAG]   (reads/writes the ``{TAG}``-suffixed dirs; default ``_pome14``,
+                         ``--tag ''`` for the published representations)
 """
 
 import argparse
@@ -121,14 +122,13 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dims", nargs="+", type=int, default=[16, 32, 64])
     parser.add_argument("--importance-dir", type=Path, default=None)
-    parser.add_argument("--pome-config", default="default",
-                        help="POME config tag of generate_variable_representations.py runs")
+    parser.add_argument("--tag", default="_pome14",
+                        help="suffix of the input/output dirs (default: _pome14; '' = published)")
     args = parser.parse_args()
     global IN_ROOT, OUT_DIR
-    if args.pome_config != "default":
-        IN_ROOT = IN_ROOT.with_name(f"{IN_ROOT.name}_{args.pome_config}")
-        OUT_DIR = OUT_DIR.with_name(f"{OUT_DIR.name}_{args.pome_config}")
-    print(f"POME config {args.pome_config}: {IN_ROOT} -> {OUT_DIR}", flush=True)
+    IN_ROOT = IN_ROOT.with_name(f"{IN_ROOT.name}{args.tag}")
+    OUT_DIR = OUT_DIR.with_name(f"{OUT_DIR.name}{args.tag}")
+    print(f"{IN_ROOT} -> {OUT_DIR}", flush=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     importances = None
     rng = np.random.default_rng(0)

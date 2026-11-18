@@ -3,8 +3,10 @@
 For each dataset the graph-format input (rows = variables, columns = samples plus a
 final ``type`` column) is fed to a :class:`pome.gnn_embedding.Embedder`. Every
 (dimension, run) combination is trained from scratch with a deterministic seed and
-the resulting sample / variable / bin embeddings are written next to the previously
-generated embeddings, using the ``{LABEL}_{kind}_{dim}_{run}.tsv`` naming convention.
+the resulting sample / variable / bin embeddings are written to
+``data/embeddings_pome14/{DATASET}/embeddings/`` using the ``{LABEL}_{kind}_{dim}_{run}.tsv``
+naming convention. POME is used with its own defaults (POME >= 1.4); the published embeddings
+under ``data/embeddings`` are not touched.
 
 Run from the project root with the POME-enabled environment (conda env ``torch``):
 
@@ -16,16 +18,12 @@ import argparse
 import os
 from pathlib import Path
 
-import sys
-
 import pandas as pd
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
-EMBEDDINGS_ROOT = PROJECT_ROOT / "data" / "embeddings"
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-from pome_evaluation.pome_configs import POME_CONFIGS, pome_config  # noqa: E402
+EMBEDDINGS_ROOT = PROJECT_ROOT / "data" / "embeddings_pome14"
 
 # POME embedder hyperparameters (mirror the reference transductive pipeline).
 NA_ENCODING = -99.0
@@ -58,8 +56,7 @@ def resolve_device(requested: str) -> str:
 
 
 def embed_dataset(key: str, dims, n_runs: int, epochs: int, device: str,
-                  overwrite: bool, embeddings_root: Path = EMBEDDINGS_ROOT,
-                  pome_kwargs: dict = None) -> None:
+                  overwrite: bool, embeddings_root: Path = EMBEDDINGS_ROOT) -> None:
     from pome.gnn_embedding import Embedder, make_deterministic
 
     file_name, label, out_name = DATASETS[key]
@@ -89,7 +86,6 @@ def embed_dataset(key: str, dims, n_runs: int, epochs: int, device: str,
                 na_encoding=NA_ENCODING,
                 informative_nas=INFORMATIVE_NAS,
                 device=device,
-                **(pome_kwargs or {}),
             )
             embedder.fit(df.copy())
 
@@ -114,12 +110,9 @@ def main() -> None:
                         help=f"training epochs (default: {DEFAULT_EPOCHS})")
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"],
                         help="compute device (default: cuda, falls back to cpu)")
-    parser.add_argument("--pome-config", default="default", choices=list(POME_CONFIGS),
-                        help="named POME training configuration (src/pome_evaluation/"
-                             "pome_configs.py); pair a non-default one with --embeddings-root")
     parser.add_argument("--embeddings-root", type=Path, default=EMBEDDINGS_ROOT,
                         help="output root; files go to <root>/<DATASET>/embeddings/ "
-                             "(default: data/embeddings)")
+                             "(default: data/embeddings_pome14)")
     parser.add_argument("--overwrite", action="store_true",
                         help="recompute and overwrite existing embedding files")
     args = parser.parse_args()
@@ -127,13 +120,12 @@ def main() -> None:
     device = resolve_device(args.device)
     print(f"Input datasets: {INPUT_DATASETS}")
     print(f"Embeddings root: {args.embeddings_root}")
-    print(f"POME config: {args.pome_config} {pome_config(args.pome_config)}")
     print(f"Datasets: {args.datasets} | dims: {args.dims} | runs: {args.runs} | "
           f"epochs: {args.epochs} | device: {device}")
 
     for key in args.datasets:
         embed_dataset(key, args.dims, args.runs, args.epochs, device,
-                      args.overwrite, args.embeddings_root, pome_config(args.pome_config))
+                      args.overwrite, args.embeddings_root)
 
 
 if __name__ == "__main__":

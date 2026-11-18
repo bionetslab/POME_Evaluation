@@ -9,7 +9,9 @@ the frozen embeddings predicts the value directly. Categorical variables use the
 decoder's nearest-category rule.
 
 Outputs mirror the input file names: ``{name}.tsv`` (imputed matrix) plus a
-``{name}.pkl`` sidecar storing the run's hyperparameters and AP score.
+``{name}.pkl`` sidecar storing the run's hyperparameters and AP score. POME is used with its own
+defaults (POME >= 1.4); results go to ``imputed_{disc}_{bins}_{dim}_pome14`` (``--output-suffix``)
+so that the published imputations are not overwritten.
 
 Run from the project root with the POME-enabled environment (conda env ``torch``):
 
@@ -23,8 +25,6 @@ from pathlib import Path
 import pandas as pd
 
 from pome.gnn_embedding import Embedder, make_deterministic
-
-from pome_evaluation.pome_configs import POME_CONFIGS, pome_config
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -46,9 +46,7 @@ def impute_graph_based(input_directory: str,
                        num_dimensions: int,
                        num_bins: int,
                        discretization_type: str,
-                       device: str = "cuda",
-                       regressor_inputs: str = None,
-                       pome_kwargs: dict = None):
+                       device: str = "cuda"):
 
     # Iterate over all files in the directory.
     for filename in os.listdir(input_directory):
@@ -78,8 +76,6 @@ def impute_graph_based(input_directory: str,
             'bins_per_continuous': num_bins,
             'discretization_type': discretization_type,
             'enable_imputation': True,
-            **({'regressor_inputs': regressor_inputs} if regressor_inputs else {}),
-            **(pome_kwargs or {}),
         }
         embedder = Embedder(**embedder_params,
                             embedding_dimension=num_dimensions)
@@ -133,20 +129,14 @@ def main():
                         help="datasets to impute (default: all with simulated_data)")
     parser.add_argument("--epochs", type=int, default=2000,
                         help="training epochs per fit (default: 2000)")
-    parser.add_argument("--regressor-inputs", default=None, choices=["invariant", "raw"],
-                        help="inputs of POME's numeric regression head, POME 1.2-1.3 only "
-                             "(default: POME's own default; 'raw' reproduces POME <= 1.1)")
-    parser.add_argument("--pome-config", default="default", choices=list(POME_CONFIGS),
-                        help="named POME training configuration (src/pome_evaluation/"
-                             "pome_configs.py); pair a non-default one with --output-suffix")
-    parser.add_argument("--output-suffix", default="",
-                        help="appended to imputed_{disc}_{bins}_{dim}, e.g. _invariant")
+    parser.add_argument("--output-suffix", default="_pome14",
+                        help="appended to imputed_{disc}_{bins}_{dim} (default: _pome14, so "
+                             "that the published imputations are not overwritten)")
     args = parser.parse_args()
 
     informative_na = []
     print(f"Datasets: {args.datasets} | discretizations: {args.discretizations} "
-          f"| bins: {args.bins} | dims: {args.dims} | epochs: {args.epochs} "
-          f"| POME config: {args.pome_config} {pome_config(args.pome_config)}")
+          f"| bins: {args.bins} | dims: {args.dims} | epochs: {args.epochs}")
 
     for dataset in args.datasets:
         na_encoding = DATASET_NA_ENCODING[dataset]
@@ -173,8 +163,6 @@ def main():
                         num_dimensions=dim,
                         num_bins=bin_count,
                         discretization_type=discretization,
-                        regressor_inputs=args.regressor_inputs,
-                        pome_kwargs=pome_config(args.pome_config),
                     )
         print(f"Finished {dataset} imputation!")
 

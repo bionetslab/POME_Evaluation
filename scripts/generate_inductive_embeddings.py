@@ -102,6 +102,10 @@ Outputs (each run writes a ``_train`` and a ``_test`` CSV, sample-indexed):
 The ``combined`` mode keeps the original (mode-less) layout so existing outputs
 stay valid; the restricted modes add one path segment.
 
+POME is used with its own defaults (POME >= 1.4) and, unless ``--output-dir`` is given, writes
+to ``output/inductive_pome14`` so that the published POME embeddings under ``output/inductive``
+are not overwritten; UMAP writes to ``output/inductive``.
+
 For POME, the CV-selected epoch count of every run is additionally logged to
 
     <output-dir>/pome/tuned_epochs.csv
@@ -124,7 +128,6 @@ resumable.
 
 import argparse
 import re
-import sys
 import time
 import warnings
 from pathlib import Path
@@ -137,8 +140,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive"
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
-from pome_evaluation.pome_configs import POME_CONFIGS, pome_config  # noqa: E402
+DEFAULT_POME_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_pome14"
 
 DATASETS = ("hancock", "luad", "mimic")
 METHODS = ("pome", "umap")
@@ -296,8 +298,7 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                      early_stopping: bool = True,
                      overfit_tol: float = DEFAULT_OVERFIT_TOL,
                      gap_draws: int = DEFAULT_GAP_DRAWS,
-                     mode: str = "combined", log_tag: str = "",
-                     pome_kwargs: dict = None) -> None:
+                     mode: str = "combined", log_tag: str = "") -> None:
     from pome.gnn_embedding import Embedder, make_deterministic
 
     split_dir = SPLITS_ROOT / dataset
@@ -342,7 +343,6 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
                 cv_seed=cv_seed,
                 overfit_tol=overfit_tol,
                 gap_draws=gap_draws,
-                **(pome_kwargs or {}),
             )
             embedder.fit(train_df)
             train_emb, *_ = embedder.get_embeddings()  # transductive (train)
@@ -564,10 +564,9 @@ def main() -> None:
                              "jobs run concurrently -- the log is rewritten on "
                              "every run, so a shared file loses rows. Merge the "
                              "shards with scripts/merge_tuned_epochs.py")
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_ROOT)
-    parser.add_argument("--pome-config", default="default", choices=list(POME_CONFIGS),
-                        help="named POME training configuration (src/pome_evaluation/"
-                             "pome_configs.py); pair a non-default one with --output-dir")
+    parser.add_argument("--output-dir", type=Path, default=None,
+                        help="output root (default: output/inductive_pome14 for POME, "
+                             "output/inductive for UMAP)")
     parser.add_argument("--overwrite", action="store_true",
                         help="recompute and overwrite existing embedding files")
     parser.add_argument("--dry-run", action="store_true",
@@ -583,7 +582,10 @@ def main() -> None:
             pass
 
     print(f"Splits root: {SPLITS_ROOT}")
-    print(f"Output root: {args.output_dir}")
+    out_root = {"pome": args.output_dir or DEFAULT_POME_OUTPUT_ROOT,
+                "umap": args.output_dir or DEFAULT_OUTPUT_ROOT}
+    for method in args.methods:
+        print(f"Output root ({method}): {out_root[method]}")
     print(f"Datasets: {args.datasets} | methods: {args.methods} | "
           f"modes: {args.modes} | dims: {args.dims} | runs: {args.runs}")
     if "pome" in args.methods:
@@ -599,9 +601,6 @@ def main() -> None:
                   f"(epochs={args.epochs}) "
                   f"bins={args.bins} discretization={args.discretization} "
                   f"device={device}")
-
-    if "pome" in args.methods:
-        print(f"POME config: {args.pome_config} {pome_config(args.pome_config)}")
 
     plan = []  # (method, dataset, mode, [split_ids])
     for method in args.methods:
@@ -633,15 +632,14 @@ def main() -> None:
                     dataset, split_id, args.dims, args.runs, args.epochs,
                     args.bins, args.discretization, args.seed,
                     args.cv_folds, args.cv_eval_every, args.cv_patience,
-                    args.cv_seed, device, args.output_dir, args.overwrite,
+                    args.cv_seed, device, out_root["pome"], args.overwrite,
                     early_stopping=args.early_stopping,
                     overfit_tol=args.overfit_tol, gap_draws=args.gap_draws,
-                    mode=mode, log_tag=args.log_tag,
-                    pome_kwargs=pome_config(args.pome_config))
+                    mode=mode, log_tag=args.log_tag)
             else:
                 embed_umap_split(
                     dataset, split_id, args.dims, args.runs,
-                    args.output_dir, args.overwrite, mode=mode)
+                    out_root["umap"], args.overwrite, mode=mode)
 
     print("\nDone.")
 

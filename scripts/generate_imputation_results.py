@@ -341,7 +341,7 @@ def main() -> None:
     parser.add_argument("--pome-suffix", default=None,
                         help="read POME files from imputed_{disc}_{bins}_{dim}{suffix} and write "
                              "{DATASET}_imputation_{disc}_bins_{bins}{suffix}.csv, e.g. "
-                             "_invariant for the invariant regression-head inputs")
+                             "_pome14 for the POME 1.4 imputations")
     parser.add_argument("--overwrite", action="store_true",
                         help="recompute and overwrite existing result CSVs")
     parser.add_argument("--dry-run", action="store_true",

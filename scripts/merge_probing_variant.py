@@ -1,6 +1,6 @@
-"""Combine the linear-probing scores of a re-trained POME variant with the published UMAP rows.
+"""Combine the linear-probing scores of re-trained POME embeddings with the published UMAP rows.
 
-The UMAP embeddings do not change when POME is re-trained (e.g. ``--pome-config stable``), and
+The UMAP embeddings do not change when POME is re-trained (e.g. with POME 1.4), and
 the MIMIC UMAP embeddings are not stored in this repo, so the UMAP comparison rows are taken
 from the published results file instead of being re-probed. The output has the same schema as
 ``inductive_linear_probing_results.csv`` and can be plotted with
@@ -8,11 +8,11 @@ from the published results file instead of being re-probed. The output has the s
 
     container/run.sh scripts/linear_probe_inductive_embeddings.py --methods pome \\
         --modes combined --dims 16 32 64 --runs 0 1 2 3 4 \\
-        --emb-root output/inductive_stable \\
-        --output output/linear_probing/inductive_linear_probing_results_stable_pome.csv
+        --emb-root output/inductive_pome14 \\
+        --output output/linear_probing/inductive_linear_probing_results_pome14_pome.csv
     container/run.sh scripts/merge_probing_variant.py \\
-        --pome output/linear_probing/inductive_linear_probing_results_stable_pome.csv \\
-        --output output/linear_probing/inductive_linear_probing_results_stable.csv
+        --pome output/linear_probing/inductive_linear_probing_results_pome14_pome.csv \\
+        --output output/linear_probing/inductive_linear_probing_results_pome14.csv
 """
 
 import argparse

@@ -49,8 +49,8 @@ def load_imputation_benchmark_data(
 ) -> dict[str, pd.DataFrame]:
     """Load and filter imputation benchmark CSV files for all cohorts.
 
-    ``suffix`` selects a result variant, e.g. ``"_invariant"`` reads
-    ``{DATASET}_imputation_{mode}_bins_{bins}_invariant.csv``.
+    ``suffix`` selects a result variant, e.g. ``"_pome14"`` reads
+    ``{DATASET}_imputation_{mode}_bins_{bins}_pome14.csv``.
     """
     frames = {}
     for cohort, pattern in COHORT_FILENAMES.items():
