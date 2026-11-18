@@ -1,0 +1,16 @@
+dataset,split,dim,epochs,config,seed,seconds,device
+hancock,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,0,39.2,cuda
+hancock,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,1,36.6,cuda
+hancock,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,2,36.4,cuda
+hancock,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,3,36.1,cuda
+hancock,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,4,36.1,cuda
+luad,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,0,33.7,cuda
+luad,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,1,33.5,cuda
+luad,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,2,33.7,cuda
+luad,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,3,33.7,cuda
+luad,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,4,33.6,cuda
+mimic,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,0,108.9,cuda
+mimic,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,1,108.4,cuda
+mimic,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,2,108.5,cuda
+mimic,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,3,108.5,cuda
+mimic,0,32,2000,anchorinf_learnvar_a10_gram10_k8_lr_decay,4,108.5,cuda

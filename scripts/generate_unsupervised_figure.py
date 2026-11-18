@@ -17,7 +17,10 @@ Steps (each cached; rerun with --overwrite to recompute):
      Silhouette (squared Euclidean) and Davies-Bouldin (custom, squared Euclidean). The UMAP
      rows are copied from the published score tables (output/unsupervised/
      {DATASET}_leiden_knn_clustering_scores.csv): the UMAP embeddings are unchanged and the
-     MIMIC ones are not stored in this repo.
+     MIMIC ones are not stored in this repo. Per-method metrics, as published: POME is
+     clustered and scored in squared Euclidean (= cosine; unit-length embeddings), UMAP in
+     Euclidean (sklearn davies_bouldin_score). The published UMAP db_custom column (a separate
+     clustering of L2-normalized UMAP embeddings) is not used and is left empty here.
      -> output/unsupervised/{DATASET}_leiden_knn_clustering_scores{tag}.csv
   2. 2D projections (PCA, UMAP, t-SNE of the standardized embedding; random_state 42).
      -> {embeddings-root}/{DATASET}/visualization/{DATASET}_samples_{dim}_{run}.tsv
@@ -113,7 +116,10 @@ def clustering_scores(root, dataset, tag, overwrite):
                   f"sil={rows[-1]['silhouette']:.3f}", flush=True)
     pome = pd.DataFrame(rows)
     published = pd.read_csv(OUT_DIR / f"{dataset}_leiden_knn_clustering_scores.csv")
-    umap = published[published["method"].str.startswith("UMAP")]
+    # The published UMAP db_custom is a different measurement (Euclidean DB of a separate Leiden
+    # run on L2-normalized UMAP embeddings); it is not UMAP's score in this figure (that is
+    # davies_bouldin), so it is blanked to avoid reading it as a common-metric UMAP value.
+    umap = published[published["method"].str.startswith("UMAP")].assign(db_custom=np.nan)
     pd.concat([pome, umap], ignore_index=True).to_csv(out, index=False)
     pd.concat(labels, ignore_index=True).to_csv(labels_out, index=False)
 

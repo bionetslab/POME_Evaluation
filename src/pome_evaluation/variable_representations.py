@@ -5,7 +5,7 @@ POME README, "Note on variable encodings"), so per-variable vectors are summarie
 variable's value nodes. The options compared here:
 
     raw              raw learned encodings e_j (POME <= 1.1 behaviour; NOT identifiable)
-    centroid_input   option 1: mean of normalized value-node inputs (POME's default variable_df)
+    centroid_input   option 1: mean of normalized value-node inputs (POME 1.2-1.3 variable_df)
     centroid_latent  option 2: mean of the variable's value-node encoder outputs z
     contrast_latent  option 3: direction in z-space in which the variable separates samples:
                      binary categorical -> z[higher value] - z[lower value];
@@ -63,25 +63,38 @@ def contrast_vectors(latent_df, variable_names, cont_vars, informative_nas=()):
 
 
 def compute_options(embedder):
-    """Return ({option: DataFrame variables x dims}, {option: Series of vector norms})."""
-    _, cen_in, _, _ = embedder.get_embeddings()
-    # Raw e_j read from the live model (identical to get_embeddings(raw=True) after fit, but also
-    # correct if the model weights were modified afterwards, as in the invariance checks).
+    """Return ({option: DataFrame variables x dims}, {option: Series of vector norms}).
+
+    Computed from the model weights and value-node embeddings only, so it works for every POME
+    version (the centroid / concept normalizations were removed from POME in 1.4).
+    """
     model = embedder.model
+    names = list(embedder._variable_names)
+    cols = [f"dim_{i}" for i in range(embedder.embedding_dimension)]
+    # Raw e_j read from the live model (also correct if the weights were modified after fit).
     raw = model.node_embeddings.weight.detach().cpu()[model.variable_embeddings_ids.cpu()]
-    raw_df = pd.DataFrame(raw.numpy(), index=cen_in.index, columns=cen_in.columns)
+    raw_df = pd.DataFrame(raw.numpy(), index=names, columns=cols)
+    inputs = embedder.get_value_node_embeddings(level="input")
+    cen_in = pd.DataFrame(np.nan, index=names, columns=cols)
+    for var, labels in _value_nodes_by_variable(inputs).items():  # all value nodes, incl. NA
+        cen_in.loc[var] = inputs.loc[labels].mean(axis=0).to_numpy()
     latent = embedder.get_value_node_embeddings(level="latent")
     groups = _value_nodes_by_variable(latent, embedder.informative_nas)
-    cen_lat = pd.DataFrame(np.nan, index=raw_df.index, columns=raw_df.columns)
+    cen_lat = pd.DataFrame(np.nan, index=names, columns=cols)
     for var, labels in groups.items():
         cen_lat.loc[var] = latent.loc[labels].mean(axis=0).to_numpy()
+    num = [v for v in names if v in embedder._cont_vars]
+    concept = raw_df.loc[num] - raw_df.loc[num].mean(axis=0)
+    scale = np.linalg.norm(concept.to_numpy(), axis=1).mean()
+    if scale > 0:
+        concept = concept / scale
     reps = {
         "raw": raw_df,
         "centroid_input": cen_in,
         "centroid_latent": cen_lat,
         "contrast_latent": contrast_vectors(latent, raw_df.index, embedder._cont_vars,
                                             embedder.informative_nas),
-        "numeric_concept": embedder.get_numeric_concept_embeddings(),
+        "numeric_concept": concept,
     }
     norms = {name: pd.Series(np.linalg.norm(df.to_numpy(), axis=1), index=df.index)
              for name, df in reps.items()}

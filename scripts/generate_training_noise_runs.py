@@ -45,6 +45,10 @@ Outputs: output/training_noise/{dataset}/imputation_mask.csv           (masked c
          output/training_noise/{dataset}/epochs_{E}/{config}/seed_{SS}_imputed.csv
          output/training_noise/runs.csv                                 (run log, wall clock)
 Analysis: scripts/analyze_training_noise_variance.py
+
+Requires POME <= 1.3 (commit cdc77be for the learnvar configs): the training options compared here
+(init, anchor_weight, train_variable_encodings) were removed in POME 1.4, whose fixed defaults
+equal anchorinf_learnvar_a0.1_gram10_k8_lr_decay.
 """
 
 import argparse
@@ -62,7 +66,7 @@ NA_ENCODING = -99.0
 TYPE_COL = "type"
 LEGACY_TRAINING = dict(init="random", anchor_weight=0.0, gram_anchor_weight=0.0,
                        gram_reference_components=None, lr_schedule="constant",
-                       negatives="sampled")
+                       negatives="sampled", train_variable_encodings=False)
 CONFIGS = {
     "baseline": dict(lr_schedule="constant", negatives="sampled"),
     "lr_decay": dict(lr_schedule="cosine", negatives="sampled"),
@@ -72,6 +76,17 @@ CONFIGS = {
 # Same grid with the spectral initialization of the encoding table (POME init="spectral").
 BASE_CONFIGS = dict(CONFIGS)
 CONFIGS.update({f"spectral_{k}": dict(v, init="spectral") for k, v in BASE_CONFIGS.items()})
+# Adopted stable_k8 settings with trainable variable encodings (value/sample rows frozen;
+# POME train_variable_encodings, branch learnable-variable-encodings). Not in LEGACY_TRAINING, so
+# the other configs still run on POME versions without that option.
+CONFIGS["anchorinf_learnvar_gram10_k8_lr_decay"] = dict(
+    init="spectral", anchor_weight=float("inf"), train_variable_encodings=True,
+    variable_anchor_weight=0.0,
+    gram_anchor_weight=10.0, gram_reference_components=8, lr_schedule="cosine")
+# ... and with the trainable e_j anchored to their init (POME variable_anchor_weight).
+for _w in (0.1, 1, 10, 100):
+    CONFIGS[f"anchorinf_learnvar_a{_w:g}_gram10_k8_lr_decay"] = dict(
+        CONFIGS["anchorinf_learnvar_gram10_k8_lr_decay"], variable_anchor_weight=float(_w))
 
 
 def anchor_configs(weights):
