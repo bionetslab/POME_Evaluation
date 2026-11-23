@@ -1,0 +1,46 @@
+# Apptainer image for the SAINT embedding baseline (Somepalli et al., 2021,
+# arXiv:2106.01342), used by scripts/embed_saint.py.
+#
+# Build (on a Helma frontend):   bash container/build.sh saint
+# Run (GPU job; SAINT's mixup augmentation calls .cuda() unconditionally):
+#     sbatch --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/saint.sif \
+#         container/submit.sh scripts/embed_saint.py
+#
+# The authors' code (github.com/somepago/saint, pinned commit below, unmodified) is baked
+# into /opt/saint. Its only non-standard dependency is einops; openml is installed so that
+# data_openml.py (which holds DataSetCatCon, used by the pretraining loop) imports as is;
+# numpy is pinned below 2 because openml 0.14 uses np.sctypes.
+# Base image and torch 2.5.1 / CUDA 12.1 as pome_eval.sif.
+
+Bootstrap: docker
+From: dockerhub-mirror.rrze.uni-erlangen.de/pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
+
+%post
+    pip install --no-cache-dir --upgrade pip
+    echo "torch==2.5.1" > /tmp/constraints.txt
+    pip install --no-cache-dir -c /tmp/constraints.txt \
+        einops==0.8.0 openml==0.14.2 numpy==1.26.4 pandas==2.2.3 scikit-learn==1.5.2
+
+    SAINT_COMMIT=e288e84c77a54cfd2ffb55a53678fb7cbbb16630
+    python - "$SAINT_COMMIT" <<'PY'
+import io, sys, urllib.request, zipfile
+commit = sys.argv[1]
+url = f"https://github.com/somepago/saint/archive/{commit}.zip"
+zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(url).read())).extractall("/opt")
+PY
+    mv "/opt/saint-$SAINT_COMMIT" /opt/saint
+    echo "$SAINT_COMMIT" > /opt/saint/COMMIT
+    rm -rf /opt/saint/old_version /opt/saint/pipeline.png
+
+    cd /opt/saint && python -c "import torch, einops, pandas, sklearn; import models, augmentations, data_openml; print('torch', torch.__version__, '| einops', einops.__version__, '| pandas', pandas.__version__)"
+
+%environment
+    export PYTHONNOUSERSITE=1
+    export SAINT_REPO=/opt/saint
+
+%runscript
+    # Same contract as pome_eval.sif (see container/run.sh): behaves like `python`.
+    exec python "$@"
+
+%labels
+    Description SAINT baseline (original code, commit e288e84) for POME_Evaluation

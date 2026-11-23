@@ -22,6 +22,15 @@ Steps (each cached; rerun with --overwrite to recompute):
      Euclidean (sklearn davies_bouldin_score). The published UMAP db_custom column (a separate
      clustering of L2-normalized UMAP embeddings) is not used and is left empty here.
      -> output/unsupervised/{DATASET}_leiden_knn_clustering_scores{tag}.csv
+  1b. Competitor scores (independent of the POME tag). Embeddings of the same sizes and runs
+     from data/embeddings_competitors/{DATASET}/embeddings/{DATASET}_{METHOD}_{dim}_{run}.tsv:
+     HIVAE (scripts/embed_hivae.py), SAINT (SAINT's own missing-value masking,
+     scripts/embed_saint.py) and MFAE = missForest + autoencoder
+     (scripts/impute_full_missforest.py, scripts/embed_autoencoder.py). Scored like UMAP: Leiden
+     (RBConfiguration, seed = run) on the Euclidean kNN graph (k = 5 % of samples), Euclidean
+     Silhouette, sklearn Davies-Bouldin. A method is skipped while any of its embeddings is
+     missing.
+     -> output/unsupervised/{DATASET}_leiden_knn_clustering_scores_competitors.csv
   2. 2D projections (PCA, UMAP, t-SNE of the standardized embedding; random_state 42).
      -> {embeddings-root}/{DATASET}/visualization/{DATASET}_samples_{dim}_{run}.tsv
   3. Distance preservation: mean Jaccard overlap of each sample's K nearest neighbours
@@ -50,12 +59,13 @@ import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker  # noqa: E402
 import matplotlib.transforms as transforms  # noqa: E402
 import seaborn as sns  # noqa: E402
 from scipy.spatial.distance import cdist  # noqa: E402
 from sklearn.decomposition import PCA  # noqa: E402
 from sklearn.manifold import TSNE  # noqa: E402
-from sklearn.metrics import silhouette_score  # noqa: E402
+from sklearn.metrics import davies_bouldin_score, silhouette_score  # noqa: E402
 from sklearn.neighbors import kneighbors_graph  # noqa: E402
 from sklearn.preprocessing import StandardScaler  # noqa: E402
 
@@ -63,6 +73,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from pome_evaluation.analyze_unsupervised_clustering import (  # noqa: E402
     davies_bouldin_score_custom)
+from pome_evaluation.tabular_inputs import embedding_path  # noqa: E402
 
 DEFAULT_EMB_ROOT = PROJECT_ROOT / "data" / "embeddings_pome14"
 OUT_DIR = PROJECT_ROOT / "output" / "unsupervised"
@@ -72,14 +83,18 @@ DIMS = [16, 32, 64]
 N_RUNS = 10
 K_LIST = [10, 30, 50]
 PROJECTIONS = ["UMAP", "PCA", "tSNE"]
+# file label of a competitor embedding -> name in the figure
+COMPETITORS = {"HIVAE": "HI-VAE", "SAINT": "SAINT", "MFAE": "missForest+AE"}
+DISPLAY_METHOD = {"POME": "POME", "UMAP": "UMAP", **COMPETITORS}
+DEFAULT_METHODS = ["POME", "UMAP", "HI-VAE", "SAINT", "missForest+AE"]
 
 
 # --- 1. clustering ------------------------------------------------------------
 
-def leiden_labels(X, seed):
+def leiden_labels(X, seed, metric="sqeuclidean"):
     n_neighbors = int(0.05 * len(X))
     adj = kneighbors_graph(X, n_neighbors=n_neighbors, mode="connectivity",
-                           include_self=False, metric="sqeuclidean")
+                           include_self=False, metric=metric)
     src, dst = adj.nonzero()
     graph = ig.Graph(n=adj.shape[0], edges=list(zip(src, dst)), directed=False)
     part = la.find_partition(graph, la.RBConfigurationVertexPartition, seed=seed)
@@ -122,6 +137,40 @@ def clustering_scores(root, dataset, tag, overwrite):
     umap = published[published["method"].str.startswith("UMAP")].assign(db_custom=np.nan)
     pd.concat([pome, umap], ignore_index=True).to_csv(out, index=False)
     pd.concat(labels, ignore_index=True).to_csv(labels_out, index=False)
+
+
+def competitor_scores(dataset, overwrite):
+    out = OUT_DIR / f"{dataset}_leiden_knn_clustering_scores_competitors.csv"
+    old = pd.read_csv(out) if out.exists() and not overwrite else None
+    known = [f"{m}_KNN_Leiden" for m in COMPETITORS]
+    if old is not None:
+        old = old[old["method"].isin(known)]
+    frames = [] if old is None else [old]
+    for method in COMPETITORS:
+        tag = f"{method}_KNN_Leiden"
+        paths = {(dim, run): Path(embedding_path(dataset, method, dim, run))
+                 for dim in DIMS for run in range(N_RUNS)}
+        if old is not None and (old["method"] == tag).sum() == len(paths):
+            continue
+        missing = [p for p in paths.values() if not p.exists()]
+        if missing:
+            print(f"  [skip] {dataset} {method}: {len(missing)} of {len(paths)} embeddings missing")
+            continue
+        if old is not None:
+            frames = [f[f["method"] != tag] for f in frames]
+        rows = []
+        for (dim, run), path in paths.items():
+            X = pd.read_csv(path, sep="\t", index_col=0).to_numpy()
+            lab = leiden_labels(X, seed=run, metric="euclidean")
+            rows.append(dict(run=run, k=len(np.unique(lab)),
+                             silhouette=silhouette_score(X, lab),
+                             davies_bouldin=davies_bouldin_score(X, lab),
+                             method=tag, dim=dim))
+            print(f"  [cluster] {dataset} {method} dim {dim} run {run}: k={rows[-1]['k']} "
+                  f"sil={rows[-1]['silhouette']:.3f}", flush=True)
+        frames.append(pd.DataFrame(rows))
+    if frames:
+        pd.concat(frames, ignore_index=True).to_csv(out, index=False)
 
 
 # --- 2. projections -------------------------------------------------------------
@@ -197,21 +246,27 @@ def preservation(root, tag, overwrite, datasets=DATASETS):
 
 # --- 4. figure --------------------------------------------------------------------
 
-def load_scores(tag):
+def load_scores(tag, methods):
     frames = []
     for dataset in DATASETS:
         df = pd.read_csv(OUT_DIR / f"{dataset}_leiden_knn_clustering_scores{tag}.csv")
+        comp = OUT_DIR / f"{dataset}_leiden_knn_clustering_scores_competitors.csv"
+        if comp.exists():
+            df = pd.concat([df, pd.read_csv(comp)], ignore_index=True)
         df["Dataset"] = DISPLAY[dataset]
         frames.append(df)
     scores = pd.concat(frames, ignore_index=True)
-    scores["Method"] = scores["method"].str.split("_").str[0]
-    # POME: custom (squared-Euclidean) DB index; UMAP: sklearn DB index (as published).
+    scores["Method"] = scores["method"].str.split("_").str[0].map(DISPLAY_METHOD)
+    # POME: custom (squared-Euclidean) DB index; others: sklearn DB index (UMAP as published).
     scores["db_final"] = np.where(scores["Method"] == "POME", scores["db_custom"],
                                   scores["davies_bouldin"])
-    return scores
+    absent = [m for m in methods if m not in set(scores["Method"])]
+    if absent:
+        raise SystemExit(f"no scores for {absent}; compute them first (step 1b)")
+    return scores[scores["Method"].isin(methods)]
 
 
-def best_counts(scores):
+def best_counts(scores, order):
     medians = scores.groupby(["Dataset", "dim", "Method"])[["silhouette", "db_final"]] \
         .median().reset_index()
     best = medians.groupby(["Dataset", "Method"]).agg(
@@ -220,7 +275,7 @@ def best_counts(scores):
     best["best_db"] = best.groupby("Dataset")["db_final"].transform("min") == best["db_final"]
     out = []
     for col, name in (("best_sil", "Silhouette"), ("best_db", "Davies-Bouldin")):
-        res = best[best[col]].groupby("Method").size().reindex(["POME", "UMAP"], fill_value=0)
+        res = best[best[col]].groupby("Method").size().reindex(order, fill_value=0)
         out.append(pd.DataFrame(dict(Method=res.index, max_on_dataset=res.values, score=name)))
     return pd.concat(out, ignore_index=True)
 
@@ -240,11 +295,14 @@ def ylim_covering(ax, lo, hi, values):
     values = np.asarray(values, dtype=float)
     pad = 0.05 * (hi - lo)
     ax.set_ylim(min(lo, np.nanmin(values) - pad), max(hi, np.nanmax(values) + pad))
+    if np.nanmin(values) < lo or np.nanmax(values) > hi:     # fixed ticks would not cover it
+        ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(5))
 
 
-def plot(tag, out_path):
-    scores = load_scores(tag)
-    agg = best_counts(scores)
+def plot(tag, out_path, methods):
+    order = list(methods)
+    scores = load_scores(tag, order)
+    agg = best_counts(scores, order)
     mean_dist, sil, db = preservation_frames(tag)
 
     mosaic = [["a", "b", "c", "d", "e"], ["f", "g", "h", "i", "j"]]
@@ -252,7 +310,6 @@ def plot(tag, out_path):
     label_fs, title_fs, tick_fs, legend_fs, legend_title_fs = 19, 19, 15, 15, 17
     offset = transforms.ScaledTranslation(-36 / 72, 27 / 72, fig.dpi_scale_trans)
     set2 = sns.color_palette("Set2")
-    order = ["POME", "UMAP"]
 
     def letter(key, size=label_fs):
         axes[key].text(0.0, 1.0, key, transform=axes[key].transAxes + offset,
@@ -272,8 +329,10 @@ def plot(tag, out_path):
     letter("a")
     handles, labels = axes["a"].get_legend_handles_labels()
     axes["a"].legend_.remove()
-    legend1 = fig.legend(handles, labels, loc="center", bbox_to_anchor=(0.34, 1.04),
-                         ncol=len(labels), fontsize=legend_fs, frameon=True, fancybox=False,
+    legend1 = fig.legend(handles, labels, loc="center",
+                         bbox_to_anchor=(0.34, 1.04 if len(labels) <= 3 else 1.075),
+                         ncol=len(labels) if len(labels) <= 3 else 2, fontsize=legend_fs,
+                         frameon=True, fancybox=False,
                          title="Embedding of POM data", title_fontsize=legend_title_fs)
 
     for key, ds in zip("bcd", ["HANCOCK", "MIMIC-IV", "TCGA-LUAD"]):
@@ -325,6 +384,10 @@ def main():
     p.add_argument("--tag", default="_pome14",
                    help="suffix of the result CSVs / figure (default: _pome14)")
     p.add_argument("--datasets", nargs="+", default=DATASETS, choices=DATASETS)
+    p.add_argument("--methods", nargs="+", default=DEFAULT_METHODS,
+                   choices=list(DISPLAY_METHOD.values()),
+                   help="methods in panels a-g, in this order (default: %(default)s; "
+                        "POME UMAP = the published figure)")
     p.add_argument("--plot-only", action="store_true", help="skip steps 1-3")
     p.add_argument("--no-plot", action="store_true",
                    help="skip step 4 (e.g. when only a subset of datasets was computed)")
@@ -336,10 +399,12 @@ def main():
     if not args.plot_only:
         for dataset in args.datasets:
             clustering_scores(args.embeddings_root, dataset, args.tag, args.overwrite)
+            competitor_scores(dataset, args.overwrite)
             project(args.embeddings_root, dataset, args.overwrite)
         preservation(args.embeddings_root, args.tag, args.overwrite, args.datasets)
     if not args.no_plot:
-        plot(args.tag, OUT_DIR / f"unsupervised_clustering{args.tag}.pdf")
+        suffix = "" if args.methods == ["POME", "UMAP"] else "_competitors"
+        plot(args.tag, OUT_DIR / f"unsupervised_clustering{args.tag}{suffix}.pdf", args.methods)
 
 
 if __name__ == "__main__":

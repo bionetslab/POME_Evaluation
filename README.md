@@ -87,7 +87,35 @@ distance.
 **POME 1.4** → `output/unsupervised/unsupervised_clustering_pome14.pdf`:
 ```bash
 sbatch container/submit.sh scripts/generate_embeddings.py --dims 16 32 64 --runs 10   # -> data/embeddings_pome14
-container/run.sh scripts/generate_unsupervised_figure.py
+container/run.sh scripts/generate_unsupervised_figure.py --methods POME UMAP
+```
+
+**Competitors (HI-VAE, SAINT, missForest + autoencoder)** → `output/unsupervised/unsupervised_clustering_pome14_competitors.pdf`.
+The script also scores tabular embeddings of the same sizes (16/32/64) and runs (0-9). They are
+read from `data/embeddings_competitors/{DATASET}/embeddings/{DATASET}_{METHOD}_{dim}_{run}.tsv`
+and clustered and scored like UMAP (Euclidean kNN graph, Euclidean Silhouette, sklearn
+Davies-Bouldin). All competitors read POME's own input graphs, so they see exactly the same
+data (`src/pome_evaluation/tabular_inputs.py`).
+- `HIVAE`: HI-VAE on the incomplete tables, using the setup of the imputation benchmark with
+  dim z set to the embedding size. The embedding is the posterior mean of z
+  (`scripts/embed_hivae.py`, `hivae.sif`, CPU).
+- `SAINT`: SAINT's self-supervised pretraining on the incomplete tables, using SAINT's own
+  missing-value mask embeddings. The embedding is the CLS-token output
+  (`scripts/embed_saint.py`, `saint.sif`, GPU).
+- `MFAE`: missForest imputation of the full tables, with the settings of the imputation
+  benchmark (`scripts/impute_full_missforest.py`). A plain MLP autoencoder then runs on the
+  completed tables (z-scored continuous + one-hot categorical; p-256-128-d, ReLU; MSE; Adam
+  1e-3, batch 64, 100 epochs). The embedding is the bottleneck
+  (`scripts/embed_autoencoder.py`, `pome_eval.sif`, CPU).
+```bash
+bash container/build.sh saint                                   # once, on a frontend
+sbatch --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/hivae.sif,PYTHONHASHSEED=0 \
+    container/submit.sh scripts/embed_hivae.py --jobs 8
+sbatch --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/saint.sif,PYTHONHASHSEED=0 \
+    container/submit.sh scripts/embed_saint.py
+sbatch --export=PYTHONHASHSEED=0 container/submit.sh scripts/impute_full_missforest.py
+container/run.sh scripts/embed_autoencoder.py                   # after the missForest job
+container/run.sh scripts/generate_unsupervised_figure.py        # default --methods POME UMAP HI-VAE SAINT missForest+AE
 ```
 
 ### Linear probing analysis
