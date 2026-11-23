@@ -115,8 +115,15 @@ sbatch --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/saint.sif,PYTHONHA
     container/submit.sh scripts/embed_saint.py
 sbatch --export=PYTHONHASHSEED=0 container/submit.sh scripts/impute_full_missforest.py
 container/run.sh scripts/embed_autoencoder.py                   # after the missForest job
-container/run.sh scripts/generate_unsupervised_figure.py        # default --methods POME UMAP HI-VAE SAINT missForest+AE
+sbatch --export=PYTHONHASHSEED=0 --time=02:00:00 \
+    container/submit.sh scripts/generate_unsupervised_figure.py --jobs 16   # ~25 min
 ```
+The default `--methods POME UMAP HI-VAE SAINT missForest+AE` covers all panels a-j. Panels a-g add
+the competitors' scores. In panels h-j, the competitors' embeddings are projected to 2D like POME's,
+and their preservation is computed with their own Leiden labels
+(`output/unsupervised/{DATASET}_{leiden_knn_labels,visualization_*_preservation}_competitors.csv`).
+These panels show one row per embedding (boxes over datasets x runs). UMAP is left out of them
+because its MIMIC embeddings are not stored.
 
 ### Linear probing analysis
 The results figure showing POME's embeddings' supervised learning capability can be reproduced with `scripts/plot_inductive_linear_probing.py`. As input, it takes `output/linear_probing/inductive_linear_probing_results.csv`, produced by `scripts/linear_probe_inductive_embeddings.py` from the train/test-split embeddings of `scripts/generate_inductive_embeddings.py`.
