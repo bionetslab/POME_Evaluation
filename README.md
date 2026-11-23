@@ -55,6 +55,24 @@ container/run.sh scripts/generate_imputation_results.py --discretization z --bin
 container/run.sh scripts/generate_imputation_figure.py --dim 64 --suffix _pome14
 ```
 
+**Competitors.** k-NN, MissForest and AutoComplete (imputed by the scripts/notebooks under
+`data/imputation_data/<method>/`), plus **HI-VAE** (Nazabal et al., 2020; the authors' original
+TF1 code) and **TabImpute** (Feitelberg et al., 2025; zero-shot pre-trained transformer). The
+latter two each have their own Apptainer image and script; both read the MissForest copies of the
+masked files and write `data/imputation_data/{hivae,tabimpute}/{DATASET}/imputed_data/`, which
+`generate_imputation_results.py` scores as tools `HI-VAE` and `TabImpute`:
+```bash
+bash container/build.sh hivae && bash container/build.sh tabimpute    # once, on a frontend
+# --export is required: submit.sh runs with --export=NONE, so a plain env var never reaches the job
+sbatch --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/hivae.sif \
+    container/submit.sh scripts/impute_hivae.py --jobs 4                # CPU only (TF 1.15)
+sbatch --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/tabimpute.sif \
+    container/submit.sh scripts/impute_tabimpute.py --datasets hancock # GPU; ~1.5/3.5/5.5 min per
+                                                                       # HANCOCK/LUAD/MIMIC file
+```
+Configuration choices (type mapping, HI-VAE's batch-size rule for sparse tables, TabImpute's
+100 x 50 windows and permutation ensemble) are documented in the two scripts' docstrings.
+
 ### Unsupervised stratification results
 The published figure can be reproduced with the notebook `scripts/plot_fig4_unsupervised.ipynb`. The scripts to produce the required input for this notebook under `src/pome_evaluation` are `analyze_unsupervised_clustering.py`, `analyze_cluster_preservation_2D.ipynb`, and `analyze_distance_preservation_2D.ipynb`. Necessary UMAP embeddings were computed using the script `embed_UMAP_several_runs.py`. POME's embeddings 2D visualizations were computed with the help of the notebook `project_embeddings_to_2D.ipynb`.
 

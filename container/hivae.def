@@ -1,0 +1,52 @@
+# Apptainer image for the HI-VAE imputation baseline (Nazabal et al., Pattern
+# Recognition 2020), used by scripts/impute_hivae.py.
+#
+# Build (on a Helma frontend):   bash container/build.sh hivae
+# Run (CPU; TF 1.15 has no CUDA build for H200):
+#     POME_EVAL_SIF=$(ws_find pome_eval)/containers/hivae.sif \
+#         container/run.sh scripts/impute_hivae.py --datasets hancock
+#
+# The authors' original code (github.com/probabilistic-learning/HI-VAE, pinned commit
+# below, unmodified) needs TensorFlow 1.x and therefore Python <= 3.7. The package
+# versions are the ones the code was verified with on Helma (2026-11-20).
+
+Bootstrap: docker
+From: dockerhub-mirror.rrze.uni-erlangen.de/condaforge/miniforge3:24.11.3-2
+
+%post
+    # Python 3.7 comes from conda-forge: Debian images that still ship 3.7 have a glibc
+    # too old for Helma's fakeroot build helper.
+    conda create -y -q -p /opt/py37 -c conda-forge python=3.7 pip
+    conda clean -y -a -q
+    export PATH=/opt/py37/bin:$PATH
+    pip install --no-cache-dir \
+        tensorflow==1.15.5 numpy==1.18.5 pandas==1.3.5 scikit-learn==1.0.2 \
+        scipy==1.7.3 protobuf==3.20.3 h5py==2.10.0
+
+    HIVAE_COMMIT=1ac9c3166a03b5f8c2dc0d7be21676e1fb1c270b
+    python - "$HIVAE_COMMIT" <<'PY'
+import io, sys, urllib.request, zipfile
+commit = sys.argv[1]
+url = f"https://github.com/probabilistic-learning/HI-VAE/archive/{commit}.zip"
+zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(url).read())).extractall("/opt")
+PY
+    mv "/opt/HI-VAE-$HIVAE_COMMIT" /opt/HI-VAE
+    echo "$HIVAE_COMMIT" > /opt/HI-VAE/COMMIT
+    # Drop the bundled example datasets; only the code is needed.
+    rm -rf /opt/HI-VAE/Wine /opt/HI-VAE/Adult /opt/HI-VAE/Breast /opt/HI-VAE/defaultCredit \
+           /opt/HI-VAE/letter /opt/HI-VAE/spam /opt/HI-VAE/Saved_Networks /opt/HI-VAE/__pycache__
+
+    python -c "import tensorflow as tf, numpy, pandas; print('tf', tf.__version__, '| numpy', numpy.__version__, '| pandas', pandas.__version__)"
+
+%environment
+    export PATH=/opt/py37/bin:$PATH
+    export PYTHONNOUSERSITE=1
+    export HIVAE_REPO=/opt/HI-VAE
+    export TF_CPP_MIN_LOG_LEVEL=2
+
+%runscript
+    # Same contract as pome_eval.sif (see container/run.sh): behaves like `python`.
+    exec python "$@"
+
+%labels
+    Description HI-VAE baseline (original TF1 code, commit 1ac9c31) for POME_Evaluation

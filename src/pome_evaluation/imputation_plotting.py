@@ -13,6 +13,8 @@ from itertools import combinations
 
 from .imputation_analysis import POME_DATASET_LABELS, POME_DATASET_ORDER, POME_DIM_ORDER
 
+METHOD_ORDER = ["POME", "MissForest", "KNN", "AutoComplete", "HI-VAE", "TabImpute"]
+
 
 def _plot_rank_panel(ax, ranks_df, title, xylabelsize, ticklabelsize, titlefontsize,palette):
     sns.lineplot(
@@ -30,7 +32,7 @@ def _plot_rank_panel(ax, ranks_df, title, xylabelsize, ticklabelsize, titlefonts
     ax.set_ylabel("Average rank ↓", fontsize=xylabelsize)
     ax.tick_params(axis="x", labelsize=ticklabelsize)
     ax.tick_params(axis="y", labelsize=ticklabelsize)
-    ax.set_yticks([1, 2, 3, 4])
+    ax.set_yticks(range(1, len(palette) + 1))
     ax.set_title(title, fontsize=titlefontsize)
 
 
@@ -182,8 +184,11 @@ def plot_imputation_results(
     )
 
     dataset_order = ["HANCOCK", "MIMIC IV", "TCGA-LUAD"]
-    method_order = sorted(metric_distributions["method"].unique())
-    method_order.reverse()
+    # POME first: it is the reference of every significance bracket. The published
+    # methods keep their order (and thus their Set2 colours); added baselines follow.
+    present = set(metric_distributions["method"].unique())
+    method_order = [m for m in METHOD_ORDER if m in present]
+    method_order += sorted(present - set(METHOD_ORDER))
     method_label_map = {"KNN": r"$k$-NN"}
     palette = dict(zip(method_order, sns.color_palette("Set2", n_colors=len(method_order))))
 

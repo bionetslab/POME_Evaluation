@@ -1,7 +1,9 @@
 #!/bin/bash -l
 # Build the POME_Evaluation Apptainer image on a Helma FRONTEND (not in a job).
 #
-#   bash container/build.sh
+#   bash container/build.sh              # pome_eval.sif  (from pome_eval.def)
+#   bash container/build.sh hivae        # hivae.sif      (HI-VAE baseline)
+#   bash container/build.sh tabimpute    # tabimpute.sif  (TabImpute baseline)
 #
 # Why the frontend: NHR@FAU only allows container builds on the AlmaLinux
 # frontends (Fritz/Alex/Helma/Woody). We point Apptainer's scratch at fast
@@ -13,7 +15,9 @@ set -euo pipefail
 # --- locate paths relative to this script (works from anywhere) -------------
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WS="$(ws_find pome_eval)"                      # /hnvme/workspace/<user>-pome_eval
-SIF="${WS}/containers/pome_eval.sif"
+NAME="${1:-pome_eval}"                         # <NAME>.def -> <NAME>.sif
+[[ -f "$SETUP_DIR/$NAME.def" ]] || { echo "error: no definition $SETUP_DIR/$NAME.def" >&2; exit 2; }
+SIF="${WS}/containers/${NAME}.sif"
 mkdir -p "${WS}/containers"
 
 # Large caches/temp on local disk (many inodes) -- NOT on Lustre/workspace.
@@ -25,8 +29,8 @@ echo ">> Building ${SIF}"
 cd "$SETUP_DIR"     # so 'requirements.txt' in the %files section resolves
 
 # If you hit 'Could not write info to setgroups: Permission denied', swap the
-# next line for: /apps/singularity/apptainer-wrapper.sh build "$SIF" pome_eval.def
-apptainer build --force "$SIF" pome_eval.def
+# next line for: /apps/singularity/apptainer-wrapper.sh build "$SIF" "$NAME.def"
+apptainer build --force "$SIF" "$NAME.def"
 
 echo ">> Done. Image: ${SIF}"
 apptainer inspect "$SIF" | sed 's/^/   /'

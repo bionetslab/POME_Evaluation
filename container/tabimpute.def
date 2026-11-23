@@ -1,0 +1,59 @@
+# Apptainer image for the TabImpute imputation baseline (Feitelberg et al., 2025,
+# arXiv:2510.02625), used by scripts/impute_tabimpute.py.
+#
+# Build (on a Helma frontend):   bash container/build.sh tabimpute
+# Run (GPU job, H200):           sbatch --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/tabimpute.sif \
+#                                    container/submit.sh scripts/impute_tabimpute.py
+#   (submit.sh uses --export=NONE: a plain `POME_EVAL_SIF=... sbatch` never reaches the job)
+#
+# Pinned: tabimpute from the authors' repo (github.com/jacobf18/tabular) at commit
+# 2cf54ac, the commit their Hugging Face model card pins for installation. It is used
+# instead of the PyPI release 0.0.4 because only the repo version can tile a table into
+# row AND column windows (`max_num_cols`); 0.0.4 splits rows only, which cannot fit
+# our one-hot-expanded tables (up to 684 columns) in GPU memory. The checkpoint is
+# `tabimpute_001.ckpt` (the published TabImpute model, the package default), frozen at
+# Hugging Face revision 53c062ee (sha256 checked below) and baked into the image, so
+# runs never depend on the Hub. Base image and torch 2.5.1 / CUDA 12.1 as pome_eval.sif.
+
+Bootstrap: docker
+From: dockerhub-mirror.rrze.uni-erlangen.de/pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
+
+%post
+    pip install --no-cache-dir --upgrade pip
+    # Keep the base image's CUDA-matched torch: tabimpute's own pin (torch>=2.2,<3)
+    # is satisfied by it, the constraint just stops pip from "upgrading" it.
+    echo "torch==2.5.1" > /tmp/constraints.txt
+    pip install --no-cache-dir -c /tmp/constraints.txt \
+        "tabimpute[categorical] @ https://github.com/jacobf18/tabular/archive/2cf54ac47dbcc1154b35e875b527ed0c42a9f416.zip#subdirectory=mcpfn" \
+        "pandas>=2.1,<3.0"
+
+    mkdir -p /opt/tabimpute
+    python - <<'PY'
+from huggingface_hub import hf_hub_download
+hf_hub_download(repo_id="Tabimpute/TabImpute", filename="tabimpute_001.ckpt",
+                revision="53c062ee6f9376bf8f346fb3cf0d2231392f8872",
+                local_dir="/opt/tabimpute")
+PY
+    echo "b8bacc5f1b8274d2b5f98ef1e2e2ee6771a018dbb72849d9b3a4abaa807a9bb1  /opt/tabimpute/tabimpute_001.ckpt" \
+        | sha256sum -c -
+    rm -rf /opt/tabimpute/.cache
+
+    python - <<'PY'
+import importlib.metadata as md, torch, pandas, numpy
+from tabimpute.interface import TabImputeCategorical
+print("torch", torch.__version__, "| tabimpute", md.version("tabimpute"),
+      "| pandas", pandas.__version__, "| numpy", numpy.__version__)
+PY
+
+%environment
+    export PYTHONNOUSERSITE=1
+    export TABIMPUTE_CHECKPOINT=/opt/tabimpute/tabimpute_001.ckpt
+    export HF_HUB_OFFLINE=1
+
+%runscript
+    # Same contract as pome_eval.sif, so container/run.sh and submit.sh work with
+    # POME_EVAL_SIF pointing here: `apptainer run tabimpute.sif <args>` == `python <args>`.
+    exec python "$@"
+
+%labels
+    Description TabImpute baseline (tabimpute @ jacobf18/tabular 2cf54ac, tabimpute_001.ckpt) for POME_Evaluation

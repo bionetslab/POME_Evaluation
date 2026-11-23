@@ -8,8 +8,9 @@ against the held-out ground truth. It reproduces
 ``src/pome_evaluation/compute_imputation_results.ipynb`` as a resumable CLI.
 
 Scored tools:
-- **KNN**, **AutoComplete**, **MissForest** baselines (imputed once per
-  masked file, so their rows are dim-independent, ``dim=-1``).
+- **KNN**, **AutoComplete**, **MissForest**, **HI-VAE** and **TabImpute**
+  baselines (imputed once per masked file, so their rows are dim-independent,
+  ``dim=-1``).
 - **POME** for every requested embedding dimension, read from
   ``imputed_{discretization}_{bins}_{dim}`` directories.
 
@@ -66,6 +67,12 @@ INPUT_FILES = {
 
 # label -> {variable: range} computed once from the original unmasked data.
 _RANGE_CACHE: dict = {}
+
+# Baselines added later: (tool name, directory under data/imputation_data).
+EXTRA_BASELINES = (
+    ("HI-VAE", "hivae"),          # scripts/impute_hivae.py
+    ("TabImpute", "tabimpute"),   # scripts/impute_tabimpute.py
+)
 
 # dataset CLI key -> on-disk dataset label (directory / output-file name).
 DATASETS = {
@@ -217,6 +224,15 @@ def process_groundtruth_file(gt_path: Path, label: str, dims, bins: int,
     if miss_df is not None:
         predictors.append(
             ("MissForest", lambda s, v, d=miss_df: d.loc[s, v], True, -1))
+
+    # Same samples x variables layout as KNN/MissForest (scripts/impute_hivae.py,
+    # scripts/impute_tabimpute.py); categoricals are already decoded to category codes.
+    for tool_name, subdir in EXTRA_BASELINES:
+        extra_df = _load_sample_by_variable(
+            IMPUTED_ROOT / subdir / label / "imputed_data" / tsv_name)
+        if extra_df is not None:
+            predictors.append(
+                (tool_name, lambda s, v, d=extra_df: d.loc[s, v], True, -1))
 
     for dim in dims:
         graph_dir = f"imputed_{discretization}_{bins}_{dim}{suffix}"
