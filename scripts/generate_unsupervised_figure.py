@@ -61,6 +61,7 @@ import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.patches  # noqa: E402
 import matplotlib.ticker  # noqa: E402
 import matplotlib.transforms as transforms  # noqa: E402
 import seaborn as sns  # noqa: E402
@@ -299,6 +300,13 @@ def plot(tag, out_path, methods):
     label_fs, title_fs, tick_fs, legend_fs, legend_title_fs = 19, 19, 15, 15, 17
     offset = transforms.ScaledTranslation(-36 / 72, 27 / 72, fig.dpi_scale_trans)
     set2 = sns.color_palette("Set2")
+    # unfilled boxes: edges, whiskers and median in the group colour, so that boxes of
+    # nearly constant scores (small run-to-run variance) still show their colour
+    box_kw = dict(fill=False, linewidth=1.6)
+
+    def color_patches(names, palette):
+        return ([matplotlib.patches.Patch(facecolor=palette[i], edgecolor="none")
+                 for i in range(len(names))], list(names))
 
     def letter(key, size=label_fs):
         axes[key].text(0.0, 1.0, key, transform=axes[key].transAxes + offset,
@@ -313,13 +321,12 @@ def plot(tag, out_path, methods):
     for key, ds in zip("abc", datasets):
         data = scores[scores["Dataset"] == ds]
         sns.boxplot(data=data, x="dim", y="silhouette", hue="Method", hue_order=order,
-                    ax=axes[key], dodge=True, gap=.2, legend=key == "a", palette=set2)
+                    ax=axes[key], dodge=True, gap=.2, legend=False, palette=set2, **box_kw)
         style(axes[key], "Embedding size", "Silhouette score", ds)
         axes[key].set_yticks([0.15, 0.3, 0.45, 0.6])
         ylim_covering(axes[key], 0.1, 0.65, data["silhouette"])
         letter(key)
-    handles, labels = axes["a"].get_legend_handles_labels()
-    axes["a"].legend_.remove()
+    handles, labels = color_patches(order, set2)
     legend1 = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.0),
                          ncol=len(labels), fontsize=legend_fs,
                          frameon=True, fancybox=False,
@@ -327,7 +334,7 @@ def plot(tag, out_path, methods):
     for key, ds in zip("def", datasets):
         data = scores[scores["Dataset"] == ds]
         sns.boxplot(data=data, x="dim", y="db_final", hue="Method", hue_order=order,
-                    ax=axes[key], legend=False, palette=set2)
+                    ax=axes[key], legend=False, palette=set2, **box_kw)
         style(axes[key], "Embedding size", "Davies-Bouldin index", ds)
         axes[key].set_yticks([0.5, 1.3, 2.1, 2.9])
         ylim_covering(axes[key], 0.25, 3.1, data["db_final"])
@@ -335,21 +342,22 @@ def plot(tag, out_path, methods):
 
     husl = sns.color_palette("husl", 3)
     sns.boxplot(data=mean_dist, x="jaccard_index", y="dataset", hue="method",
-                hue_order=PROJECTIONS, order=datasets, ax=axes["g"], palette=husl)
+                hue_order=PROJECTIONS, order=datasets, ax=axes["g"], legend=False, palette=husl, **box_kw)
     style(axes["g"], "Mean Jaccard index", "", "Distance preservation")
     letter("g")
-    handles2, labels2 = axes["g"].get_legend_handles_labels()
-    axes["g"].legend_.remove()
+    handles2, labels2 = color_patches(PROJECTIONS, husl)
     legend2 = fig.legend(handles2, labels2, loc="upper center", bbox_to_anchor=(0.5, 0.0),
                          ncol=len(labels2), fontsize=legend_fs, frameon=True, fancybox=False,
                          title="2D projection of embeddings", title_fontsize=legend_title_fs)
     sns.boxplot(data=sil, x="silhouette", y="dataset", hue="method", hue_order=PROJECTIONS,
-                order=datasets, ax=axes["h"], legend=False, palette=husl, showfliers=False)
+                order=datasets, ax=axes["h"], legend=False, palette=husl, showfliers=False,
+                **box_kw)
     style(axes["h"], "Silhouette score", "", "Cluster preservation")
     axes["h"].set_yticklabels([])
     letter("h")
     sns.boxplot(data=db, x="davies_bouldin", y="dataset", hue="method", hue_order=PROJECTIONS,
-                order=datasets, ax=axes["i"], legend=False, palette=husl, showfliers=False)
+                order=datasets, ax=axes["i"], legend=False, palette=husl, showfliers=False,
+                **box_kw)
     style(axes["i"], "Davies-Bouldin index", "", "Cluster preservation")
     axes["i"].set_yticklabels([])
     letter("i")
