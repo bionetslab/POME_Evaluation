@@ -31,20 +31,12 @@ Steps (each cached; rerun with --overwrite to recompute):
      Silhouette, sklearn Davies-Bouldin. A method is skipped while any of its embeddings is
      missing.
      -> output/unsupervised/{DATASET}_leiden_knn_clustering_scores_competitors.csv
-        output/unsupervised/{DATASET}_leiden_knn_labels_competitors.csv
   2. 2D projections (PCA, UMAP, t-SNE of the standardized embedding; random_state 42).
      -> {embeddings-root}/{DATASET}/visualization/{DATASET}_samples_{dim}_{run}.tsv
   3. Distance preservation: mean Jaccard overlap of each sample's K nearest neighbours
      (K = 10, 30, 50) in the embedding vs. the projection; cluster preservation: Silhouette /
      Davies-Bouldin of the step-1 Leiden labels computed in the 2D projection.
      -> output/unsupervised/visualization_{distance,cluster}_preservation_results{tag}.csv
-     The same for the competitors (projections of their embeddings, their step-1b labels;
-     parallel with --jobs):
-     -> data/embeddings_competitors/{DATASET}/visualization/{DATASET}_{METHOD}_{dim}_{run}.tsv
-        output/unsupervised/{DATASET}_visualization_{distance,cluster}_preservation_competitors.csv
-     Panels h-j show POME per dataset when it is the only embedding with projections
-     (--methods POME UMAP: UMAP's MIMIC embeddings are not stored), otherwise one row per
-     embedding method (boxes over datasets x runs, means over embedding sizes).
   4. Figure -> output/unsupervised/unsupervised_clustering{tag}.pdf
 
 Difference to the legacy code: Leiden is seeded (seed = run) so that the scores are
@@ -55,7 +47,6 @@ CPU:  container/run.sh scripts/generate_unsupervised_figure.py
 """
 
 import argparse
-import os
 import sys
 import warnings
 from pathlib import Path
@@ -82,7 +73,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from pome_evaluation.analyze_unsupervised_clustering import (  # noqa: E402
     davies_bouldin_score_custom)
-from pome_evaluation.tabular_inputs import COMPETITOR_ROOT, embedding_path  # noqa: E402
+from pome_evaluation.tabular_inputs import embedding_path  # noqa: E402
 
 DEFAULT_EMB_ROOT = PROJECT_ROOT / "data" / "embeddings_pome14"
 OUT_DIR = PROJECT_ROOT / "output" / "unsupervised"
@@ -150,60 +141,42 @@ def clustering_scores(root, dataset, tag, overwrite):
 
 def competitor_scores(dataset, overwrite):
     out = OUT_DIR / f"{dataset}_leiden_knn_clustering_scores_competitors.csv"
-    labels_out = OUT_DIR / f"{dataset}_leiden_knn_labels_competitors.csv"
-    cached = out.exists() and labels_out.exists() and not overwrite
-    old = pd.read_csv(out) if cached else pd.DataFrame(columns=["method"])
-    old_labels = pd.read_csv(labels_out, dtype={"sample": str}) if cached \
-        else pd.DataFrame(columns=["method"])
-    frames, label_frames = [], []
+    old = pd.read_csv(out) if out.exists() and not overwrite else None
+    known = [f"{m}_KNN_Leiden" for m in COMPETITORS]
+    if old is not None:
+        old = old[old["method"].isin(known)]
+    frames = [] if old is None else [old]
     for method in COMPETITORS:
         tag = f"{method}_KNN_Leiden"
         paths = {(dim, run): Path(embedding_path(dataset, method, dim, run))
                  for dim in DIMS for run in range(N_RUNS)}
-        if (old["method"] == tag).sum() == len(paths) and (old_labels["method"] == method).any():
-            frames.append(old[old["method"] == tag])
-            label_frames.append(old_labels[old_labels["method"] == method])
+        if old is not None and (old["method"] == tag).sum() == len(paths):
             continue
         missing = [p for p in paths.values() if not p.exists()]
         if missing:
             print(f"  [skip] {dataset} {method}: {len(missing)} of {len(paths)} embeddings missing")
             continue
+        if old is not None:
+            frames = [f[f["method"] != tag] for f in frames]
         rows = []
         for (dim, run), path in paths.items():
-            emb = pd.read_csv(path, sep="\t", index_col=0)
-            X = emb.to_numpy()
+            X = pd.read_csv(path, sep="\t", index_col=0).to_numpy()
             lab = leiden_labels(X, seed=run, metric="euclidean")
             rows.append(dict(run=run, k=len(np.unique(lab)),
                              silhouette=silhouette_score(X, lab),
                              davies_bouldin=davies_bouldin_score(X, lab),
                              method=tag, dim=dim))
-            label_frames.append(pd.DataFrame(dict(sample=emb.index.astype(str), dim=dim,
-                                                  run=run, method=method, label=lab)))
             print(f"  [cluster] {dataset} {method} dim {dim} run {run}: k={rows[-1]['k']} "
                   f"sil={rows[-1]['silhouette']:.3f}", flush=True)
         frames.append(pd.DataFrame(rows))
     if frames:
         pd.concat(frames, ignore_index=True).to_csv(out, index=False)
-        pd.concat(label_frames, ignore_index=True).to_csv(labels_out, index=False)
 
 
 # --- 2. projections -------------------------------------------------------------
 
-def project_matrix(emb):
-    """PCA / UMAP / t-SNE (2D) of the standardized embedding (DataFrame, samples as index)."""
-    import umap.umap_ as umap
-    X = StandardScaler().fit_transform(emb.to_numpy())
-    parts = {
-        "PCA": PCA(n_components=2, random_state=42).fit_transform(X),
-        "UMAP": umap.UMAP(n_components=2, metric="euclidean",
-                          random_state=42).fit_transform(X),
-        "tSNE": TSNE(n_components=2, init="pca", random_state=42).fit_transform(X),
-    }
-    return pd.concat([pd.DataFrame(v, index=emb.index, columns=[f"{k}_1", f"{k}_2"])
-                      for k, v in parts.items()], axis=1)
-
-
 def project(root, dataset, overwrite):
+    import umap.umap_ as umap
     vis_dir = root / dataset / "visualization"
     vis_dir.mkdir(parents=True, exist_ok=True)
     for dim in DIMS:
@@ -211,45 +184,18 @@ def project(root, dataset, overwrite):
             path = vis_dir / f"{dataset}_samples_{dim}_{run}.tsv"
             if path.exists() and not overwrite:
                 continue
-            project_matrix(load_embedding(root, dataset, dim, run)).to_csv(path, sep="\t")
+            emb = load_embedding(root, dataset, dim, run)
+            X = StandardScaler().fit_transform(emb.to_numpy())
+            parts = {
+                "PCA": PCA(n_components=2, random_state=42).fit_transform(X),
+                "UMAP": umap.UMAP(n_components=2, metric="euclidean",
+                                  random_state=42).fit_transform(X),
+                "tSNE": TSNE(n_components=2, init="pca", random_state=42).fit_transform(X),
+            }
+            df = pd.concat([pd.DataFrame(v, index=emb.index, columns=[f"{k}_1", f"{k}_2"])
+                            for k, v in parts.items()], axis=1)
+            df.to_csv(path, sep="\t")
             print(f"  [project] {dataset} dim {dim} run {run}", flush=True)
-
-
-def competitor_vis_path(dataset, method, dim, run):
-    return Path(COMPETITOR_ROOT) / dataset / "visualization" / f"{dataset}_{method}_{dim}_{run}.tsv"
-
-
-def load_competitor(dataset, method, dim, run):
-    emb = pd.read_csv(embedding_path(dataset, method, dim, run), sep="\t", index_col=0)
-    emb.index = emb.index.astype(str)
-    return emb
-
-
-def _project_competitor(task):
-    dataset, method, dim, run = task
-    path = competitor_vis_path(dataset, method, dim, run)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    project_matrix(load_competitor(dataset, method, dim, run)).to_csv(path, sep="\t")
-    return task
-
-
-def project_competitors(dataset, overwrite, jobs):
-    from concurrent.futures import ProcessPoolExecutor
-    tasks = [(dataset, m, dim, run) for m in COMPETITORS for dim in DIMS for run in range(N_RUNS)
-             if Path(embedding_path(dataset, m, dim, run)).exists()
-             and (overwrite or not competitor_vis_path(dataset, m, dim, run).exists())]
-    if not tasks:
-        return
-    # Spawned (not forked) single-threaded workers: forking after the clustering step has
-    # started OpenMP/numba thread pools deadlocks the children.
-    import multiprocessing
-    for var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
-                "NUMBA_NUM_THREADS"):
-        os.environ[var] = "1"
-    with ProcessPoolExecutor(max_workers=max(1, jobs),
-                             mp_context=multiprocessing.get_context("spawn")) as pool:
-        for task in pool.map(_project_competitor, tasks):
-            print("  [project] %s %s dim %d run %d" % task, flush=True)
 
 
 # --- 3. preservation ------------------------------------------------------------
@@ -261,33 +207,6 @@ def knn_order(X):
 def jaccard(order_a, order_b, k):
     a, b = order_a[:, 1:k + 1], order_b[:, 1:k + 1]
     return float(np.mean([len(set(x) & set(y)) / len(set(x) | set(y)) for x, y in zip(a, b)]))
-
-
-def preservation_rows(emb, vis, lab, base):
-    """Distance (K-NN Jaccard) and cluster (Silhouette / DB of `lab`) preservation rows."""
-    dist_rows, clust_rows = [], []
-    vis = vis.loc[emb.index]
-    emb_order = knn_order(emb.to_numpy())
-    for method in PROJECTIONS:
-        P = vis[[f"{method}_1", f"{method}_2"]].to_numpy()
-        p_order = knn_order(P)
-        for k in K_LIST:
-            dist_rows.append(dict(base, method=method, K=k,
-                                  jaccard_index=jaccard(emb_order, p_order, k)))
-        clust_rows.append(dict(base, method=method, silhouette=silhouette_score(P, lab),
-                               davies_bouldin=davies_bouldin_score_custom(P, lab)))
-    return dist_rows, clust_rows
-
-
-def read_vis(path):
-    vis = pd.read_csv(path, sep="\t", index_col=0)
-    vis.index = vis.index.astype(str)
-    return vis
-
-
-def labels_for(labels, index, dim, run):
-    lab = labels[(labels["dim"] == dim) & (labels["run"] == run)]
-    return lab.set_index("sample").loc[index, "label"].to_numpy()
 
 
 def preservation(root, tag, overwrite, datasets=DATASETS):
@@ -302,58 +221,27 @@ def preservation(root, tag, overwrite, datasets=DATASETS):
         for dim in DIMS:
             for run in range(N_RUNS):
                 emb = load_embedding(root, dataset, dim, run)
-                vis = read_vis(root / dataset / "visualization" /
-                               f"{dataset}_samples_{dim}_{run}.tsv")
-                d, c = preservation_rows(emb, vis, labels_for(labels, emb.index, dim, run),
-                                         dict(run=run, dim=dim, dataset=dataset))
-                dist_rows += d
-                clust_rows += c
+                vis = pd.read_csv(root / dataset / "visualization" /
+                                  f"{dataset}_samples_{dim}_{run}.tsv", sep="\t", index_col=0)
+                vis.index = vis.index.astype(str)
+                vis = vis.loc[emb.index]
+                lab = labels[(labels["dim"] == dim) & (labels["run"] == run)]
+                lab = lab.set_index("sample").loc[emb.index, "label"].to_numpy()
+                emb_order = knn_order(emb.to_numpy())
+                for method in PROJECTIONS:
+                    P = vis[[f"{method}_1", f"{method}_2"]].to_numpy()
+                    p_order = knn_order(P)
+                    for k in K_LIST:
+                        dist_rows.append(dict(run=run, dim=dim, method=method, K=k,
+                                              jaccard_index=jaccard(emb_order, p_order, k),
+                                              dataset=dataset))
+                    clust_rows.append(dict(run=run, dim=dim, method=method,
+                                           silhouette=silhouette_score(P, lab),
+                                           davies_bouldin=davies_bouldin_score_custom(P, lab),
+                                           dataset=dataset))
                 print(f"  [preserve] {dataset} dim {dim} run {run}", flush=True)
     pd.DataFrame(dist_rows).to_csv(dist_out, index=False)
     pd.DataFrame(clust_rows).to_csv(clust_out, index=False)
-
-
-def competitor_preservation(dataset, overwrite):
-    """Same as `preservation`, for the competitors (each with its own step-1b Leiden labels)."""
-    dist_out = OUT_DIR / f"{dataset}_visualization_distance_preservation_competitors.csv"
-    clust_out = OUT_DIR / f"{dataset}_visualization_cluster_preservation_competitors.csv"
-    labels_path = OUT_DIR / f"{dataset}_leiden_knn_labels_competitors.csv"
-    if not labels_path.exists():
-        return
-    labels = pd.read_csv(labels_path, dtype={"sample": str})
-    done = set()
-    if dist_out.exists() and clust_out.exists() and not overwrite:
-        old_d, old_c = pd.read_csv(dist_out), pd.read_csv(clust_out)
-        done = set(old_c["embedding"])
-    else:
-        old_d, old_c = pd.DataFrame(), pd.DataFrame()
-    dist_rows, clust_rows = [], []
-    for method in COMPETITORS:
-        if method in done:
-            continue
-        vis_paths = [competitor_vis_path(dataset, method, dim, run)
-                     for dim in DIMS for run in range(N_RUNS)]
-        if not (labels["method"] == method).any() or not all(p.exists() for p in vis_paths):
-            continue
-        lab_m = labels[labels["method"] == method]
-        for dim in DIMS:
-            for run in range(N_RUNS):
-                emb = load_competitor(dataset, method, dim, run)
-                vis = read_vis(competitor_vis_path(dataset, method, dim, run))
-                d, c = preservation_rows(emb, vis, labels_for(lab_m, emb.index, dim, run),
-                                         dict(run=run, dim=dim, dataset=dataset,
-                                              embedding=method))
-                dist_rows += d
-                clust_rows += c
-            print(f"  [preserve] {dataset} {method} dim {dim}", flush=True)
-    if dist_rows:
-        old_d = old_d[~old_d.get("embedding", pd.Series(dtype=str)).isin(
-            {r["embedding"] for r in clust_rows})] if len(old_d) else old_d
-        old_c = old_c[~old_c.get("embedding", pd.Series(dtype=str)).isin(
-            {r["embedding"] for r in clust_rows})] if len(old_c) else old_c
-        pd.concat([old_d, pd.DataFrame(dist_rows)], ignore_index=True).to_csv(dist_out, index=False)
-        pd.concat([old_c, pd.DataFrame(clust_rows)], ignore_index=True).to_csv(clust_out,
-                                                                                index=False)
 
 
 # --- 4. figure --------------------------------------------------------------------
@@ -392,26 +280,13 @@ def best_counts(scores, order):
     return pd.concat(out, ignore_index=True)
 
 
-def preservation_frames(tag, methods):
-    """Per (dataset, embedding, projection, run) means over embedding sizes; K = 10."""
-    dist = [pd.read_csv(OUT_DIR / f"visualization_distance_preservation_results{tag}.csv")
-            .assign(embedding="POME")]
-    clust = [pd.read_csv(OUT_DIR / f"visualization_cluster_preservation_results{tag}.csv")
-             .assign(embedding="POME")]
-    for dataset in DATASETS:
-        for kind, frames in (("distance", dist), ("cluster", clust)):
-            path = OUT_DIR / f"{dataset}_visualization_{kind}_preservation_competitors.csv"
-            if path.exists():
-                frames.append(pd.read_csv(path))
-    dist, clust = pd.concat(dist, ignore_index=True), pd.concat(clust, ignore_index=True)
-    for df in (dist, clust):
-        df["embedding"] = df["embedding"].map(DISPLAY_METHOD)
-    dist = dist[(dist["K"] == 10) & dist["embedding"].isin(methods)]
-    clust = clust[clust["embedding"].isin(methods)]
-    keys = ["dataset", "embedding", "method", "run"]
-    mean_dist = dist.groupby(keys, as_index=False)["jaccard_index"].mean()
-    sil = clust.groupby(keys, as_index=False)["silhouette"].mean()
-    db = clust.groupby(keys, as_index=False)["davies_bouldin"].mean()
+def preservation_frames(tag):
+    dist = pd.read_csv(OUT_DIR / f"visualization_distance_preservation_results{tag}.csv")
+    clust = pd.read_csv(OUT_DIR / f"visualization_cluster_preservation_results{tag}.csv")
+    dist = dist[dist["K"] == 10]
+    mean_dist = dist.groupby(["dataset", "method", "run"], as_index=False)["jaccard_index"].mean()
+    sil = clust.groupby(["dataset", "method", "run"], as_index=False)["silhouette"].mean()
+    db = clust.groupby(["dataset", "run", "method"], as_index=False)["davies_bouldin"].mean()
     names = {"TCGA_LUAD": "TCGA-LUAD", "MIMIC": "MIMIC-IV"}
     return [f.replace(names) for f in (mean_dist, sil, db)]
 
@@ -428,9 +303,7 @@ def plot(tag, out_path, methods):
     order = list(methods)
     scores = load_scores(tag, order)
     agg = best_counts(scores, order)
-    mean_dist, sil, db = preservation_frames(tag, order)
-    # h-j: every embedding with stored projections (UMAP's MIMIC embeddings are not stored)
-    hj_order = [m for m in order if m in set(sil["embedding"])]
+    mean_dist, sil, db = preservation_frames(tag)
 
     mosaic = [["a", "b", "c", "d", "e"], ["f", "g", "h", "i", "j"]]
     fig, axes = plt.subplot_mosaic(mosaic, figsize=(16, 9), layout="constrained")
@@ -438,11 +311,8 @@ def plot(tag, out_path, methods):
     offset = transforms.ScaledTranslation(-36 / 72, 27 / 72, fig.dpi_scale_trans)
     set2 = sns.color_palette("Set2")
 
-    def letter(key, size=label_fs, title_lines=1):
-        # raised by one title line height per extra title line
-        shift = transforms.ScaledTranslation(0, (title_lines - 1) * 1.2 * title_fs / 72,
-                                             fig.dpi_scale_trans)
-        axes[key].text(0.0, 1.0, key, transform=axes[key].transAxes + offset + shift,
+    def letter(key, size=label_fs):
+        axes[key].text(0.0, 1.0, key, transform=axes[key].transAxes + offset,
                        fontsize=size, fontweight="bold")
 
     def style(ax, xlabel, ylabel, title):
@@ -484,29 +354,23 @@ def plot(tag, out_path, methods):
 
     husl = sns.color_palette("husl", 3)
     ds_order = ["HANCOCK", "MIMIC-IV", "TCGA-LUAD"]
-    if hj_order == ["POME"]:
-        # published layout: POME only, one row per dataset
-        hj_y, hj_rows, hj_suffix = "dataset", ds_order, ""
-    else:
-        # one row per embedding method, boxes over datasets x runs (means over sizes)
-        hj_y, hj_rows, hj_suffix = "embedding", hj_order, "\n(all datasets)"
-    sns.boxplot(data=mean_dist, x="jaccard_index", y=hj_y, hue="method",
-                hue_order=PROJECTIONS, order=hj_rows, ax=axes["h"], palette=husl)
-    style(axes["h"], "Mean Jaccard index", "", "Distance preservation" + hj_suffix)
-    letter("h", title_lines=hj_suffix.count("\n") + 1)
+    sns.boxplot(data=mean_dist, x="jaccard_index", y="dataset", hue="method",
+                hue_order=PROJECTIONS, order=ds_order, ax=axes["h"], palette=husl)
+    style(axes["h"], "Mean Jaccard index", "", "Distance preservation")
+    letter("h")
     handles2, labels2 = axes["h"].get_legend_handles_labels()
     axes["h"].legend_.remove()
     legend2 = fig.legend(handles2, labels2, loc="center", bbox_to_anchor=(0.69, 1.04),
                          ncol=len(labels2), fontsize=legend_fs, frameon=True, fancybox=False,
                          title="2D projection of embeddings", title_fontsize=legend_title_fs)
-    sns.boxplot(data=sil, x="silhouette", y=hj_y, hue="method", hue_order=PROJECTIONS,
-                order=hj_rows, ax=axes["i"], legend=False, palette=husl, showfliers=False)
-    style(axes["i"], "Silhouette score", "", "Cluster preservation" + hj_suffix)
-    letter("i", title_lines=hj_suffix.count("\n") + 1)
-    sns.boxplot(data=db, x="davies_bouldin", y=hj_y, hue="method", hue_order=PROJECTIONS,
-                order=hj_rows, ax=axes["j"], legend=False, palette=husl, showfliers=False)
-    style(axes["j"], "Davies-Bouldin index", "", "Cluster preservation" + hj_suffix)
-    letter("j", label_fs + 2, title_lines=hj_suffix.count("\n") + 1)
+    sns.boxplot(data=sil, x="silhouette", y="dataset", hue="method", hue_order=PROJECTIONS,
+                order=ds_order, ax=axes["i"], legend=False, palette=husl, showfliers=False)
+    style(axes["i"], "Silhouette score", "", "Cluster preservation")
+    letter("i")
+    sns.boxplot(data=db, x="davies_bouldin", y="dataset", hue="method", hue_order=PROJECTIONS,
+                order=ds_order, ax=axes["j"], legend=False, palette=husl, showfliers=False)
+    style(axes["j"], "Davies-Bouldin index", "", "Cluster preservation")
+    letter("j", label_fs + 2)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, bbox_inches="tight", bbox_extra_artists=[legend1, legend2])
@@ -528,8 +392,6 @@ def main():
     p.add_argument("--no-plot", action="store_true",
                    help="skip step 4 (e.g. when only a subset of datasets was computed)")
     p.add_argument("--overwrite", action="store_true", help="recompute cached steps")
-    p.add_argument("--jobs", type=int, default=1,
-                   help="parallel processes for the competitor 2D projections")
     args = p.parse_args()
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=UserWarning)
@@ -539,8 +401,6 @@ def main():
             clustering_scores(args.embeddings_root, dataset, args.tag, args.overwrite)
             competitor_scores(dataset, args.overwrite)
             project(args.embeddings_root, dataset, args.overwrite)
-            project_competitors(dataset, args.overwrite, args.jobs)
-            competitor_preservation(dataset, args.overwrite)
         preservation(args.embeddings_root, args.tag, args.overwrite, args.datasets)
     if not args.no_plot:
         suffix = "" if args.methods == ["POME", "UMAP"] else "_competitors"
