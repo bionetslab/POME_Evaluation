@@ -320,8 +320,8 @@ def plot(tag, out_path, methods):
         letter(key)
     handles, labels = axes["a"].get_legend_handles_labels()
     axes["a"].legend_.remove()
-    legend1 = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.3, 1.0),
-                         ncol=len(labels) if len(labels) <= 3 else 2, fontsize=legend_fs,
+    legend1 = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.0),
+                         ncol=len(labels), fontsize=legend_fs,
                          frameon=True, fancybox=False,
                          title="Embedding of POM data", title_fontsize=legend_title_fs)
     for key, ds in zip("def", datasets):
@@ -340,8 +340,8 @@ def plot(tag, out_path, methods):
     letter("g")
     handles2, labels2 = axes["g"].get_legend_handles_labels()
     axes["g"].legend_.remove()
-    legend2 = fig.legend(handles2, labels2, loc="lower center", bbox_to_anchor=(0.75, 1.0),
-                         ncol=1, fontsize=legend_fs, frameon=True, fancybox=False,
+    legend2 = fig.legend(handles2, labels2, loc="upper center", bbox_to_anchor=(0.5, 0.0),
+                         ncol=len(labels2), fontsize=legend_fs, frameon=True, fancybox=False,
                          title="2D projection of embeddings", title_fontsize=legend_title_fs)
     sns.boxplot(data=sil, x="silhouette", y="dataset", hue="method", hue_order=PROJECTIONS,
                 order=datasets, ax=axes["h"], legend=False, palette=husl, showfliers=False)
