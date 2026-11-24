@@ -1,4 +1,4 @@
-"""Unsupervised clustering / 2D-visualization figure (manuscript Fig. 3, panels a-j).
+"""Unsupervised clustering / 2D-visualization figure (manuscript Fig. 3).
 
 Scriptable port of the legacy chain
     src/pome_evaluation/analyze_unsupervised_clustering.py      (panels a-g scores)
@@ -9,7 +9,9 @@ Scriptable port of the legacy chain
 with the same metrics and settings, parameterized by the POME embedding root so that
 re-trained POME embeddings (by default the POME 1.4 embeddings of ``generate_embeddings.py``
 under ``data/embeddings_pome14``) can be evaluated without touching the published results.
-Panels k-m (HANCOCK case study) are not part of this script.
+Panels k-m (HANCOCK case study) are not part of this script. The panel letters above are
+those of the published figure; this script draws a 3 x 3 layout without the published
+panel a (best-median counts): Silhouette a-c, Davies-Bouldin d-f, 2D preservation g-i.
 
 Steps (each cached; rerun with --overwrite to recompute):
   1. Clustering scores. Per dataset x dim (16, 32, 64) x run (0-9): Leiden (RBConfiguration)
@@ -266,20 +268,6 @@ def load_scores(tag, methods):
     return scores[scores["Method"].isin(methods)]
 
 
-def best_counts(scores, order):
-    medians = scores.groupby(["Dataset", "dim", "Method"])[["silhouette", "db_final"]] \
-        .median().reset_index()
-    best = medians.groupby(["Dataset", "Method"]).agg(
-        db_final=("db_final", "min"), silhouette=("silhouette", "max")).reset_index()
-    best["best_sil"] = best.groupby("Dataset")["silhouette"].transform("max") == best["silhouette"]
-    best["best_db"] = best.groupby("Dataset")["db_final"].transform("min") == best["db_final"]
-    out = []
-    for col, name in (("best_sil", "Silhouette"), ("best_db", "Davies-Bouldin")):
-        res = best[best[col]].groupby("Method").size().reindex(order, fill_value=0)
-        out.append(pd.DataFrame(dict(Method=res.index, max_on_dataset=res.values, score=name)))
-    return pd.concat(out, ignore_index=True)
-
-
 def preservation_frames(tag):
     dist = pd.read_csv(OUT_DIR / f"visualization_distance_preservation_results{tag}.csv")
     clust = pd.read_csv(OUT_DIR / f"visualization_cluster_preservation_results{tag}.csv")
@@ -302,11 +290,12 @@ def ylim_covering(ax, lo, hi, values):
 def plot(tag, out_path, methods):
     order = list(methods)
     scores = load_scores(tag, order)
-    agg = best_counts(scores, order)
     mean_dist, sil, db = preservation_frames(tag)
+    datasets = ["HANCOCK", "MIMIC-IV", "TCGA-LUAD"]
 
-    mosaic = [["a", "b", "c", "d", "e"], ["f", "g", "h", "i", "j"]]
-    fig, axes = plt.subplot_mosaic(mosaic, figsize=(16, 9), layout="constrained")
+    # rows: Silhouette (a-c), Davies-Bouldin (d-f), 2D preservation (g-i)
+    mosaic = [["a", "b", "c"], ["d", "e", "f"], ["g", "h", "i"]]
+    fig, axes = plt.subplot_mosaic(mosaic, figsize=(13, 13.5), layout="constrained")
     label_fs, title_fs, tick_fs, legend_fs, legend_title_fs = 19, 19, 15, 15, 17
     offset = transforms.ScaledTranslation(-36 / 72, 27 / 72, fig.dpi_scale_trans)
     set2 = sns.color_palette("Set2")
@@ -321,29 +310,21 @@ def plot(tag, out_path, methods):
         ax.tick_params(axis="both", labelsize=tick_fs)
         ax.set_title(title, fontsize=title_fs)
 
-    sns.barplot(data=agg, y="score", x="max_on_dataset", hue="Method", hue_order=order,
-                ax=axes["a"], palette=set2)
-    style(axes["a"], "Number of datasets with \nbest median score", "", "")
-    axes["a"].set_title("Results aggregated \n over datasets and \n embedding sizes",
-                        fontsize=title_fs - 1)
-    letter("a")
-    handles, labels = axes["a"].get_legend_handles_labels()
-    axes["a"].legend_.remove()
-    legend1 = fig.legend(handles, labels, loc="center",
-                         bbox_to_anchor=(0.34, 1.04 if len(labels) <= 3 else 1.075),
-                         ncol=len(labels) if len(labels) <= 3 else 2, fontsize=legend_fs,
-                         frameon=True, fancybox=False,
-                         title="Embedding of POM data", title_fontsize=legend_title_fs)
-
-    for key, ds in zip("bcd", ["HANCOCK", "MIMIC-IV", "TCGA-LUAD"]):
+    for key, ds in zip("abc", datasets):
         data = scores[scores["Dataset"] == ds]
         sns.boxplot(data=data, x="dim", y="silhouette", hue="Method", hue_order=order,
-                    ax=axes[key], dodge=True, gap=.2, legend=False, palette=set2)
+                    ax=axes[key], dodge=True, gap=.2, legend=key == "a", palette=set2)
         style(axes[key], "Embedding size", "Silhouette score", ds)
         axes[key].set_yticks([0.15, 0.3, 0.45, 0.6])
         ylim_covering(axes[key], 0.1, 0.65, data["silhouette"])
         letter(key)
-    for key, ds in zip("efg", ["HANCOCK", "MIMIC-IV", "TCGA-LUAD"]):
+    handles, labels = axes["a"].get_legend_handles_labels()
+    axes["a"].legend_.remove()
+    legend1 = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.3, 1.0),
+                         ncol=len(labels) if len(labels) <= 3 else 2, fontsize=legend_fs,
+                         frameon=True, fancybox=False,
+                         title="Embedding of POM data", title_fontsize=legend_title_fs)
+    for key, ds in zip("def", datasets):
         data = scores[scores["Dataset"] == ds]
         sns.boxplot(data=data, x="dim", y="db_final", hue="Method", hue_order=order,
                     ax=axes[key], legend=False, palette=set2)
@@ -353,24 +334,25 @@ def plot(tag, out_path, methods):
         letter(key)
 
     husl = sns.color_palette("husl", 3)
-    ds_order = ["HANCOCK", "MIMIC-IV", "TCGA-LUAD"]
     sns.boxplot(data=mean_dist, x="jaccard_index", y="dataset", hue="method",
-                hue_order=PROJECTIONS, order=ds_order, ax=axes["h"], palette=husl)
-    style(axes["h"], "Mean Jaccard index", "", "Distance preservation")
-    letter("h")
-    handles2, labels2 = axes["h"].get_legend_handles_labels()
-    axes["h"].legend_.remove()
-    legend2 = fig.legend(handles2, labels2, loc="center", bbox_to_anchor=(0.69, 1.04),
-                         ncol=len(labels2), fontsize=legend_fs, frameon=True, fancybox=False,
+                hue_order=PROJECTIONS, order=datasets, ax=axes["g"], palette=husl)
+    style(axes["g"], "Mean Jaccard index", "", "Distance preservation")
+    letter("g")
+    handles2, labels2 = axes["g"].get_legend_handles_labels()
+    axes["g"].legend_.remove()
+    legend2 = fig.legend(handles2, labels2, loc="lower center", bbox_to_anchor=(0.75, 1.0),
+                         ncol=1, fontsize=legend_fs, frameon=True, fancybox=False,
                          title="2D projection of embeddings", title_fontsize=legend_title_fs)
     sns.boxplot(data=sil, x="silhouette", y="dataset", hue="method", hue_order=PROJECTIONS,
-                order=ds_order, ax=axes["i"], legend=False, palette=husl, showfliers=False)
-    style(axes["i"], "Silhouette score", "", "Cluster preservation")
-    letter("i")
+                order=datasets, ax=axes["h"], legend=False, palette=husl, showfliers=False)
+    style(axes["h"], "Silhouette score", "", "Cluster preservation")
+    axes["h"].set_yticklabels([])
+    letter("h")
     sns.boxplot(data=db, x="davies_bouldin", y="dataset", hue="method", hue_order=PROJECTIONS,
-                order=ds_order, ax=axes["j"], legend=False, palette=husl, showfliers=False)
-    style(axes["j"], "Davies-Bouldin index", "", "Cluster preservation")
-    letter("j", label_fs + 2)
+                order=datasets, ax=axes["i"], legend=False, palette=husl, showfliers=False)
+    style(axes["i"], "Davies-Bouldin index", "", "Cluster preservation")
+    axes["i"].set_yticklabels([])
+    letter("i")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, bbox_inches="tight", bbox_extra_artists=[legend1, legend2])
@@ -386,7 +368,7 @@ def main():
     p.add_argument("--datasets", nargs="+", default=DATASETS, choices=DATASETS)
     p.add_argument("--methods", nargs="+", default=DEFAULT_METHODS,
                    choices=list(DISPLAY_METHOD.values()),
-                   help="methods in panels a-g, in this order (default: %(default)s; "
+                   help="methods in panels a-f, in this order (default: %(default)s; "
                         "POME UMAP = the published figure)")
     p.add_argument("--plot-only", action="store_true", help="skip steps 1-3")
     p.add_argument("--no-plot", action="store_true",
