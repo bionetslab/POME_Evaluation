@@ -25,7 +25,7 @@ Run from the project root (CPU):
 Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/grid_probes.csv
 Outputs (output/inductive_stopping_ablation/):
   epoch_peaks.csv           AP maxima over the epoch grid vs. the 2000-epoch budget
-  ap_per_target.pdf/.png    AP vs. epochs per target: every split (thin), mean +- SEM (thick)
+  ap_per_target.pdf/.png    AP vs. epochs per target: mean +- SEM over splits, per dim
 """
 import argparse
 from pathlib import Path
@@ -41,7 +41,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
 DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 BUDGET = 2000  # POME's default inductive training budget
-DIM_COLORS = {32: "#1f77b4", 64: "#d62728"}
+DIM_COLORS = {16: "#2ca02c", 32: "#1f77b4", 64: "#d62728"}
 
 
 def load(root):
@@ -73,7 +73,7 @@ def epoch_peaks(probes):
 
 
 def plot_targets(probes, out):
-    """AP vs epochs per target: every split (thin) and mean +- SEM over splits (thick)."""
+    """AP vs epochs per target: mean +- SEM over splits, one line per embedding size."""
     targets = {ds: sorted(probes[probes.dataset == ds].target.unique()) for ds in DATASETS}
     ncol = max(len(t) for t in targets.values())
     fig, axes = plt.subplots(len(DATASETS), ncol, figsize=(4 * ncol, 2.9 * len(DATASETS)),
@@ -91,7 +91,6 @@ def plot_targets(probes, out):
                                                 values="average_precision")
                 if a.empty:
                     continue
-                ax.plot(a.index, a.to_numpy(), color=col, lw=.4, alpha=.25)
                 m, se = a.mean(axis=1), a.sem(axis=1)
                 ax.plot(m.index, m, "o-", color=col, ms=3, lw=1.6, label=f"d={dim}")
                 ax.fill_between(m.index, m - se, m + se, color=col, alpha=.2, lw=0)
@@ -105,8 +104,7 @@ def plot_targets(probes, out):
     handles = axes[0, 0].get_legend_handles_labels()[0] + [plt.Line2D(
         [], [], ls=":", color="grey", label=f"default budget ({BUDGET} epochs)")]
     axes[0, 0].legend(handles=handles, fontsize=7, loc="lower right")
-    fig.suptitle("Linear-probe AP per target (thin: individual splits; thick: mean ± SEM "
-                 "over 10 splits)", fontsize=11)
+    fig.suptitle("Linear-probe AP per target (mean ± SEM over 10 splits)", fontsize=11)
     fig.tight_layout()
     for ext in ("pdf", "png"):
         fig.savefig(out / f"ap_per_target.{ext}", dpi=200)
