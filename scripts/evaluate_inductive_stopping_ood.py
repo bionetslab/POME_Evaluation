@@ -33,7 +33,7 @@ ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--root", type=Path, default=ROOT)
-    p.add_argument("--dims", type=int, nargs="+", default=[32])
+    p.add_argument("--dims", type=int, nargs="+", default=[32, 64])
     p.add_argument("--epochs", type=int, nargs="+", default=[100, 300, 500, 1000, 2000])
     p.add_argument("--max-full", type=int, default=10000)
     p.add_argument("--k", type=int, default=100)

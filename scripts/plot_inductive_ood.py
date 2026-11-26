@@ -1,16 +1,15 @@
 """Manuscript figure: are POME's inductive embeddings of unseen samples in-distribution?
 
 One panel per dataset. For every train/test split, the Rosenbaum cross-match z-score (scXmatch)
-of the held-out test samples against the training samples, in four representations:
+of the held-out test samples against the training samples, in three representations:
 
-  Raw values        binary sample x value indicators (model-free; shift already in the data)
-  Spectral          spectral coordinates, test samples by Nystrom extension (model-free)
-  POME (published)  transform() embeddings, published configuration
-  POME (stable)     transform() embeddings, adopted stable_k8 configuration
+  Raw values   binary sample x value indicators (model-free; shift already in the data)
+  Spectral     spectral coordinates, test samples by Nystrom extension (model-free)
+  POME         transform() embeddings of current POME (defaults, 2000 epochs;
+               generate_inductive_ood_embeddings.py)
 
 z ~ 0: test and training samples are indistinguishable; z < 0: shifted. Points = splits,
 bar = mean over splits; d = 32 and d = 64 side by side (raw values have no dimension).
-The Nystrom-initialized variant of stable_k8 is not shown (identical within noise).
 
 Inputs:  output/inductive_ood/ood_crossmatch_results.csv (evaluate_inductive_ood.py)
 Outputs: output/inductive_ood/inductive_ood_crossmatch.{pdf,png}
@@ -35,8 +34,7 @@ OUT_ROOT = PROJECT_ROOT / "output" / "inductive_ood"
 GROUPS = [  # (config, label, color)
     ("raw_onehot", "Raw\nvalues", "#8c8c8c"),
     ("spectral", "Spectral\ncoords.", "#8c8c8c"),
-    ("default", "POME\npublished", "#eb6834"),
-    ("stable_k8", "POME\nstable", "#2a78d6"),
+    ("pome", "POME", "#2a78d6"),
 ]
 DATASETS = [("hancock", "HANCOCK"), ("luad_noleak", "TCGA-LUAD"), ("mimic", "MIMIC")]
 DIMS = {32: ("o", -0.17), 64: ("s", 0.17)}
@@ -84,7 +82,7 @@ def main() -> None:
     for ax in axes:
         ax.text(0.5, 1.0, "model-free", transform=ax.get_xaxis_transform(), ha="center",
                 va="bottom", fontsize=6.5, color=MUTED)
-        ax.text(2.5, 1.0, "embeddings", transform=ax.get_xaxis_transform(), ha="center",
+        ax.text(2.0, 1.0, "embedding", transform=ax.get_xaxis_transform(), ha="center",
                 va="bottom", fontsize=6.5, color=MUTED)
     handles = [Line2D([], [], ls="", marker="D", color=MUTED, label="raw (no d)"),
                Line2D([], [], ls="", marker="o", color=MUTED, label="d = 32"),

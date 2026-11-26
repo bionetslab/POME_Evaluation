@@ -3,8 +3,9 @@
 Question: do POME's inductive embeddings of unseen samples (transform()) land in the same
 distribution as the transductive embeddings of the training samples?
 
-  pome14_spectral   POME defaults (spectral input encoding; a new sample node gets a zero input
-                    row, so its embedding comes from the value nodes it connects to)
+  pome   current POME defaults (POME >= 1.5; spectral input encoding, a new sample node gets a
+         zero input row, so its embedding comes from the value nodes it connects to), trained for
+         the inductive budget of 2000 epochs like the probing embeddings
 
 Per dataset x split x dim, one fit on the training split (POME defaults, fixed ``--epochs``, no
 CV-tuned stopping, seed ``--seed``) and three embeddings:
@@ -14,17 +15,19 @@ CV-tuned stopping, seed ``--seed``) and three embeddings:
   train_inductive      transform() of the *training* samples (method-effect control: same samples,
                        only the embedding route differs)
 
-The cross-match tests are run by ``evaluate_inductive_ood.py --root output/inductive_ood_encodings``
-(scXmatch environment).
+The model-free references (``generate_model_free_ood_reference.py``) are written next to it; the
+cross-match tests are run by ``evaluate_inductive_ood.py`` (scXmatch environment) and drawn by
+``plot_inductive_ood.py``.
 
 GPU (H200), one job per dataset:
-    sbatch container/submit.sh scripts/generate_inductive_ood_embeddings.py --datasets hancock
+    sbatch --export=PYTHONHASHSEED=0 container/submit.sh \\
+        scripts/generate_inductive_ood_embeddings.py --datasets hancock
 CPU smoke test:
     container/run.sh scripts/generate_inductive_ood_embeddings.py --datasets luad_noleak --splits 0 \\
         --dims 16 --epochs 30 --device cpu --out-root <scratch>
 
 Inputs:  data/train_test_splits/{dataset}/split_{NN}_{train,test}_pome.tsv
-Outputs: output/inductive_ood_encodings/pome14_spectral/{dataset}/split_{NN}/dim_{D}/
+Outputs: output/inductive_ood/pome/{dataset}/split_{NN}/dim_{D}/
          {train_transductive,test_inductive,train_inductive}.csv
 """
 
@@ -37,8 +40,8 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
-OUT_ROOT = PROJECT_ROOT / "output" / "inductive_ood_encodings"
-CONFIG = "pome14_spectral"
+OUT_ROOT = PROJECT_ROOT / "output" / "inductive_ood"
+CONFIG = "pome"
 NA_ENCODING = -99.0
 KINDS = ("train_transductive", "test_inductive", "train_inductive")
 

@@ -199,10 +199,16 @@ container/run.sh scripts/plot_inductive_linear_probing.py
 `plot_inductive_linear_probing.py --methods POME UMAP` draws a subset of the methods.
 
 The companion data-integration figure (does embedding continuous *and* categorical variables beat
-either type alone?) is drawn by `scripts/plot_inductive_type_combination.py --dim 64`. It reads the
-probing results with the `numeric_only` / `cat_only` modes (`linear_probe_inductive_embeddings.py
---methods pome umap --modes combined numeric_only cat_only`), whose embeddings come from
-`generate_inductive_embeddings.py --modes`.
+either type alone?) is drawn by `scripts/plot_inductive_type_combination.py --dim 64` (HANCOCK and TCGA-LUAD). Its
+embeddings are one self-consistent set of all three modes (`combined`, `numeric_only`, `cat_only`)
+of current POME (2000 epochs) and UMAP, dim 64, 5 runs, in `output/inductive_type_combination`
+(`container/submit_pome_modes.sh --modes "combined numeric_only cat_only" --output-dir
+output/inductive_type_combination`, plus `generate_inductive_embeddings.py --methods umap` with the
+same modes and root), probed with `linear_probe_inductive_embeddings.py --emb-root
+output/inductive_type_combination --modes combined numeric_only cat_only` into
+`output/linear_probing/inductive_type_combination_probing_results.csv` (commands in the script's
+docstring). The OOD figure (`scripts/plot_inductive_ood.py`) compares the cross-match shift of
+POME's inductive test embeddings with two model-free references (raw values, spectral coordinates).
 
 `scripts/linear_probe_full_dataset_embeddings.py` is the transductive control: it probes the
 full-dataset embeddings of HANCOCK and MIMIC on the same splits. LUAD is left out because its

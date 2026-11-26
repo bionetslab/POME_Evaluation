@@ -9,18 +9,26 @@ legacy path is kept in the repo for comparison; new work uses this script.
 The question is unchanged: for each embedding method, on how many targets does
 embedding *all* variables beat embedding only the continuous or only the
 categorical ones? What changes is the evaluation protocol -- scores now come
-from ``output/linear_probing/inductive_logreg_probing_results.csv``, i.e. a
-logistic regression fit on the train-split embedding and evaluated on the
-held-out test-split embedding, over the same ``data/train_test_splits/``
+from ``output/linear_probing/inductive_type_combination_probing_results.csv``,
+i.e. the default probe of ``scripts/linear_probe_inductive_embeddings.py`` (logistic
+regression on z-scored coordinates) fit on the train-split embedding and evaluated
+on the held-out test-split embedding, over the same ``data/train_test_splits/``
 partitions used by ``scripts/plot_inductive_linear_probing.py``. The three
 modes are embedded from variable-type subsets of those very same splits, so
 Combined / Numeric only / Categorical only differ *only* in which variables the
-encoder saw.
+encoder saw. All three modes (also Combined) are generated in one self-consistent
+set with the current POME (>= 1.5, 2000 epochs) and UMAP, dim 64, 5 runs, in
+``output/inductive_type_combination``:
 
-Requires the restricted modes to have been generated and probed first:
-
-    python scripts/generate_inductive_embeddings.py --modes numeric_only cat_only ...
-    python scripts/linear_probe_inductive_embeddings.py --modes combined numeric_only cat_only
+    container/submit_pome_modes.sh --modes "combined numeric_only cat_only" \
+        --output-dir output/inductive_type_combination
+    container/run.sh scripts/generate_inductive_embeddings.py --methods umap \
+        --datasets hancock luad_noleak --modes combined numeric_only cat_only --dims 64 \
+        --runs 5 --output-dir output/inductive_type_combination
+    container/run.sh scripts/linear_probe_inductive_embeddings.py \
+        --emb-root output/inductive_type_combination --methods pome umap \
+        --datasets hancock luad_noleak --modes combined numeric_only cat_only --jobs 32 \
+        --output output/linear_probing/inductive_type_combination_probing_results.csv
 
 Layout (2x4 mosaic), mirroring the notebook figure:
 
@@ -58,7 +66,7 @@ import seaborn as sns
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RESULTS = PROJECT_ROOT / "output" / "linear_probing" / \
-    "inductive_logreg_probing_results.csv"
+    "inductive_type_combination_probing_results.csv"
 DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "linear_probing" / \
     "inductive_type_combination_effect.pdf"
 DEFAULT_DIM = 64

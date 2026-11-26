@@ -215,8 +215,10 @@ def summarize(args):
     import matplotlib.pyplot as plt
     from scipy.stats import wilcoxon
 
-    cos = pd.concat([pd.read_csv(f) for f in sorted(args.out.glob("*_cosines.csv"))])
-    probes = pd.concat([pd.read_csv(f) for f in sorted(args.out.glob("*_probes.csv"))])
+    cos = pd.concat([pd.read_csv(f) for f in sorted(args.out.glob("*_cosines.csv"))
+                     if not f.name.startswith("summary_")])
+    probes = pd.concat([pd.read_csv(f) for f in sorted(args.out.glob("*_probes.csv"))
+                     if not f.name.startswith("summary_")])
     cs = cos.groupby(["samples", "init", "dataset", "dim", "epochs"]).agg(
         cos_mean=("cos_mean", "mean"), cos_p05=("cos_p05", "mean"), cos_min=("cos_min", "min"),
         splits=("split", "nunique")).reset_index()

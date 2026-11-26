@@ -49,9 +49,28 @@ def write(out_dir: Path, train: np.ndarray, test: np.ndarray, train_names, test_
     pd.DataFrame(test, index=test_names, columns=cols).to_csv(out_dir / "test_inductive.csv")
 
 
+def spectral_nystrom_projection(unique_edges, num_samples, num_nodes, d):
+    """Per-value-node Nystrom weights P_v = deg_v^-1/2 V_v S^-1/2 (POME's spectral components).
+
+    For A_hat = D_s^-1/2 A D_v^-1/2 = U S V^T a training sample's spectral coordinate is
+    x_i = U_i S^1/2 = A_hat_i V S^-1/2; up to the deg_s factor (removed by the unit normalization)
+    a sample's coordinate is the sum of P_v over its value nodes, which reproduces x_i exactly for
+    training samples. (Formerly ``pome.utils.spectral_nystrom_projection``, removed in POME 1.3.)
+    """
+    import scipy.sparse as sp
+    from pome.utils import _spectral_components
+
+    U, S, V = _spectral_components(unique_edges, num_samples, num_nodes, d)
+    src, dst = unique_edges.detach().cpu().numpy()
+    A = sp.csr_matrix((np.ones(len(src)), (src, dst - num_samples)),
+                      shape=(num_samples, num_nodes - num_samples))
+    A.data[:] = 1.0
+    deg_v = np.maximum(np.asarray(A.sum(axis=0)).ravel(), 1.0)
+    return V * (S ** -0.5) * (deg_v ** -0.5)[:, None]
+
+
 def run_one(dataset, split, dims, args):
     from pome.gnn_embedding import Embedder
-    from pome.utils import spectral_nystrom_projection
 
     split_dir = SPLITS_ROOT / dataset
     train_df = load_graph(split_dir / f"split_{split:02d}_train_pome.tsv")

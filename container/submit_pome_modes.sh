@@ -22,6 +22,8 @@
 #                                    are not already queued/running
 #   --splits-per-job 5               split ids per job (10 splits -> 2 jobs each)
 #   --time     06:00:00              walltime per job
+#   --output-dir DIR                 embedding root (default: the generator's,
+#                                    output/inductive_pome14)
 #   --only-first                     submit just the first shard (to time a fit)
 #   --dry-run                        print the sbatch commands, submit nothing
 #
@@ -49,6 +51,7 @@ EPOCHS=2000
 SPLITS=""
 SPLITS_PER_JOB=5
 WALLTIME="06:00:00"
+OUTPUT_DIR=""
 DRY_RUN=0
 ONLY_FIRST=0
 
@@ -62,6 +65,7 @@ while [[ $# -gt 0 ]]; do
         --splits)         SPLITS="$2"; shift 2 ;;
         --splits-per-job) SPLITS_PER_JOB="$2"; shift 2 ;;
         --time)           WALLTIME="$2"; shift 2 ;;
+        --output-dir)     OUTPUT_DIR="$2"; shift 2 ;;
         --only-first)     ONLY_FIRST=1; shift ;;
         --dry-run)        DRY_RUN=1; shift ;;
         -h|--help)        sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -99,6 +103,7 @@ for dataset in $DATASETS; do
             cmd=(sbatch
                  --job-name="pome_${tag}"
                  --time="$WALLTIME"
+                 --export=PYTHONHASHSEED=0
                  "$SETUP_DIR/submit.sh"
                  scripts/generate_inductive_embeddings.py
                  --methods pome
@@ -108,7 +113,8 @@ for dataset in $DATASETS; do
                  --runs "$RUNS"
                  --epochs "$EPOCHS"
                  --splits "${chunk[@]}"
-                 --log-tag "$tag")
+                 --log-tag "$tag"
+                 ${OUTPUT_DIR:+--output-dir "$OUTPUT_DIR"})
             if [[ $DRY_RUN -eq 1 ]]; then
                 printf '%q ' "${cmd[@]}"; echo
             else
