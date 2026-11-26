@@ -70,7 +70,8 @@ def mlp(sizes):
     return nn.Sequential(*layers)
 
 
-def embed(X, dim, run, opts, device):
+def train(X, dim, run, opts, device):
+    """Train the autoencoder on X; return (encoder, mean MSE of the last epoch)."""
     import torch
     from torch.utils.data import DataLoader, TensorDataset
 
@@ -94,9 +95,18 @@ def embed(X, dim, run, opts, device):
             loss.backward()
             optimizer.step()
             total += loss.item() * len(xb)
+    return encoder, total / len(X)
+
+
+def encode(encoder, X, device):
+    import torch
     with torch.no_grad():
-        Z = encoder(data.to(device)).cpu().numpy()
-    return Z, total / len(X)
+        return encoder(torch.from_numpy(X).to(device)).cpu().numpy()
+
+
+def embed(X, dim, run, opts, device):
+    encoder, final_loss = train(X, dim, run, opts, device)
+    return encode(encoder, X, device), final_loss
 
 
 def main():

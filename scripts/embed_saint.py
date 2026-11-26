@@ -98,13 +98,12 @@ def prepare(dataset):
     return X, cat_idxs, con_idxs, cat_dims, np.array([mean, std]).astype(np.float32), table.index
 
 
-def embed(saint, dataset, dim, run, opts, device):
+def pretrain(saint, X, cat_idxs, con_idxs, cat_dims, mean_std, dim, run, opts, device):
+    """Seed, build SAINT and run the authors' self-supervised pretraining on X."""
     import torch
-    from torch.utils.data import DataLoader
 
-    SAINT, SAINT_pretrain, DataSetCatCon, embed_data_mask = saint
-    X, cat_idxs, con_idxs, cat_dims, mean_std, index = prepare(dataset)
-    n = len(index)
+    SAINT, SAINT_pretrain, _, _ = saint
+    n = len(X["data"])
     Y = {"data": np.zeros((n, 1), dtype=np.int64)}            # unused dummy target
 
     random.seed(run)
@@ -123,8 +122,17 @@ def embed(saint, dataset, dim, run, opts, device):
         attn_dropout=0.8, ff_dropout=0.8, mlp_hidden_mults=(4, 2), cont_embeddings="MLP",
         attentiontype="colrow", final_mlp_style="sep", y_dim=2)
     model.to(device)
-    model = SAINT_pretrain(model, cat_idxs, X, Y, mean_std, opt, device)
+    return SAINT_pretrain(model, cat_idxs, X, Y, mean_std, opt, device)
 
+
+def encode(saint, model, X, cat_idxs, mean_std, dim, opts, device):
+    """CLS-token output, eval mode, consecutive batches of --batch-size in input order."""
+    import torch
+    from torch.utils.data import DataLoader
+
+    _, _, DataSetCatCon, embed_data_mask = saint
+    n = len(X["data"])
+    Y = {"data": np.zeros((n, 1), dtype=np.int64)}
     loader = DataLoader(DataSetCatCon(X, Y, cat_idxs, "clf", mean_std),
                         batch_size=opts.batch_size, shuffle=False, num_workers=0)
     model.eval()
@@ -138,6 +146,13 @@ def embed(saint, dataset, dim, run, opts, device):
     Z = np.concatenate(reps)
     if Z.shape != (n, dim) or not np.isfinite(Z).all():
         raise RuntimeError("bad embedding: shape %s, finite %s" % (Z.shape, np.isfinite(Z).all()))
+    return Z
+
+
+def embed(saint, dataset, dim, run, opts, device):
+    X, cat_idxs, con_idxs, cat_dims, mean_std, index = prepare(dataset)
+    model = pretrain(saint, X, cat_idxs, con_idxs, cat_dims, mean_std, dim, run, opts, device)
+    Z = encode(saint, model, X, cat_idxs, mean_std, dim, opts, device)
     df = pd.DataFrame(Z, index=index, columns=["dim_%d" % i for i in range(dim)])
     df.index.name = "sample"
     return df

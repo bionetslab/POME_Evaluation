@@ -104,6 +104,9 @@ BINDS=(--bind "$REPO" --bind "$WS")
 [[ "$POME_REPO" == "$HOME"/* ]] || BINDS+=(--bind "$POME_REPO")
 [[ -z "$UMAP_SHIM" || "$UMAP_REPO" == "$HOME"/* ]] || BINDS+=(--bind "$UMAP_REPO")
 PYPATH="${UMAP_SHIM:+$UMAP_SHIM:}$REPO/src:$POME_REPO/src"
+# Packages added after the image was built (e.g. xgboost for the non-linear probing),
+# installed with `pip install --no-deps --target $WS/pylib ...` inside the image.
+[[ -d "$WS/pylib" ]] && PYPATH="$PYPATH:$WS/pylib"
 
 # ---- Optional: stage heavy OUTPUT dirs to node-local NVMe ($TMPDIR) --------
 # Imputation/embedding jobs emit thousands of small files; writing those to the
