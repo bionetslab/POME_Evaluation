@@ -163,6 +163,7 @@ ax.set_title("Results aggregated over \ntargets and embedding sizes", fontsize=t
 panel_label(ax, "a")
 
 # Per-target panels: dumbbell per (dim, method), logreg filled -> MLP empty.
+YLABEL_PANELS = {"b", "d", "g"}   # first target panel of each row
 group_width = 0.8
 step = group_width / len(methods)
 for dataset, target, key, title in panels:
@@ -182,7 +183,8 @@ for dataset, target, key, title in panels:
     ax.set_xticklabels(dims)
     ax.set_xlim(-0.5, len(dims) - 0.5)
     ax.set_xlabel("Embedding size", fontsize=labelfontsize)
-    ax.set_ylabel("Median average precision", fontsize=labelfontsize - 2)
+    if key in YLABEL_PANELS:
+        ax.set_ylabel("Median average precision", fontsize=labelfontsize - 2)
     ax.tick_params(axis="both", labelsize=ticklabelsize)
     ax.set_title(title, fontsize=titlefontsize)
     panel_label(ax, key)
