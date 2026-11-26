@@ -28,8 +28,7 @@ the grid (linear interpolation in log E). Criteria:
 
 Per rule and split: regret = AP of the best grid epoch (oracle, uses test labels) - AP(E_sel), and
 gain = AP(E_sel) - AP(2000). Tolerance/patience are chosen to minimize the mean regret (datasets
-weighted equally, both dims); leave-one-dataset-out (choose on two datasets, evaluate on the third)
-checks that the choice transfers. Agreement of each signal with downstream quality is measured
+weighted equally, both dims). Agreement of each signal with downstream quality is measured
 as the Spearman correlation (per split) between the signal at epoch E (oriented so that higher =
 better) and AP(E) over the grid.
 
@@ -46,7 +45,6 @@ Outputs (output/inductive_stopping_ablation/):
   rule_results.csv      per rule x dataset x dim x split: selected epoch, AP, regret, gain
   rule_summary.csv      per rule: mean regret / gain / epochs per dataset and overall
   signal_agreement.csv  Spearman(signal, AP) per signal x dataset x dim x split
-  lodo_selection.csv    leave-one-dataset-out choice of tol/patience per criterion
   stopping_validation.pdf/.png      AP and CV signals vs epochs, selected epochs
   stopping_regret_heatmaps.pdf/.png regret per criterion x tolerance x patience
 """
@@ -84,6 +82,9 @@ def load(root):
                        ignore_index=True)
     probes = pd.concat([pd.read_csv(f) for f in sorted(root.glob("*/dim_*/split_*/grid_probes.csv"))],
                        ignore_index=True)
+    # only units with a CV trace (grid fits without one, e.g. d16, feed analyze_inductive_epoch_probes)
+    units = traces[KEY].drop_duplicates()
+    probes = probes.merge(units, on=KEY)
     signals = [c["signal"] for c in CRITERIA.values()] + ["rankme_train", "rankme_val"]
     trace = traces.groupby(KEY + ["epoch"])[signals].mean().reset_index()   # fold mean
     ap = probes.groupby(KEY + ["epochs"])["average_precision"].mean().rename("ap").reset_index()
@@ -148,21 +149,6 @@ def summarize(res):
     # pivot_table(dropna=False) creates rows for tol x patience combinations of other criteria
     return (wide.join(overall).dropna(subset=["regret_mean"]).reset_index()
             .sort_values("regret_mean"))
-
-
-def lodo(res):
-    """Leave-one-dataset-out choice of (tol, patience) per criterion."""
-    rows = []
-    rule = ["tol", "patience"]
-    for crit, g in res[res.criterion != "fixed"].groupby("criterion"):
-        per = g.groupby(rule + ["dataset"])["regret"].mean().unstack("dataset")
-        for held in per.columns:
-            train = per.drop(columns=held).mean(axis=1)
-            tol, pat = train.idxmin()
-            rows.append(dict(criterion=crit, held_out=held, tol=tol, patience=pat,
-                             train_regret=train.min(), held_out_regret=per.loc[(tol, pat), held],
-                             held_out_best_regret=per[held].min()))
-    return pd.DataFrame(rows)
 
 
 def agreement(trace, ap):
@@ -277,8 +263,6 @@ def main() -> None:
     summary.to_csv(out / "rule_summary.csv", index=False)
     agree = agreement(trace, ap)
     agree.to_csv(out / "signal_agreement.csv", index=False)
-    lo = lodo(res)
-    lo.to_csv(out / "lodo_selection.csv", index=False)
 
     pd.set_option("display.width", 250)
     pd.set_option("display.max_columns", 40)
@@ -296,9 +280,6 @@ def main() -> None:
     print("\n== Spearman(signal, downstream AP) over the epoch grid (median over splits) ==")
     print(agree.groupby(["signal", "dataset"])["spearman"].median()
           .unstack("dataset").round(2).to_string())
-
-    print("\n== Leave-one-dataset-out choice of tol/patience ==")
-    print(lo.round(4).to_string(index=False))
 
     ood_path = args.root / "ood_crossmatch.csv"
     if ood_path.exists():

@@ -35,11 +35,9 @@ best grid epoch of that split and target (an oracle that uses the test labels; A
 interpolated linearly in log E between grid fits). Aggregate = mean over the 8 targets (each
 target weighted equally; per target the mean over dims and splits).
 
-Hyperparameter choice (--tuning): by default ONE setting per criterion, chosen to minimize the
-target-mean regret over all three datasets (the rule a user would get as POME's default; the
-reported regret is in-sample). With --tuning lodo, leave-one-dataset-out instead (each dataset gets
-the setting tuned on the two others); summary.csv also lists the other scheme (regret_other).
-Uncertainty: 95 % bootstrap CI over splits
+Hyperparameter choice: ONE setting per criterion, chosen to minimize the target-mean regret over
+all three datasets (the rule a user would get as POME's default; the reported regret is
+in-sample). Uncertainty: 95 % bootstrap CI over splits
 (resampled within dataset). Test vs. budget: paired Wilcoxon signed-rank over the 30
 dataset x split units (regret difference averaged over targets and dims).
 
@@ -51,8 +49,8 @@ Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/{cv_tra
 Outputs: output/inductive_stopping_ablation/criteria_ablation/
   selections.csv        selected epoch per criterion x hyperparameters x dataset x dim x split
   regret_per_target.csv regret per criterion x hyperparameters x dataset x dim x split x target
-  hyperparameters.csv   LODO / in-sample hyperparameters per criterion
-  summary.csv           per criterion: regret (primary scheme; regret_other: other scheme), CI, per dataset, p vs budget
+  hyperparameters.csv   chosen hyperparameters per criterion
+  summary.csv           per criterion: regret, CI, per dataset, p vs budget
   figure_stopping_criteria.pdf/.png  manuscript figure
 """
 import argparse
@@ -113,6 +111,9 @@ def load(root):
     trace = traces.groupby(KEY + ["epoch"])[signals].mean().reset_index()  # fold mean
     probes = pd.concat([pd.read_csv(f) for f in sorted(root.glob("*/dim_*/split_*/grid_probes.csv"))],
                        ignore_index=True)
+    # only units with a CV trace (grid fits without one, e.g. d16, feed analyze_inductive_epoch_probes)
+    units = traces[KEY].drop_duplicates()
+    probes = probes.merge(units, on=KEY)
     # AP curve per unit x target: {key: (targets, grid epochs, AP matrix targets x grid)}
     curves = {}
     for k, g in probes.groupby(KEY):
@@ -176,22 +177,16 @@ def choose(reg, datasets):
     return per.groupby("criterion").idxmin().map(lambda t: t[1])
 
 
-SCHEME_LABELS = {"insample": "one setting tuned on all three datasets",
-                 "lodo": "tuned leave-one-dataset-out"}
+TUNING_LABEL = "one setting tuned on all three datasets"
 
 
-def lodo_regret(reg):
-    """Rows of `reg` with each dataset's hyperparameters chosen on the other datasets."""
-    parts, hp = [], []
-    for held in DATASETS:
-        best = choose(reg, [d for d in DATASETS if d != held])
-        for crit, param in best.items():
-            parts.append(reg[(reg.dataset == held) & (reg.criterion == crit) & (reg.param == param)])
-            hp.append(dict(criterion=crit, scheme="lodo", held_out=held, param=param))
+def tuned_regret(reg):
+    """Rows of `reg` with each criterion's hyperparameters chosen on all datasets."""
     best = choose(reg, list(DATASETS))
-    insample = pd.concat([reg[(reg.criterion == c) & (reg.param == p)] for c, p in best.items()])
-    hp += [dict(criterion=c, scheme="in-sample", held_out="-", param=p) for c, p in best.items()]
-    return pd.concat(parts, ignore_index=True), insample, pd.DataFrame(hp)
+    tuned = pd.concat([reg[(reg.criterion == c) & (reg.param == p)] for c, p in best.items()],
+                      ignore_index=True)
+    hp = pd.DataFrame([dict(criterion=c, param=p) for c, p in best.items()])
+    return tuned, hp
 
 
 def bootstrap_ci(df, n=2000, seed=0):
@@ -209,21 +204,19 @@ def bootstrap_ci(df, n=2000, seed=0):
     return np.percentile(stats, [2.5, 97.5])
 
 
-def summarize(primary, other):
-    """Per criterion: regret under the primary tuning scheme (CI, p vs budget, per dataset) and
-    the target-mean regret under the other scheme (`regret_other`)."""
-    lodo, insample = primary, other
-    budget = lodo[lodo.criterion == "budget"].groupby(["dataset", "split"])["regret"].mean()
+def summarize(tuned):
+    """Per criterion: regret (95 % CI, p vs budget, per dataset)."""
+    budget = tuned[tuned.criterion == "budget"].groupby(["dataset", "split"])["regret"].mean()
     rows = []
     for crit in LABELS:
-        d = lodo[lodo.criterion == crit]
+        d = tuned[tuned.criterion == crit]
         if d.empty:
             continue
         lo, hi = bootstrap_ci(d)
         diff = d.groupby(["dataset", "split"])["regret"].mean() - budget
         p = float(wilcoxon(diff).pvalue) if (diff != 0).any() else np.nan
         row = dict(criterion=crit, label=LABELS[crit], regret=target_mean(d), ci_low=lo,
-                   ci_high=hi, regret_other=target_mean(insample[insample.criterion == crit]),
+                   ci_high=hi,
                    ap=target_mean(d, "ap"), delta_vs_budget=diff.mean(), p_vs_budget=p,
                    better_splits=int((diff < 0).sum()), worse_splits=int((diff > 0).sum()))
         for ds in DATASETS:
@@ -234,7 +227,7 @@ def summarize(primary, other):
     return pd.DataFrame(rows).sort_values("regret").reset_index(drop=True)
 
 
-def plot(summary, lodo, out, tuning):
+def plot(summary, tuned, out):
     s = summary.iloc[::-1].reset_index(drop=True)  # best on top
     y = np.arange(len(s))
     fig, axes = plt.subplots(1, 3, figsize=(7.2, 0.32 * len(s) + 1.3), sharey=True,
@@ -250,7 +243,7 @@ def plot(summary, lodo, out, tuning):
         ax.tick_params(labelsize=7)
     hl = s.criterion == "budget"
 
-    # (a) overall regret under the chosen tuning scheme (95% CI)
+    # (a) overall regret (95% CI)
     ax = axes[0]
     for yi, r in zip(y, s.itertuples()):
         col = ink if r.criterion == "budget" else muted
@@ -289,7 +282,7 @@ def plot(summary, lodo, out, tuning):
     ax = axes[2]
     for ds, dsl in DATASETS.items():
         for yi, crit in zip(y, s.criterion):
-            e = lodo[(lodo.criterion == crit) & (lodo.dataset == ds)].groupby(KEY)["epochs"].first()
+            e = tuned[(tuned.criterion == crit) & (tuned.dataset == ds)].groupby(KEY)["epochs"].first()
             jitter = np.random.default_rng(0).uniform(-0.07, 0.07, len(e))
             ax.plot(e.to_numpy() * np.exp(jitter), np.full(len(e), yi + off[ds]), "|",
                     color=DATASET_COLORS[ds], ms=4, alpha=0.6, mew=0.8)
@@ -305,7 +298,7 @@ def plot(summary, lodo, out, tuning):
                 ax.axhspan(yi - 0.45, yi + 0.45, color="#f2f1ec", zorder=0, lw=0)
     handles = [
         plt.Line2D([], [], marker="o", color=muted, lw=2, ms=5, mec="white",
-                   label=SCHEME_LABELS[tuning] + " (95% CI)"),
+                   label=TUNING_LABEL + " (95% CI)"),
         *[plt.Line2D([], [], marker="o", ls="", color=DATASET_COLORS[d], ms=4.5, mec="white",
                      label=dl) for d, dl in DATASETS.items()]]
     fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=5,
@@ -318,13 +311,8 @@ def plot(summary, lodo, out, tuning):
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--root", type=Path, default=ROOT)
-    p.add_argument("--tuning", choices=["insample", "lodo"], default="insample",
-                   help="primary hyperparameter choice: one setting per criterion tuned on all "
-                        "datasets (default), or leave-one-dataset-out (written to .../lodo/)")
     args = p.parse_args()
     out = args.root / "criteria_ablation"
-    if args.tuning == "lodo":
-        out = out / "lodo"
     out.mkdir(parents=True, exist_ok=True)
 
     trace, curves = load(args.root)
@@ -333,20 +321,18 @@ def main() -> None:
     sel.to_csv(out / "selections.csv", index=False)
     reg = regrets(sel, curves)
     reg.to_csv(out / "regret_per_target.csv", index=False)
-    lodo, insample, hp = lodo_regret(reg)
-    primary, other = (insample, lodo) if args.tuning == "insample" else (lodo, insample)
+    tuned, hp = tuned_regret(reg)
     hp.to_csv(out / "hyperparameters.csv", index=False)
-    summary = summarize(primary, other)
+    summary = summarize(tuned)
     summary.to_csv(out / "summary.csv", index=False)
 
     pd.set_option("display.width", 250)
     pd.set_option("display.max_columns", 30)
-    print(f"== Stopping criteria: linear-probe regret, mean over 8 targets ({args.tuning}) ==")
+    print("== Stopping criteria: linear-probe regret, mean over 8 targets ==")
     print(summary.drop(columns="label").round(4).to_string(index=False))
     print("\n== Hyperparameters ==")
-    print(hp.pivot_table(index="criterion", columns=["scheme", "held_out"], values="param",
-                         aggfunc="first").to_string())
-    plot(summary, primary, out, args.tuning)
+    print(hp.to_string(index=False))
+    plot(summary, tuned, out)
     print(f"\nwrote {out}")
 
 
