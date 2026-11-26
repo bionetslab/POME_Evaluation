@@ -16,7 +16,7 @@
 #   --modes    "numeric_only cat_only"   variable-type modes to cover
 #   --dims     "64"                  embedding sizes
 #   --runs     5                     runs per (split, dim)
-#   --epochs   10000                 UPPER CAP on the CV-tuned epoch count
+#   --epochs   2000                  fixed training epochs (POME >= 1.5, no early stopping)
 #   --splits   "0 1 2 3 4"           restrict to these split ids (default: all
 #                                    found); use to submit only the shards that
 #                                    are not already queued/running
@@ -25,10 +25,8 @@
 #   --only-first                     submit just the first shard (to time a fit)
 #   --dry-run                        print the sbatch commands, submit nothing
 #
-# Note --epochs is a *cap*, not a fixed epoch count: POME's inductive CV stops
-# early at the epoch that best generalizes to held-out samples. Raising the cap
-# only costs time on runs that would otherwise have been truncated by it. The
-# generator's own default is 2000; this wrapper passes 10000 explicitly.
+# POME >= 1.5 trains inductive mode to this fixed budget without early stopping
+# (POME's and the generator's default is 2000).
 #
 # Each job gets a unique --log-tag so the per-run tuned-epochs logs never race
 # (generate_inductive_embeddings.py rewrites that file after every run). When
@@ -47,7 +45,7 @@ DATASETS="hancock luad"
 MODES="numeric_only cat_only"
 DIMS="64"
 RUNS=5
-EPOCHS=10000
+EPOCHS=2000
 SPLITS=""
 SPLITS_PER_JOB=5
 WALLTIME="06:00:00"
