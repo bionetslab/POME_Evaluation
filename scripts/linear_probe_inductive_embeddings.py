@@ -1,97 +1,60 @@
-"""Inductive linear-probing of the POME / UMAP embeddings produced by
-``scripts/generate_inductive_embeddings.py``, of the tabular competitors (HI-VAE, SAINT,
-missForest + autoencoder) produced by ``scripts/embed_{hivae,saint,mfae}_inductive.py``, and
-of the target-conditioned TabICL embeddings of ``scripts/embed_tabicl_inductive.py`` (one
-embedding per target under ``tabicl/<dataset>/target_<target>/``, each probed for its own
-target only).
+"""Inductive probing of the sample embeddings of POME and its competitors.
 
-For every computed embedding (dataset x method x split x dim x run) a logistic
-regression is *fit on the training-split embedding* and *evaluated on the
-held-out test-split embedding*, for each binary held-out target variable of the
-dataset. This mirrors the targets and classifier configuration of the transductive
-notebooks ``src/pome_evaluation/analyze_<DATASET>_embedding_separability.ipynb``
-but uses the inductive train/test structure instead of within-embedding k-fold CV.
+Methods (embeddings fit on the training split, the held-out test split transformed):
 
-Binary targets per dataset (numeric/regression targets from the notebooks are
-intentionally excluded -- this script does logistic regression only):
+    pome       POME 1.4                  scripts/generate_inductive_embeddings.py   output/inductive_pome14
+    umap       NA-aware UMAP             scripts/generate_inductive_embeddings.py   output/inductive
+    hivae      HI-VAE                    scripts/embed_hivae_inductive.py           output/inductive_competitors
+    saint      SAINT (native)            scripts/embed_saint_inductive.py           output/inductive_competitors
+    mfae       missForest + autoencoder  scripts/embed_mfae_inductive.py            output/inductive_competitors
+    tabicl_lf  TabICL v1.1, label-free   scripts/embed_tabicl_labelfree_inductive.py output/inductive_competitors
 
-    hancock : recurrence, survival_status, rfs_event
-    luad    : Disease Free Status, Disease-specific Survival status,
-              Progression Free Status
-    mimic   : label_aplasia, label_nf
+Every method is read from its own root (``METHOD_ROOTS``), so one call probes all of them;
+``--emb-root`` overrides the root for every method (e.g. for variant embeddings). For every
+embedding (dataset x method x split x dim x run) the probe is *fit on the training-split
+embedding* and *evaluated on the held-out test-split embedding*, for each binary target:
 
-Object-typed targets are integer-encoded with LabelEncoder fit on the full
-target column (reproducing the notebooks; e.g. recurrence no=0/yes=1,
-survival_status deceased=0/living=1). Numeric 0/1 targets pass through unchanged.
+    hancock     : recurrence, survival_status, rfs_event
+    mimic       : label_aplasia, label_nf
+    luad_noleak : Disease Free Status, Disease-specific Survival status, Progression Free Status
 
-The classifier matches the notebooks: LogisticRegression(penalty="l2",
-solver="liblinear", max_iter=1000), and embeddings are NOT rescaled (use
---standardize to z-score features before fitting).
+``luad_noleak`` is TCGA-LUAD without its four outcome/follow-up variables
+(``scripts/make_luad_noleak_splits.py``); it is the only LUAD dataset of the inductive analyses.
+Object-typed targets are integer-encoded with LabelEncoder fit on the full target column (e.g.
+recurrence no=0/yes=1, survival_status deceased=0/living=1); numeric 0/1 targets pass through.
 
-Non-linear probing (``--probe xgboost``)
-----------------------------------------
-Replaces the logistic regression with a gradient-boosted tree ensemble
-(XGBClassifier, see ``XGB_PARAMS``): 300 trees of depth <= 3, learning rate 0.05,
-row and column subsampling 0.8, hist tree method. The hyperparameters are fixed
-and the same for every dataset, method, target and embedding size (no tuning, so
-no test information enters the probe). The seed is fixed (0), and the trees are
-deterministic. Everything else -- targets, splits, train/test protocol, metrics
-and output schema -- is identical to the linear probe, so
-``plot_inductive_linear_probing.py`` draws the result in the same layout. The
-default output is then ``inductive_xgboost_probing_results.csv``, and every
-output row records its probe in the ``probe`` column. xgboost is not in images
-built before this option; install it with
-``pip install --no-deps --target $(ws_find pome_eval)/pylib xgboost==2.1.3``
-inside the image (run.sh / submit.sh put that directory on PYTHONPATH).
+Probes (``--probe``):
 
-Further non-linear probes (``--probe svm | knn | mlp``)
--------------------------------------------------------
-Chosen for the geometry of POME's embeddings, which are L2-normalized (every sample on the unit
-sphere, per-dimension std ~0.1, ~6 effective dimensions), and applied identically to every method.
-Each one tunes its hyperparameters by an inner stratified 3-fold CV (seed 0, scoring = average
-precision) on the *training split only*, then refits on the whole training split:
-
-    svm : RBF-kernel SVC on standardized features (fit on train); C in {0.1, 1, 10, 100},
-          gamma = "scale". Test scores = decision function (AP and ROC AUC are rank-based).
-    knn : k-nearest neighbours, distance-weighted, unscaled features; metric in
-          {cosine, euclidean} x k in {5, 10, 20, 40, 80, 160} (cosine = angular distance on POME's
-          sphere).
-    mlp : one hidden layer of 64 ReLU units on standardized features, Adam, early stopping
-          on a 10% validation split of the training data, seed 0; L2 penalty alpha in
-          {1e-4, 1e-2, 1}.
-
-Default outputs: ``inductive_<probe>_probing_results.csv``. ``--standardize`` is ignored by these
-probes (their scaling is part of the probe).
+    logreg_std : logistic regression on standardized features (z-scored with the training
+                 mean/std): LogisticRegression(penalty="l2", solver="liblinear", max_iter=1000).
+                 The default.
+    mlp        : one hidden layer of 64 ReLU units on standardized features, Adam, early stopping
+                 on a 10% validation split of the training data, seed 0. The L2 penalty alpha in
+                 {1e-4, 1e-2, 1} is tuned by an inner stratified 3-fold CV (seed 0, scoring =
+                 average precision) on the training split only, then refit on the whole split.
 
 Variable-type modes (``--modes``)
 ---------------------------------
-``scripts/generate_inductive_embeddings.py --modes`` can embed a variable-type
-subset of the same splits (``numeric_only`` / ``cat_only``) next to the default
-``combined`` embeddings. All discovered modes are probed by default and tagged
-in the ``mode`` column, so the data-integration comparison (does combining
-continuous and categorical variables beat either type alone?) uses the *exact*
-same targets, classifier and splits as the headline combined probing --
-``scripts/plot_inductive_type_combination.py`` draws it.
+``scripts/generate_inductive_embeddings.py --modes`` can embed a variable-type subset of the
+same splits (``numeric_only`` / ``cat_only``) next to the default ``combined`` embeddings. All
+discovered modes are probed by default and tagged in the ``mode`` column, so the
+data-integration comparison (``scripts/plot_inductive_type_combination.py``) uses the same
+targets, probe and splits as the combined probing.
 
-Run from the project root (any env with pandas + scikit-learn):
+    container/run.sh scripts/linear_probe_inductive_embeddings.py --jobs 32
+    container/run.sh scripts/linear_probe_inductive_embeddings.py --probe mlp --jobs 32
+    container/run.sh scripts/linear_probe_inductive_embeddings.py --datasets hancock --methods pome --dims 32
 
-    conda run -n torch python scripts/linear_probe_inductive_embeddings.py
-    conda run -n torch python scripts/linear_probe_inductive_embeddings.py --datasets hancock --dims 32
-    conda run -n torch python scripts/linear_probe_inductive_embeddings.py --modes combined numeric_only cat_only
-    container/run.sh scripts/linear_probe_inductive_embeddings.py --probe xgboost --jobs 32
+Output: one tidy long-format CSV (one row per dataset/method/mode/target/dim/split/run)
 
-Output: one tidy long-format CSV (one row per
-dataset/method/mode/target/dim/split/run)
+    output/linear_probing/inductive_<probe>_probing_results.csv
 
-    output/linear_probing/inductive_linear_probing_results.csv
-
-with the headline metric ``average_precision`` plus roc_auc / precision /
-recall / f1, the per-split sample counts and the naive test-set positive rate
-(``test_pos_ratio``) as the AP baseline.
+with the headline metric ``average_precision`` plus roc_auc / precision / recall / f1, the
+per-split sample counts, the naive test-set positive rate (``test_pos_ratio``, the AP baseline)
+and the probe (``probe``; ``best_params`` for the tuned MLP).
 """
 
 import argparse
-import re
 import warnings
 from pathlib import Path
 
@@ -100,45 +63,35 @@ import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.exceptions import ConvergenceWarning, UndefinedMetricWarning
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.svm import SVC
 from sklearn.metrics import (average_precision_score, f1_score, precision_score,
                              recall_score, roc_auc_score)
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.neural_network import MLPClassifier
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
-DEFAULT_EMB_ROOT = PROJECT_ROOT / "output" / "inductive"
-DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "linear_probing" / \
-    "inductive_linear_probing_results.csv"
+OUTPUT_DIR = PROJECT_ROOT / "output" / "linear_probing"
 
-PROBES = ("logreg", "xgboost", "svm", "knn", "mlp")
-# Fixed, untuned XGBoost probe (shallow trees, shrinkage, subsampling: a standard
-# small-data configuration). One thread per fit; --jobs parallelizes over embeddings.
-XGB_PARAMS = dict(n_estimators=300, max_depth=3, learning_rate=0.05,
-                  subsample=0.8, colsample_bytree=0.8, min_child_weight=1,
-                  reg_lambda=1.0, tree_method="hist", eval_metric="logloss",
-                  random_state=0, n_jobs=1)
-
-# luad_noleak = luad without its outcome/follow-up variables (scripts/make_luad_noleak_splits.py)
-DATASETS = ("hancock", "luad", "mimic", "luad_noleak")
-# hivae / saint / mfae: the tabular competitors of scripts/embed_{hivae,saint,mfae}_inductive.py,
-# written under output/inductive_competitors (probe them with --emb-root there).
-# tabicl_lf: label-free TabICL v1.1 row embeddings (scripts/embed_tabicl_labelfree_inductive.py).
-METHODS = ("pome", "umap", "hivae", "saint", "mfae", "tabicl", "tabicl_lf")
-# Target-conditioned methods (scripts/embed_tabicl_inductive.py): one embedding per probing
-# target under <method>/<dataset>/target_<slug>/, probed for that target only.
-TARGET_CONDITIONED_METHODS = ("tabicl",)
+PROBES = ("logreg_std", "mlp")
+DATASETS = ("hancock", "mimic", "luad_noleak")
+COMPETITOR_ROOT = PROJECT_ROOT / "output" / "inductive_competitors"
+METHOD_ROOTS = {
+    "pome": PROJECT_ROOT / "output" / "inductive_pome14",
+    "umap": PROJECT_ROOT / "output" / "inductive",
+    "hivae": COMPETITOR_ROOT,
+    "saint": COMPETITOR_ROOT,
+    "mfae": COMPETITOR_ROOT,
+    "tabicl_lf": COMPETITOR_ROOT,
+}
+METHODS = tuple(METHOD_ROOTS)
 # Variable-type subsets written by generate_inductive_embeddings.py --modes.
 # `combined` keeps the original mode-less directory layout.
 MODES = ("combined", "numeric_only", "cat_only")
 
-# Per-dataset target file and the binary targets to probe (raw column ->
-# display label, mirroring the notebooks).
+# Per-dataset target file and the binary targets to probe (raw column -> display label).
 DATASET_TARGETS = {
     "hancock": {
         "file": "hancock_targets.csv",
@@ -148,14 +101,6 @@ DATASET_TARGETS = {
             "rfs_event": "RFS Event",
         },
     },
-    "luad": {
-        "file": "TCGA_LUAD_targets.csv",
-        "targets": {
-            "Disease Free Status": "Disease Free Status",
-            "Disease-specific Survival status": "DSS Status",
-            "Progression Free Status": "Progression Free Status",
-        },
-    },
     "mimic": {
         "file": "mimic_targets.csv",
         "targets": {
@@ -163,16 +108,23 @@ DATASET_TARGETS = {
             "label_nf": "Neutropenic Fever",
         },
     },
+    "luad_noleak": {
+        "file": "TCGA_LUAD_targets.csv",
+        "targets": {
+            "Disease Free Status": "Disease Free Status",
+            "Disease-specific Survival status": "DSS Status",
+            "Progression Free Status": "Progression Free Status",
+        },
+    },
 }
 
-DATASET_TARGETS["luad_noleak"] = DATASET_TARGETS["luad"]   # same samples and targets
 
 # --- Target loading ----------------------------------------------------------
 def load_binary_targets(dataset: str) -> dict[str, pd.Series]:
     """Return {display_label: int-encoded 0/1 Series indexed by sample id}.
 
     LabelEncoder is fit on the full non-null column so the 0/1 meaning is
-    consistent across all splits (and reproduces the notebooks' encoding).
+    consistent across all splits.
     """
     spec = DATASET_TARGETS[dataset]
     df = pd.read_csv(INPUT_DATASETS / spec["file"], index_col=0)
@@ -191,13 +143,8 @@ def load_binary_targets(dataset: str) -> dict[str, pd.Series]:
 
 
 # --- Embedding discovery -----------------------------------------------------
-def target_slug(label: str) -> str:
-    """Directory name part of a target's display label ('DSS Status' -> 'dss_status')."""
-    return re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")
-
-
 def discover_runs(emb_root: Path, method: str, dataset: str,
-                  dims, splits, runs, mode: str = "combined", target: str | None = None):
+                  dims, splits, runs, mode: str = "combined"):
     """Yield (split, dim, run, train_csv, test_csv) for existing run pairs.
 
     Mirrors ``generate_inductive_embeddings.run_paths``: ``combined`` lives
@@ -208,8 +155,6 @@ def discover_runs(emb_root: Path, method: str, dataset: str,
     base = emb_root / method / dataset
     if mode != "combined":
         base = base / mode
-    if target is not None:      # target-conditioned method: one directory per target
-        base = base / ("target_" + target_slug(target))
     if not base.is_dir():
         return
     for split_dir in sorted(base.glob("split_*")):
@@ -235,33 +180,24 @@ INNER_CV_FOLDS = 3
 
 
 def make_classifier(probe: str):
-    """The probe estimator; svm / knn / mlp are inner-CV grid searches on the training split."""
-    if probe == "logreg":
-        return LogisticRegression(penalty="l2", solver="liblinear", max_iter=1000)
-    if probe == "xgboost":
-        from xgboost import XGBClassifier
-        return XGBClassifier(**XGB_PARAMS)
-    if probe == "svm":
-        est = Pipeline([("scale", StandardScaler()), ("clf", SVC(kernel="rbf", gamma="scale"))])
-        grid = {"clf__C": [0.1, 1, 10, 100]}
-    elif probe == "knn":
-        est = KNeighborsClassifier(weights="distance", algorithm="brute")
-        grid = {"metric": ["cosine", "euclidean"], "n_neighbors": [5, 10, 20, 40, 80, 160]}
-    elif probe == "mlp":
+    """The probe estimator; both standardize the features with the training statistics."""
+    if probe == "logreg_std":
+        return Pipeline([("scale", StandardScaler()),
+                         ("clf", LogisticRegression(penalty="l2", solver="liblinear",
+                                                    max_iter=1000))])
+    if probe == "mlp":
         est = Pipeline([("scale", StandardScaler()),
                         ("clf", MLPClassifier(hidden_layer_sizes=(64,), early_stopping=True,
                                               validation_fraction=0.1, max_iter=500,
                                               random_state=0))])
-        grid = {"clf__alpha": [1e-4, 1e-2, 1.0]}
-    else:
-        raise ValueError(probe)
-    cv = StratifiedKFold(n_splits=INNER_CV_FOLDS, shuffle=True, random_state=0)
-    return GridSearchCV(est, grid, scoring="average_precision", cv=cv, n_jobs=1)
+        cv = StratifiedKFold(n_splits=INNER_CV_FOLDS, shuffle=True, random_state=0)
+        return GridSearchCV(est, {"clf__alpha": [1e-4, 1e-2, 1.0]},
+                            scoring="average_precision", cv=cv, n_jobs=1)
+    raise ValueError(probe)
 
 
 def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
-              y_full: pd.Series, standardize: bool,
-              probe: str = "logreg") -> dict | None:
+              y_full: pd.Series, probe: str = "logreg_std") -> dict | None:
     """Fit the probe on train embedding, evaluate on test embedding for one target.
 
     Returns a metrics dict, or None if the target can't be probed for this
@@ -276,10 +212,10 @@ def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
     X_te = test_emb.loc[te_mask].to_numpy()
     y_te = y_te.loc[te_mask].astype(int).to_numpy()
 
-    # A logistic regression cannot consume non-finite embedding coordinates,
-    # which the inductive transform can occasionally produce (notably UMAP for a
-    # held-out sample with no usable neighbours). Drop those rows from both fit
-    # and evaluation and record how many were dropped so it stays visible.
+    # A probe cannot consume non-finite embedding coordinates, which the inductive
+    # transform can occasionally produce (notably UMAP for a held-out sample with no
+    # usable neighbours). Drop those rows from both fit and evaluation and record how
+    # many were dropped so it stays visible.
     tr_finite = np.isfinite(X_tr).all(axis=1)
     te_finite = np.isfinite(X_te).all(axis=1)
     n_train_nonfinite = int((~tr_finite).sum())
@@ -290,22 +226,10 @@ def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
     if len(y_tr) == 0 or len(y_te) == 0 or len(np.unique(y_tr)) < 2:
         return None
 
-    if standardize and probe in ("logreg", "xgboost"):
-        scaler = StandardScaler().fit(X_tr)
-        X_tr, X_te = scaler.transform(X_tr), scaler.transform(X_te)
-
-    # k-NN needs k < n_train (per inner-CV fold); drop the grid values that do not fit
     clf = make_classifier(probe)
-    if probe == "knn":
-        k_max = len(y_tr) * (INNER_CV_FOLDS - 1) // INNER_CV_FOLDS - 1
-        clf.param_grid["n_neighbors"] = [k for k in clf.param_grid["n_neighbors"] if k <= k_max]
     clf.fit(X_tr, y_tr)
-    if probe == "svm":
-        proba = clf.decision_function(X_te)        # ranking score; no Platt scaling needed
-        pred = clf.predict(X_te).astype(int)
-    else:
-        proba = clf.predict_proba(X_te)[:, 1]
-        pred = (proba >= 0.5).astype(int)
+    proba = clf.predict_proba(X_te)[:, 1]
+    pred = (proba >= 0.5).astype(int)
     best = getattr(clf, "best_params_", None)
 
     test_has_both = len(np.unique(y_te)) == 2
@@ -325,11 +249,11 @@ def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
     }
 
 
-def probe_pair(train_csv, test_csv, targets, standardize, probe):
+def probe_pair(train_csv, test_csv, targets, probe):
     """Probe every target on one (train, test) embedding pair -> [(label, metrics)]."""
     # set here as well: joblib worker processes do not inherit main()'s filters
     warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
-    # sklearn >= 1.8 deprecates penalty="l2"; kept for the notebooks' exact configuration
+    # sklearn >= 1.8 deprecates penalty="l2"
     warnings.filterwarnings("ignore", category=FutureWarning, message=".*'penalty' was deprecated")
     warnings.filterwarnings("ignore", category=ConvergenceWarning)   # MLP inner-CV fits
     train_emb = pd.read_csv(train_csv, index_col=0)
@@ -338,7 +262,7 @@ def probe_pair(train_csv, test_csv, targets, standardize, probe):
     test_emb.index = test_emb.index.astype(str)
     out = []
     for label, y_full in targets.items():
-        metrics = probe_one(train_emb, test_emb, y_full, standardize, probe)
+        metrics = probe_one(train_emb, test_emb, y_full, probe)
         if metrics is not None:
             out.append((label, metrics))
     return out
@@ -352,9 +276,8 @@ def main() -> None:
                         default=list(DATASETS))
     parser.add_argument("--methods", nargs="+", choices=METHODS,
                         default=list(METHODS))
-    parser.add_argument("--modes", nargs="+", choices=MODES,
-                        default=list(MODES),
-                        help="variable-type subsets to probe (default: all; "
+    parser.add_argument("--modes", nargs="+", choices=MODES, default=["combined"],
+                        help="variable-type subsets to probe (default: combined; "
                              "modes without embeddings are skipped)")
     parser.add_argument("--dims", nargs="+", type=int, default=None,
                         help="dims to probe (default: all found)")
@@ -362,60 +285,38 @@ def main() -> None:
                         help="split ids to probe (default: all found)")
     parser.add_argument("--runs", nargs="+", type=int, default=None,
                         help="run ids to probe (default: all found)")
-    parser.add_argument("--emb-root", type=Path, default=DEFAULT_EMB_ROOT)
+    parser.add_argument("--emb-root", type=Path, default=None,
+                        help="embedding root for every method (default: METHOD_ROOTS)")
     parser.add_argument("--output", type=Path, default=None,
-                        help="default: inductive_linear_probing_results.csv "
-                             "(logreg) / inductive_xgboost_probing_results.csv")
-    parser.add_argument("--probe", choices=PROBES, default="logreg",
-                        help="logreg (linear, default) or a non-linear probe: xgboost, "
-                             "svm (RBF), knn, mlp")
+                        help="default: output/linear_probing/inductive_<probe>_probing_results.csv")
+    parser.add_argument("--probe", choices=PROBES, default="logreg_std")
     parser.add_argument("--jobs", type=int, default=1,
                         help="embedding pairs probed in parallel")
-    parser.add_argument("--standardize", action="store_true",
-                        help="z-score embedding features (fit on train) "
-                             "before logistic regression (default: off, "
-                             "matching the notebooks)")
     args = parser.parse_args()
     if args.output is None:
-        args.output = (DEFAULT_OUTPUT if args.probe == "logreg" else
-                       DEFAULT_OUTPUT.with_name(f"inductive_{args.probe}_probing_results.csv"))
+        args.output = OUTPUT_DIR / f"inductive_{args.probe}_probing_results.csv"
 
     warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
-    print(f"Embedding root: {args.emb_root}")
     print(f"Datasets: {args.datasets} | methods: {args.methods} | "
-          f"modes: {args.modes} | standardize: {args.standardize} | "
-          f"probe: {args.probe}")
+          f"modes: {args.modes} | probe: {args.probe}")
 
     rows = []
     for dataset in args.datasets:
         targets = load_binary_targets(dataset)
         print(f"\n[{dataset}] targets: {list(targets)}")
         for method in args.methods:
+            emb_root = args.emb_root or METHOD_ROOTS[method]
             for mode in args.modes:
-                # (target directory, targets probed on its embeddings)
-                if method in TARGET_CONDITIONED_METHODS:
-                    if mode != "combined":
-                        continue
-                    groups = [(label, {label: y}) for label, y in targets.items()]
-                else:
-                    groups = [(None, targets)]
-                run_pairs, pair_targets = [], []
-                for target_dir, group_targets in groups:
-                    found = list(discover_runs(
-                        args.emb_root, method, dataset,
-                        args.dims, args.splits, args.runs, mode, target_dir))
-                    run_pairs += found
-                    pair_targets += [group_targets] * len(found)
+                run_pairs = list(discover_runs(
+                    emb_root, method, dataset,
+                    args.dims, args.splits, args.runs, mode))
                 if not run_pairs:
-                    print(f"  [warn] no {method}/{mode} embeddings found")
+                    print(f"  [warn] no {method}/{mode} embeddings found under {emb_root}")
                     continue
-                n_done = 0
                 n_nonfinite = 0  # non-finite embedding rows dropped (train+test)
                 results = Parallel(n_jobs=args.jobs)(
-                    delayed(probe_pair)(train_csv, test_csv, pair_tg,
-                                        args.standardize, args.probe)
-                    for (_, _, _, train_csv, test_csv), pair_tg
-                    in zip(run_pairs, pair_targets))
+                    delayed(probe_pair)(train_csv, test_csv, targets, args.probe)
+                    for _, _, _, train_csv, test_csv in run_pairs)
                 for (split, dim, run, _, _), pair in zip(run_pairs, results):
                     for label, metrics in pair:
                         n_nonfinite += (metrics["n_train_nonfinite"]
@@ -426,18 +327,15 @@ def main() -> None:
                             "split": split, "run": run,
                             **metrics, "probe": args.probe,
                         })
-                    n_done += 1
-                msg = (f"  {method:4s} {mode:12s}: probed {n_done} embedding "
-                       "pairs x "
-                       + ("1 own target" if method in TARGET_CONDITIONED_METHODS
-                          else f"{len(targets)} targets"))
+                msg = (f"  {method:9s} {mode:12s}: probed {len(run_pairs)} embedding "
+                       f"pairs x {len(targets)} targets")
                 if n_nonfinite:
                     msg += (f"  [warn] dropped {n_nonfinite} non-finite "
                             f"embedding rows (see n_*_nonfinite columns)")
                 print(msg)
 
     if not rows:
-        print("\nNo results produced -- check --emb-root has embeddings.")
+        print("\nNo results produced -- check the embedding roots.")
         return
 
     result_df = pd.DataFrame(rows)

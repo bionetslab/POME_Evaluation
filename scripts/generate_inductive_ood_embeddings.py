@@ -20,7 +20,7 @@ The cross-match tests are run by ``evaluate_inductive_ood.py --root output/induc
 GPU (H200), one job per dataset:
     sbatch container/submit.sh scripts/generate_inductive_ood_embeddings.py --datasets hancock
 CPU smoke test:
-    container/run.sh scripts/generate_inductive_ood_embeddings.py --datasets luad --splits 0 \\
+    container/run.sh scripts/generate_inductive_ood_embeddings.py --datasets luad_noleak --splits 0 \\
         --dims 16 --epochs 30 --device cpu --out-root <scratch>
 
 Inputs:  data/train_test_splits/{dataset}/split_{NN}_{train,test}_pome.tsv
@@ -85,7 +85,7 @@ def run_one(dataset, split, dim, args, device):
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--datasets", nargs="+", default=["hancock", "luad", "mimic"])
+    p.add_argument("--datasets", nargs="+", default=["hancock", "luad_noleak", "mimic"])
     p.add_argument("--splits", type=int, nargs="+", default=list(range(10)))
     p.add_argument("--dims", type=int, nargs="+", default=[32, 64])
     p.add_argument("--epochs", type=int, default=2000)

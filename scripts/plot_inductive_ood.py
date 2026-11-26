@@ -38,7 +38,7 @@ GROUPS = [  # (config, label, color)
     ("default", "POME\npublished", "#eb6834"),
     ("stable_k8", "POME\nstable", "#2a78d6"),
 ]
-DATASETS = [("hancock", "HANCOCK"), ("luad", "TCGA-LUAD"), ("mimic", "MIMIC")]
+DATASETS = [("hancock", "HANCOCK"), ("luad_noleak", "TCGA-LUAD"), ("mimic", "MIMIC")]
 DIMS = {32: ("o", -0.17), 64: ("s", 0.17)}
 INK, MUTED = "#222222", "#6b6b6b"
 

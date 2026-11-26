@@ -42,7 +42,7 @@ OUT_PATH = os.path.join(
     SCRIPT_DIR, "..", "output", "linear_probing",
     "inductive_epoch_ap_vs_rankme.pdf")
 
-DATASET_LABELS = {"hancock": "HANCOCK", "luad": "TCGA-LUAD", "mimic": "MIMIC-IV"}
+DATASET_LABELS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 
 # Colors: AP vs. the two RankMe curves.
 AP_COLOR = "#1b9e77"      # green
@@ -56,7 +56,7 @@ ticklabelsize = 12
 df = pd.read_csv(RESULTS_PATH)
 df = df[df["method"] == "POME"].copy()
 
-datasets = [d for d in ["hancock", "luad", "mimic"] if d in set(df["dataset"])]
+datasets = [d for d in ["hancock", "luad_noleak", "mimic"] if d in set(df["dataset"])]
 dims = sorted(df["dim"].unique())
 epochs = sorted(df["epoch"].unique())
 

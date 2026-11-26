@@ -23,6 +23,22 @@ TRAIN_FRAC = 0.8
 SEED = 42
 
 
+def make_splits(graph_df, sample_df, n_splits=N_SPLITS, train_frac=TRAIN_FRAC, seed=SEED):
+    """Yield (i, train graph, test graph, train samples, test samples) of the random splits.
+
+    graph_df: variables x samples (+ ``type`` column); sample_df: samples x variables.
+    """
+    all_samples = np.array([c for c in graph_df.columns if c != TYPE_COL])
+    n_train = round(len(all_samples) * train_frac)
+    rng = np.random.default_rng(seed)
+    for i in range(n_splits):
+        perm = rng.permutation(len(all_samples))
+        train = all_samples[perm[:n_train]].tolist()
+        test = all_samples[perm[n_train:]].tolist()
+        yield (i, graph_df[train + [TYPE_COL]], graph_df[test + [TYPE_COL]],
+               sample_df.loc[train], sample_df.loc[test])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--graph", default="data/hancock_wo_targets_graph.tsv")
@@ -47,22 +63,14 @@ def main():
           f"(train={n_train}, test={len(all_samples) - n_train})")
     print(f"Output directory: {args.outdir}\n")
 
-    rng = np.random.default_rng(args.seed)
-
-    for i in range(args.n_splits):
-        perm = rng.permutation(len(all_samples))
-        train = all_samples[perm[:n_train]].tolist()
-        test  = all_samples[perm[n_train:]].tolist()
-
+    for i, g_train, g_test, s_train, s_test in make_splits(
+            graph_df, sample_df, args.n_splits, args.train_frac, args.seed):
         prefix = os.path.join(args.outdir, f"split_{i:02d}")
-
-        graph_df[train + [TYPE_COL]].to_csv(f"{prefix}_train_pome.tsv", sep="\t")
-        graph_df[test  + [TYPE_COL]].to_csv(f"{prefix}_test_pome.tsv",  sep="\t")
-
-        sample_df.loc[train].to_csv(f"{prefix}_train_umap.csv")
-        sample_df.loc[test].to_csv(f"{prefix}_test_umap.csv")
-
-        print(f"Split {i:02d}: train={len(train)}  test={len(test)}")
+        g_train.to_csv(f"{prefix}_train_pome.tsv", sep="\t")
+        g_test.to_csv(f"{prefix}_test_pome.tsv", sep="\t")
+        s_train.to_csv(f"{prefix}_train_umap.csv")
+        s_test.to_csv(f"{prefix}_test_umap.csv")
+        print(f"Split {i:02d}: train={len(s_train)}  test={len(s_test)}")
 
     print(f"\nDone. Files written to {args.outdir}/")
 

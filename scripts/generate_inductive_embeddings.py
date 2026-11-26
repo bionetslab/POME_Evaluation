@@ -88,7 +88,7 @@ Run from the project root with the POME-enabled environment, e.g.:
     conda run -n torch python scripts/generate_inductive_embeddings.py \
         --datasets hancock --methods pome --epochs 200
     conda run -n torch python scripts/generate_inductive_embeddings.py \
-        --datasets hancock luad --modes numeric_only cat_only --dims 64
+        --datasets hancock luad_noleak --modes numeric_only cat_only --dims 64
 
 Outputs (each run writes a ``_train`` and a ``_test`` CSV, sample-indexed):
 
@@ -140,7 +140,7 @@ DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive"
 DEFAULT_POME_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_pome14"
 
 # luad_noleak = luad without its outcome/follow-up variables (scripts/make_luad_noleak_splits.py)
-DATASETS = ("hancock", "luad", "mimic", "luad_noleak")
+DATASETS = ("hancock", "mimic", "luad_noleak")
 METHODS = ("pome", "umap")
 MODES = ("combined", "numeric_only", "cat_only")
 DIMENSIONS = (16, 32, 64, 128)
@@ -156,7 +156,6 @@ GRAPH_TYPE_BY_MODE = {"numeric_only": "cont", "cat_only": "cat"}
 # UMAP sample matrices into numeric vs categorical feature blocks.
 CAT_VAR_FILES = {
     "hancock": "hancock_cat_variables.csv",
-    "luad": "TCGA_LUAD_cat_vars.csv",
     "luad_noleak": "TCGA_LUAD_cat_vars.csv",   # only columns present are used
     "mimic": "mimic_aggregated_cat_variables.csv",
 }

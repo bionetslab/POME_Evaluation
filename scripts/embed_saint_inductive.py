@@ -27,7 +27,7 @@ in input order: test samples attend only to other test samples, never to trainin
 
 GPU (SAINT's mixup calls .cuda()):
     sbatch --job-name=ind_saint --export=POME_EVAL_SIF=$(ws_find pome_eval)/containers/saint.sif,PYTHONHASHSEED=0 \\
-        container/submit.sh scripts/embed_saint_inductive.py --datasets hancock luad
+        container/submit.sh scripts/embed_saint_inductive.py --datasets hancock luad_noleak
 """
 
 import argparse

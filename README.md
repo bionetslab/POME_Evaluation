@@ -119,197 +119,92 @@ container/run.sh scripts/generate_unsupervised_figure.py        # default --meth
 ```
 
 ### Linear probing analysis
-The results figure showing POME's embeddings' supervised learning capability can be reproduced with `scripts/plot_inductive_linear_probing.py`. As input, it takes `output/linear_probing/inductive_linear_probing_results.csv`, produced by `scripts/linear_probe_inductive_embeddings.py` from the train/test-split embeddings of `scripts/generate_inductive_embeddings.py`.
+`scripts/linear_probe_inductive_embeddings.py` probes the inductive sample embeddings of POME and its
+competitors. Every embedding is fit on a training split and transforms the held-out test split. The
+probe is fit on the training-split embedding and scored on the test-split embedding (average precision)
+for each binary target. There are 10 train/test splits per dataset, embedding sizes 16/32/64 and runs 0-4.
+`scripts/plot_inductive_linear_probing.py` draws the figure. Panel a counts the targets on which each
+method has the best median score, and panels b-i show one target each. Two probes are used, both on
+features z-scored with the training statistics:
 
-**POME 1.4** → `output/linear_probing/inductive_linear_probing_results_pome14.pdf`. Only POME
-is re-probed; `scripts/merge_probing_variant.py` adds the published UMAP rows.
-```bash
-sbatch container/submit.sh scripts/generate_inductive_embeddings.py --methods pome --modes combined \
-    --datasets hancock --dims 16 --runs 5 --log-tag hancock_d16   # per dataset x dim; -> output/inductive_pome14
-container/run.sh scripts/linear_probe_inductive_embeddings.py --methods pome --modes combined \
-    --dims 16 32 64 --runs 0 1 2 3 4 --emb-root output/inductive_pome14 \
-    --output output/linear_probing/inductive_linear_probing_results_pome14_pome.csv
-container/run.sh scripts/merge_probing_variant.py \
-    --pome output/linear_probing/inductive_linear_probing_results_pome14_pome.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14.csv
-container/run.sh scripts/plot_inductive_linear_probing.py --dims 16 32 64 \
-    --results output/linear_probing/inductive_linear_probing_results_pome14.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14.pdf
-```
+- `logreg_std` (default): logistic regression (L2, liblinear) →
+  `output/linear_probing/inductive_logreg_std_probing_results.{csv,pdf}`
+- `mlp`: one hidden layer of 64 ReLU units with early stopping; the L2 penalty is tuned by an inner
+  3-fold CV on the training split → `output/linear_probing/inductive_mlp_probing_results.{csv,pdf}`
 
-**Competitors (HI-VAE, SAINT, missForest + autoencoder)** →
-`output/linear_probing/inductive_linear_probing_results_pome14_competitors.pdf`. These are the
-tabular competitors of the clustering analysis, run inductively on the same train/test splits
-(the POME-format split files, so they see exactly the data POME sees). Each one is fit on the
-training split only and embeds the held-out test samples with the frozen model. Training and
-architecture are the same as in the clustering versions, at dims 16/32/64 with runs 0-4.
-Outputs go to `output/inductive_competitors/{hivae,saint,mfae}/` in the inductive layout.
-- `scripts/embed_hivae_inductive.py` (`hivae.sif`, CPU): the training embedding comes from the
-  authors' restore pass over the training split. The test embedding comes from one more restore
-  pass of the frozen network over train + test, keeping the test rows. The authors' code re-codes
-  categories per input file and normalizes per batch, so a test-only pass would be wrong.
-- `scripts/embed_saint_inductive.py` (`saint.sif`, GPU): label encoding, mean filling and
-  standardization use training statistics only. Test categories never seen in training go to
-  SAINT's mask token. Test samples are encoded in their own batches, so they never attend to
-  training samples.
-- `scripts/embed_mfae_inductive.py` (CPU): missForest is fit on the training split and then
-  imputes train + test with the fitted model (cached in `_mfae_imputed/`). The design matrix
-  uses training z-score statistics and training one-hot categories. The autoencoder is trained
-  on the training rows only.
+**Datasets.** HANCOCK, MIMIC-IV and the leakage-free TCGA-LUAD (`luad_noleak`). Four LUAD inputs record
+the outcome or the follow-up after diagnosis and leak the targets: "New Neoplasm Event Post Initial
+Therapy Indicator" (single-variable AUC 0.93 for Disease Free Status), "Person Neoplasm Cancer Status"
+and two follow-up-time variables. `scripts/make_luad_noleak_splits.py` draws the LUAD train/test splits
+with the generator of `scripts/generate_splits.py` (seed 42) and drops these variables. `luad_noleak` is
+the only LUAD dataset of the inductive analyses.
+
+**Methods** (the probing script reads each one from its own embedding root):
+- **POME 1.4**: `scripts/generate_inductive_embeddings.py --methods pome` → `output/inductive_pome14`.
+- **UMAP** (NA-aware fork): `scripts/generate_inductive_embeddings.py --methods umap` → `output/inductive`.
+- The tabular competitors of the clustering analysis, run inductively on the same POME-format split
+  files. Each one is fit on the training split only and embeds the test samples with the frozen model,
+  with the clustering versions' training and architecture → `output/inductive_competitors/`:
+  - **HI-VAE**: `scripts/embed_hivae_inductive.py` (`hivae.sif`, CPU). The training embedding comes
+    from the authors' restore pass over the training split. The test embedding comes from one more
+    restore pass of the frozen network over train + test, keeping the test rows. The authors' code
+    re-codes categories per input file and normalizes per batch, so a test-only pass would be wrong.
+  - **SAINT**: `scripts/embed_saint_inductive.py` (`saint.sif`, GPU). Label encoding, mean filling and
+    standardization use training statistics only. Test categories never seen in training go to SAINT's
+    mask token, and test samples are encoded in their own batches.
+  - **missForest + autoencoder**: `scripts/embed_mfae_inductive.py` (CPU). missForest is fit on the
+    training split and imputes train + test (cached in `_mfae_imputed/`). The design matrix uses
+    training z-scores and training one-hot categories, and the autoencoder is trained on the training
+    rows only.
+- **TabICL** (pre-trained tabular foundation model, label-free): `scripts/embed_tabicl_labelfree_inductive.py`
+  (`tabicl` 2.2.0, checkpoint `tabicl-classifier-v1.1-20250506.ckpt`) → `output/inductive_competitors/tabicl_lf`.
+  TabICL is used instead of TabPFN because TabPFN ≥ 2.5 requires a Prior Labs license login before its
+  weights download, and TabPFN has no label-free stage (labels enter from its first layer). The
+  embedding is the output of TabICL's row-wise interaction stage (512-d), taken before the in-context
+  stage that uses labels; v1.1's column embedding is not target-aware. One forward pass per split and
+  run embeds the training and test rows, with the column statistics from the training rows only. The
+  sklearn wrapper needs labels for `fit`, so a dummy label vector is passed; the script checks that a
+  second, different dummy vector gives identical embeddings. PCA fit on train reduces the embedding to
+  16/32/64. Each run is one ensemble member with a run-seeded feature order. `tabicl`, `einops` and
+  `huggingface_hub` are installed with `pip install --no-deps --target $(ws_find pome_eval)/pylib`
+  (`run.sh`/`submit.sh` put it on `PYTHONPATH`). The checkpoint is stored in
+  `$(ws_find pome_eval)/models/tabicl/`.
+
 ```bash
 WS=$(ws_find pome_eval)
+container/run.sh scripts/make_luad_noleak_splits.py
+# POME: per dataset x dim (hancock mimic luad_noleak x 16 32 64)
+sbatch --export=PYTHONHASHSEED=0 container/submit.sh scripts/generate_inductive_embeddings.py \
+    --methods pome --modes combined --datasets hancock --dims 16 --runs 5 --log-tag hancock_d16
+# UMAP: per dataset x dim on the GPU node, or on CPU
+sbatch --export=PYTHONHASHSEED=0 container/submit.sh scripts/generate_inductive_embeddings.py \
+    --methods umap --modes combined --datasets mimic --dims 16 --runs 5
+# competitors
 sbatch --job-name=ind_hivae --export=POME_EVAL_SIF=$WS/containers/hivae.sif \
     container/submit.sh scripts/embed_hivae_inductive.py --jobs 16
 sbatch --job-name=ind_saint --export=POME_EVAL_SIF=$WS/containers/saint.sif,PYTHONHASHSEED=0 \
-    container/submit.sh scripts/embed_saint_inductive.py --datasets hancock luad   # + mimic, per --dims
+    container/submit.sh scripts/embed_saint_inductive.py --datasets hancock luad_noleak   # + mimic, per --dims
 sbatch --job-name=ind_mfae container/submit.sh scripts/embed_mfae_inductive.py
-container/run.sh scripts/linear_probe_inductive_embeddings.py --methods hivae saint mfae \
-    --modes combined --dims 16 32 64 --runs 0 1 2 3 4 --emb-root output/inductive_competitors \
-    --output output/linear_probing/inductive_linear_probing_results_competitors.csv
-container/run.sh scripts/merge_probing_variant.py \
-    --pome output/linear_probing/inductive_linear_probing_results_pome14_pome.csv \
-    --competitors output/linear_probing/inductive_linear_probing_results_competitors.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14_competitors.csv
-container/run.sh scripts/plot_inductive_linear_probing.py --dims 16 32 64 \
-    --results output/linear_probing/inductive_linear_probing_results_pome14_competitors.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14_competitors.pdf
-```
-`plot_inductive_linear_probing.py --methods POME UMAP` on the same CSV reproduces the
-two-method figure.
-
-**Leakage-free TCGA-LUAD** → `output/linear_probing/inductive_linear_probing_results_pome14_competitors_noleak.pdf`
-(and `..._pome14_noleak.pdf` for POME vs UMAP only). Four LUAD inputs record the outcome or the
-follow-up after diagnosis ("New Neoplasm Event Post Initial Therapy Indicator", single-variable
-AUC 0.93 for Disease Free Status; "Person Neoplasm Cancer Status"; and two follow-up-time
-variables). `scripts/make_luad_noleak_splits.py` writes the same splits without them as dataset
-`luad_noleak`, which every inductive script accepts. Outputs land in their own `luad_noleak`
-directories, so the original LUAD results stay untouched.
-```bash
-container/run.sh scripts/make_luad_noleak_splits.py
-sbatch --export=PYTHONHASHSEED=0 container/submit.sh scripts/generate_inductive_embeddings.py \
-    --methods pome --modes combined --datasets luad_noleak --dims 16 --runs 5 --log-tag luad_noleak_d16  # per dim
-container/run.sh scripts/generate_inductive_embeddings.py --methods umap --modes combined \
-    --datasets luad_noleak --dims 16 32 64 --runs 5
-# competitors: the three embed_*_inductive.py jobs above with --datasets luad_noleak
-# probe each method family on luad_noleak (--datasets luad_noleak, emb roots as above) into
-# *_pome14_pome_luad_noleak.csv / *_umap_luad_noleak.csv / *_competitors_luad_noleak.csv, then:
-container/run.sh scripts/merge_probing_variant.py \
-    --pome output/linear_probing/inductive_linear_probing_results_pome14_pome.csv \
-           output/linear_probing/inductive_linear_probing_results_pome14_pome_luad_noleak.csv \
-    --competitors output/linear_probing/inductive_linear_probing_results_competitors.csv \
-                  output/linear_probing/inductive_linear_probing_results_umap_luad_noleak.csv \
-                  output/linear_probing/inductive_linear_probing_results_competitors_luad_noleak.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14_competitors_noleak.csv
-container/run.sh scripts/plot_inductive_linear_probing.py --dims 16 32 64 --luad-dataset luad_noleak \
-    --results output/linear_probing/inductive_linear_probing_results_pome14_competitors_noleak.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14_competitors_noleak.pdf
-```
-
-**Tabular foundation model (TabICL)** → `output/linear_probing/inductive_linear_probing_results_pome14_competitors_tabicl_noleak.pdf`.
-Same as the figure above, plus TabICL (`tabicl` 2.2.0, checkpoint `tabicl-classifier-v2-20260212.ckpt`).
-TabICL is used instead of TabPFN because TabPFN ≥ 2.5 requires a Prior Labs license login
-before its weights download. TabICLv2's column embedding is target-aware, so
-`scripts/embed_tabicl_inductive.py` builds one embedding per probing target. Each embedding is
-the final in-context hidden state of a query row (512-d). Test rows use the labelled training
-split as context. Training rows are embedded out-of-fold (5-fold), so a row never sees its own
-label. PCA is fit on train and reduces the embedding to 16/32/64. Each run is one ensemble member
-with a run-seeded feature order. Because it sees the probed label, TabICL is a **supervised
-reference**, and the figure labels it "TabICL (supervised)". The package (with einops and
-huggingface_hub) is installed with `pip install --no-deps --target $(ws_find pome_eval)/pylib`,
-and the checkpoint is stored in `$(ws_find pome_eval)/models/tabicl/`. Outputs are written to
-`output/inductive_competitors/tabicl/<dataset>/target_<target>/split_NN/dim_D/`. The probing
-script probes each `target_<target>` directory for its own target only. Panel a counts wins
-among the label-free methods only, so TabICL has no bar there. The same comparison is also run
-with standardized logistic regression and the MLP, XGBoost, RBF-SVM and k-NN probes (see "Further
-non-linear probes" below):
-`output/linear_probing/inductive_{logreg_std,mlp,xgboost,svm,knn}_probing_results_pome14_competitors_tabicl_noleak.pdf`.
-
-The same figures also show a **label-free TabICL** ("TabICL", method `tabicl_lf`), which competes
-in panel a. `scripts/embed_tabicl_labelfree_inductive.py` uses the v1.1 checkpoint
-`tabicl-classifier-v1.1-20250506.ckpt`, whose column embedding is not target-aware. The
-embedding is the output of TabICL's row-wise interaction stage (512-d), taken before the
-in-context stage that uses labels. One forward pass per split and run embeds the training and
-test rows together. The column statistics come from the training rows only. The sklearn wrapper
-needs labels for `fit`, so a dummy label vector is passed; it only reaches the discarded
-in-context stage. The script checks that a second, different dummy vector gives identical
-embeddings. PCA is fit on train and reduces the embedding to 16/32/64. Each run is one ensemble
-member with a run-seeded feature order. One embedding per split serves all targets, in the
-standard layout `output/inductive_competitors/tabicl_lf/<dataset>/split_NN/dim_D/`.
-```bash
-sbatch --job-name=ind_tabicl container/submit.sh scripts/embed_tabicl_inductive.py   # hancock mimic luad_noleak
 sbatch --job-name=ind_tabicl_lf container/submit.sh scripts/embed_tabicl_labelfree_inductive.py
-for M in tabicl tabicl_lf; do
-    container/run.sh scripts/linear_probe_inductive_embeddings.py --methods $M --modes combined \
-        --datasets hancock mimic luad_noleak --dims 16 32 64 --emb-root output/inductive_competitors \
-        --output output/linear_probing/inductive_linear_probing_results_$M.csv
-done
-container/run.sh scripts/merge_probing_variant.py \
-    --pome output/linear_probing/inductive_linear_probing_results_pome14_pome.csv \
-           output/linear_probing/inductive_linear_probing_results_pome14_pome_luad_noleak.csv \
-    --competitors output/linear_probing/inductive_linear_probing_results_competitors.csv \
-                  output/linear_probing/inductive_linear_probing_results_umap_luad_noleak.csv \
-                  output/linear_probing/inductive_linear_probing_results_competitors_luad_noleak.csv \
-                  output/linear_probing/inductive_linear_probing_results_tabicl.csv \
-                  output/linear_probing/inductive_linear_probing_results_tabicl_lf.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14_competitors_tabicl_noleak.csv
-container/run.sh scripts/plot_inductive_linear_probing.py --dims 16 32 64 --luad-dataset luad_noleak \
-    --results output/linear_probing/inductive_linear_probing_results_pome14_competitors_tabicl_noleak.csv \
-    --output output/linear_probing/inductive_linear_probing_results_pome14_competitors_tabicl_noleak.pdf
-# standardized logistic regression (logreg_std), MLP, XGBoost, RBF-SVM and k-NN; the other files come from the
-# "Further non-linear probes" block below
-for PR in "logreg_std:--probe logreg --standardize" "mlp:--probe mlp" "xgboost:--probe xgboost" \
-          "svm:--probe svm" "knn:--probe knn"; do
-    X=output/linear_probing/inductive_${PR%%:*}_probing_results
-    for M in tabicl tabicl_lf; do
-        container/run.sh scripts/linear_probe_inductive_embeddings.py ${PR#*:} --jobs 24 --methods $M \
-            --modes combined --datasets hancock mimic luad_noleak --dims 16 32 64 \
-            --emb-root output/inductive_competitors --output ${X}_$M.csv
-    done
-    container/run.sh scripts/merge_probing_variant.py --reference none --pome ${X}_pome14_pome.csv \
-        --competitors ${X}_umap.csv ${X}_competitors.csv ${X}_tabicl.csv ${X}_tabicl_lf.csv \
-        --output ${X}_pome14_competitors_tabicl.csv
-    container/run.sh scripts/plot_inductive_linear_probing.py --dims 16 32 64 --luad-dataset luad_noleak \
-        --results ${X}_pome14_competitors_tabicl.csv --output ${X}_pome14_competitors_tabicl_noleak.pdf
+# probe all methods and plot
+for P in logreg_std mlp; do
+    container/run.sh scripts/linear_probe_inductive_embeddings.py --probe $P --jobs 32 --dims 16 32 64 --runs 0 1 2 3 4
+    container/run.sh scripts/plot_inductive_linear_probing.py --probe $P
 done
 ```
+`plot_inductive_linear_probing.py --methods POME UMAP` draws a subset of the methods.
 
-**Non-linear probing (XGBoost)** → `output/linear_probing/inductive_xgboost_probing_results_pome14_competitors.pdf`
-(and `..._noleak.pdf` with the leakage-free LUAD). Same embeddings, splits, targets, metrics and
-layout as the logistic-regression figures, but the probe is an XGBoost classifier
-(`linear_probe_inductive_embeddings.py --probe xgboost`: 300 trees, depth 3, learning rate 0.05,
-subsampling 0.8, fixed seed, no tuning). The published results file holds logistic-regression
-scores only, so every method is probed afresh, including UMAP (`--reference none`). The MIMIC
-UMAP embeddings were never stored and are regenerated first. xgboost is not in the image built
-earlier: it is installed into `$(ws_find pome_eval)/pylib`, which `run.sh`/`submit.sh` put on
-`PYTHONPATH`.
-```bash
-WS=$(ws_find pome_eval)
-apptainer exec $WS/containers/pome_eval.sif pip install --no-deps --target $WS/pylib xgboost==2.1.3
-sbatch --export=PYTHONHASHSEED=0 container/submit.sh scripts/generate_inductive_embeddings.py \
-    --methods umap --modes combined --datasets mimic --dims 16 --runs 5   # per dim
-X=output/linear_probing/inductive_xgboost_probing_results
-P="scripts/linear_probe_inductive_embeddings.py --probe xgboost --jobs 48 --modes combined --dims 16 32 64 --runs 0 1 2 3 4"
-container/run.sh $P --methods pome --emb-root output/inductive_pome14 --output ${X}_pome14_pome.csv
-container/run.sh $P --methods hivae saint mfae --emb-root output/inductive_competitors --output ${X}_competitors.csv
-container/run.sh $P --methods umap --output ${X}_umap.csv
-container/run.sh scripts/merge_probing_variant.py --reference none --pome ${X}_pome14_pome.csv \
-    --competitors ${X}_umap.csv ${X}_competitors.csv --output ${X}_pome14_competitors.csv
-container/run.sh scripts/plot_inductive_linear_probing.py --dims 16 32 64 \
-    --results ${X}_pome14_competitors.csv --output ${X}_pome14_competitors.pdf
-container/run.sh scripts/plot_inductive_linear_probing.py --dims 16 32 64 --luad-dataset luad_noleak \
-    --results ${X}_pome14_competitors.csv --output ${X}_pome14_competitors_noleak.pdf
-```
+The companion data-integration figure (does embedding continuous *and* categorical variables beat
+either type alone?) is drawn by `scripts/plot_inductive_type_combination.py --dim 64`. It reads the
+probing results with the `numeric_only` / `cat_only` modes (`linear_probe_inductive_embeddings.py
+--methods pome umap --modes combined numeric_only cat_only`), whose embeddings come from
+`generate_inductive_embeddings.py --modes`.
 
-**Further non-linear probes (RBF-SVM, k-NN, MLP) and standardized logistic regression** →
-`output/linear_probing/inductive_{svm,knn,mlp,logreg_std}_probing_results_pome14_competitors{,_noleak}.pdf`.
-`--probe svm|knn|mlp` tune their hyperparameters by inner 3-fold CV on the training split (see the
-script docstring). `logreg_std` is the headline probe with `--standardize`, i.e. with features
-z-scored on the training split. Same pipeline as the XGBoost block above, with `--probe <probe>`
-(and `--probe logreg --standardize` for `logreg_std`) and `X=output/linear_probing/inductive_<probe>_probing_results`.
+`scripts/linear_probe_full_dataset_embeddings.py` is the transductive control: it probes the
+full-dataset embeddings of HANCOCK and MIMIC on the same splits. LUAD is left out because its
+full-dataset embeddings contain the leaking variables.
 
-The companion data-integration figure (does embedding continuous *and* categorical variables beat either type alone?) is drawn by `scripts/plot_inductive_type_combination.py --dim 64`, off the same results CSV; its `numeric_only` / `cat_only` embeddings come from `generate_inductive_embeddings.py --modes`.
-
-The earlier transductive versions of both figures are retained for comparison: `scripts/plot_fig3_linear_probing.ipynb` and `scripts/plot_type_combination_effect.ipynb`, fed by the `src/pome_evaluation/analyze_*_embedding_separability.ipynb` notebooks via `output/supervised/`.
+The earlier transductive versions of the figures are retained for comparison: `scripts/plot_fig3_linear_probing.ipynb` and `scripts/plot_type_combination_effect.ipynb`, fed by the `src/pome_evaluation/analyze_*_embedding_separability.ipynb` notebooks via `output/supervised/`.
 
 ### Survival analysis on HANCOCK
 Simply run
@@ -373,7 +268,7 @@ For analyzing which visualization technique best preserves high-dimension cluste
 
 ### Analyze supervised learning results
 
-For comparing how well POME's and UMAP's embeddings are suitable for predicting held-out target variables by using a simple logistic regression model, run `scripts/linear_probe_inductive_embeddings.py`. It probes every dataset, method and variable-type mode it finds into one tidy CSV, fitting on each training split and scoring the held-out test split. `scripts/linear_probe_full_dataset_embeddings.py` is the transductive control over the same splits.
+For comparing how well the embeddings of POME and its competitors predict held-out target variables, run `scripts/linear_probe_inductive_embeddings.py` (standardized logistic regression, or `--probe mlp`). It probes every dataset and method into one tidy CSV, fitting on each training split and scoring the held-out test split. `scripts/linear_probe_full_dataset_embeddings.py` is the transductive control over the same splits.
 
 ### Generate simulated missingness datasets
 

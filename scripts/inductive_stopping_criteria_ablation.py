@@ -68,8 +68,8 @@ from scipy.stats import wilcoxon  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
-DATASETS = {"hancock": "HANCOCK", "luad": "TCGA-LUAD", "mimic": "MIMIC-IV"}
-DATASET_COLORS = {"hancock": "#2a78d6", "luad": "#eb6834", "mimic": "#1baf7a"}
+DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
+DATASET_COLORS = {"hancock": "#2a78d6", "luad_noleak": "#eb6834", "mimic": "#1baf7a"}
 BUDGET = 2000
 EVAL_EVERY = 10
 KEY = ["dataset", "dim", "split"]
@@ -276,7 +276,7 @@ def plot(summary, lodo, out, tuning):
 
     # (b) per-dataset regret
     ax = axes[1]
-    off = {"hancock": -0.22, "luad": 0.0, "mimic": 0.22}
+    off = {"hancock": -0.22, "luad_noleak": 0.0, "mimic": 0.22}
     for ds, dsl in DATASETS.items():
         ax.plot(s[f"regret_{ds}"], y + off[ds], "o", color=DATASET_COLORS[ds], ms=4.5,
                 mec="white", mew=0.6, label=dsl)

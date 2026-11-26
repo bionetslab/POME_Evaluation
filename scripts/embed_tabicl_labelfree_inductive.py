@@ -1,9 +1,11 @@
-"""Inductive, label-free TabICL embeddings for the linear-probing analysis.
+"""Inductive, label-free TabICL embeddings for the probing analysis.
 
-Unsupervised tabular-foundation-model competitor of POME in the inductive probing
+Pre-trained tabular-foundation-model competitor of POME in the inductive probing
 (``scripts/linear_probe_inductive_embeddings.py``, method ``tabicl_lf``, figure name "TabICL").
-It is the label-free counterpart of the target-conditioned TabICLv2 reference of
-``scripts/embed_tabicl_inductive.py`` ("TabICL (supervised)").
+TabICL (``pip install tabicl``, version 2.2.0; ungated weights on the Hugging Face Hub, repo
+``jingang/TabICL``) is used instead of TabPFN because TabPFN >= 2.5 needs a Prior Labs license
+login before its weights download, and TabPFN offers no label-free embedding (the labels enter
+from its first layer on).
 
 TabICL runs in three stages: a column-wise embedding (each value embedded within the
 distribution of its column, summarized from the context rows), a row-wise interaction
@@ -13,10 +15,11 @@ needs labels in the v1.1 checkpoint ``tabicl-classifier-v1.1-20250506.ckpt``: it
 embedding is not target-aware (``col_target_aware=False``), unlike TabICLv2. The embedding is
 the output of the row-wise interaction, so no label enters it:
 
-1. Inputs as in ``embed_tabicl_inductive.py`` (POME-format split files; categorical variables
-   as pandas categories, ordinal-encoded by TabICL with missing/unseen -> -1; continuous
-   ones mean-imputed with the training means; TabICL's power normalization and outlier
-   clipping fit on the training split).
+1. Inputs: the POME-format split files that POME's inductive embeddings use
+   (``data/train_test_splits/<dataset>/split_NN_{train,test}_pome.tsv``). Categorical variables
+   are passed as pandas categories, so TabICL's own preprocessing ordinal-encodes them
+   (missing and unseen categories -> code -1) and mean-imputes the continuous ones (training
+   means); its power normalization and outlier clipping are fit on the training split.
 2. One forward pass per split and run with the training rows as context and the test rows
    as queries. The column statistics (the induced points of the column-wise set
    transformer) are computed from the training rows only (``embed_with_test=False``), so
@@ -25,7 +28,8 @@ the output of the row-wise interaction, so no label enters it:
    is passed and only reaches the discarded in-context stage. The script checks this:
    the embeddings with a second, different dummy label vector must be identical.
 3. One ensemble member per run (power normalization, random feature order seeded by
-   ``random_state = run``), the run-to-run variation, as in the supervised variant.
+   ``random_state = run``), the run-to-run variation. (TabICL's default 8-member ensemble
+   cannot be averaged: its members see differently ordered features.)
 4. PCA (fit on the training embeddings) reduces the 512 dims to 16/32/64.
 
 One embedding per split, dim and run serves all targets (standard layout):
@@ -33,29 +37,48 @@ One embedding per split, dim and run serves all targets (standard layout):
     output: output/inductive_competitors/tabicl_lf/<dataset>/split_NN/dim_D/run_RR_{train,test}.csv
 
 The checkpoint is read from ``--checkpoint`` (default: ``$(ws_find pome_eval)/models/tabicl/``).
+tabicl 2.2.0, einops and huggingface_hub are installed in ``$(ws_find pome_eval)/pylib``
+(``pip install --no-deps --target ...``), which run.sh / submit.sh put on PYTHONPATH.
 
 CPU/GPU:  container/run.sh scripts/embed_tabicl_labelfree_inductive.py [--datasets hancock] [--device cpu]
 """
 
 import argparse
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from sklearn.decomposition import PCA
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
-from embed_tabicl_inductive import as_tabicl_frame, default_checkpoint  # noqa: E402
 from pome_evaluation.tabular_inputs import (inductive_paths, load_split_tables,  # noqa: E402
                                             split_ids, write_embedding_csv)
 
 METHOD = "tabicl_lf"
 CHECKPOINT = "tabicl-classifier-v1.1-20250506.ckpt"
-DATASETS = ("hancock", "mimic", "luad_noleak", "luad")
+DATASETS = ("hancock", "mimic", "luad_noleak")
+
+
+def default_checkpoint():
+    try:
+        ws = subprocess.run(["ws_find", "pome_eval"], capture_output=True, text=True,
+                            check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        ws = "/hnvme/workspace/y105dc10-pome_eval"
+    return os.path.join(ws, "models", "tabicl", CHECKPOINT)
+
+
+def as_tabicl_frame(table, cat_cols):
+    """Categorical variables as pandas categories (NaN kept), continuous ones as float."""
+    df = table.copy()
+    for col in cat_cols:
+        df[col] = df[col].map(lambda v: np.nan if pd.isna(v) else "c%g" % v).astype("category")
+    return df
 
 
 class RowEmbedder:
@@ -115,8 +138,7 @@ def main():
 
     import torch
     device = opts.device if opts.device == "cpu" or torch.cuda.is_available() else "cpu"
-    checkpoint = opts.checkpoint or os.path.join(os.path.dirname(default_checkpoint()),
-                                                 CHECKPOINT)
+    checkpoint = opts.checkpoint or default_checkpoint()
     if not os.path.exists(checkpoint):
         raise SystemExit("TabICL checkpoint not found: %s" % checkpoint)
     print("checkpoint %s, device %s" % (checkpoint, device), flush=True)

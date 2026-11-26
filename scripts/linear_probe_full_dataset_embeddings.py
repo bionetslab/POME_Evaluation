@@ -28,14 +28,15 @@ in 0..9 and embedding size ``D`` in {16, 32, 64, 128}:
     POME : data/embeddings/<PREFIX>/embeddings/<PREFIX>_samples_<D>_<R>.tsv
     UMAP : data/embeddings/<PREFIX>/embeddings/<PREFIX>_UMAP_<D>_<R>.csv
 
-with ``<PREFIX>`` = HANCOCK / TCGA_LUAD / MIMIC. Train/test sample membership is
+with ``<PREFIX>`` = HANCOCK / MIMIC. TCGA-LUAD is not probed: its full-dataset embeddings are
+built from all LUAD variables, including the four outcome/follow-up variables that leak the
+targets (see ``scripts/make_luad_noleak_splits.py``). Train/test sample membership is
 read from the split files (identical across the POME/UMAP formats), so the exact
 same samples are held out as in the inductive analysis -- including MIMIC's
 patient-level grouping, which is already baked into the splits.
 
-The classifier matches the notebooks / inductive script:
-LogisticRegression(penalty="l2", solver="liblinear", max_iter=1000); embeddings
-are NOT rescaled (use --standardize to z-score features before fitting).
+The probe (``--probe``) is that of the inductive script: ``logreg_std`` (logistic regression on
+standardized features, the default) or ``mlp``.
 
 Run from the project root (any env with pandas + scikit-learn):
 
@@ -64,7 +65,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 # routine so the two analyses are identical apart from the embedding source.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from linear_probe_inductive_embeddings import (  # noqa: E402
-    load_binary_targets, probe_one)
+    PROBES, load_binary_targets, probe_one)
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -73,11 +74,11 @@ SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
 DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "linear_probing" / \
     "full_dataset_linear_probing_results.csv"
 
-DATASETS = ("hancock", "luad", "mimic")
+DATASETS = ("hancock", "mimic")
 METHODS = ("pome", "umap")
 
 # Directory prefix / file stem for each dataset's full-dataset embedding files.
-EMB_PREFIX = {"hancock": "HANCOCK", "luad": "TCGA_LUAD", "mimic": "MIMIC"}
+EMB_PREFIX = {"hancock": "HANCOCK", "mimic": "MIMIC"}
 
 _SPLIT_MEMBER_RE = re.compile(r"^split_(\d+)_train_umap\.csv$")
 
@@ -167,16 +168,14 @@ def main() -> None:
     parser.add_argument("--runs", nargs="+", type=int, default=None,
                         help="run ids to probe (default: all found)")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--standardize", action="store_true",
-                        help="z-score embedding features (fit on train) before "
-                             "logistic regression (default: off)")
+    parser.add_argument("--probe", choices=PROBES, default="logreg_std")
     args = parser.parse_args()
 
     warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
     print(f"Embeddings root: {EMBEDDINGS_ROOT}")
     print(f"Splits root: {SPLITS_ROOT}")
     print(f"Datasets: {args.datasets} | methods: {args.methods} | "
-          f"standardize: {args.standardize}")
+          f"probe: {args.probe}")
 
     rows = []
     for dataset in args.datasets:
@@ -212,7 +211,7 @@ def main() -> None:
                         test_emb = emb.loc[emb.index.intersection(test_ids)]
                         for label, y_full in targets.items():
                             metrics = probe_one(train_emb, test_emb, y_full,
-                                                args.standardize)
+                                                args.probe)
                             if metrics is None:
                                 continue
                             n_nonfinite += (metrics["n_train_nonfinite"]
@@ -224,7 +223,7 @@ def main() -> None:
                                 # identical to the inductive results.
                                 "mode": "combined",
                                 "target": label, "dim": dim, "split": split,
-                                "run": run, **metrics,
+                                "run": run, **metrics, "probe": args.probe,
                             })
                     n_probed += 1
             msg = (f"  {method:4s}: probed {n_probed} embeddings "

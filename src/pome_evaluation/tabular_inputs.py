@@ -56,7 +56,7 @@ def imputed_path(dataset, root=COMPETITOR_ROOT):
 # --- inductive (train/test split) inputs, for the linear-probing analysis ----------------
 SPLITS_ROOT = os.path.join(PROJECT_ROOT, "data", "train_test_splits")
 INDUCTIVE_COMPETITOR_ROOT = os.path.join(PROJECT_ROOT, "output", "inductive_competitors")
-SPLIT_DATASETS = ("hancock", "luad", "mimic", "luad_noleak")   # directory names under SPLITS_ROOT
+SPLIT_DATASETS = ("hancock", "mimic", "luad_noleak")   # directory names under SPLITS_ROOT
 
 
 def _graph_to_table(path):
@@ -69,7 +69,7 @@ def _graph_to_table(path):
 
 
 def split_ids(dataset):
-    """Sorted ids of the train/test splits of ``dataset`` (``hancock`` / ``luad`` / ``mimic``)."""
+    """Sorted ids of the train/test splits of ``dataset`` (``hancock`` / ``mimic`` / ``luad_noleak``)."""
     names = os.listdir(os.path.join(SPLITS_ROOT, dataset))
     return sorted(int(n.split("_")[1]) for n in names if n.endswith("_train_pome.tsv"))
 

@@ -1,26 +1,20 @@
-"""Plot inductive linear probing results.
+"""Plot the inductive probing results.
 
-Reproduces the layout of scripts/plot_fig3_linear_probing.ipynb (3x3 mosaic:
-one aggregated bar panel + eight per-target boxplot panels), using the
-inductive linear probing results (embeddings fit on the train split and
-transformed onto the held-out test split) instead of that notebook's
-transductive k-fold scores.
+3x3 mosaic: one aggregated bar panel (a) + eight per-target boxplot panels (b-i), from the
+results of ``scripts/linear_probe_inductive_embeddings.py`` (embeddings fit on the train split
+and transformed onto the held-out test split). Each embedding size draws one box per method:
+POME, UMAP, the tabular competitors HI-VAE, SAINT and missForest+AE, and the label-free TabICL
+(method TABICL_LF, drawn as "TabICL"), with the names and colours of the clustering figure.
+Panel a counts, per method, the targets on which it has the best median score. The TCGA-LUAD
+panels show ``luad_noleak`` (LUAD without its outcome/follow-up variables).
 
-Only the inductive scores are shown: each embedding size draws one box per
-method (POME and UMAP, plus the tabular competitors HI-VAE, SAINT and
-missForest+AE when the results file has them; same names and colours as the
-clustering figure). Label-free TabICL v1.1 embeddings (method TABICL_LF) are drawn as "TabICL"
-and compete in panel a. Target-conditioned TabICL embeddings (method TABICL) are drawn as
-"TabICL (supervised)" and are not counted in panel a (wins among the label-free methods).
+    container/run.sh scripts/plot_inductive_linear_probing.py                   # logreg_std
+    container/run.sh scripts/plot_inductive_linear_probing.py --probe mlp
+    container/run.sh scripts/plot_inductive_linear_probing.py [--results CSV] [--output PDF] \
+        [--dims 16 32 64] [--methods POME UMAP]
 
-Usage:
-    container/run.sh scripts/plot_inductive_linear_probing.py \
-        [--results CSV] [--output PDF] [--dims 16 32 64] [--methods POME UMAP]
-Defaults reproduce the original figure (all dims and methods in the results file).
-
-The same script draws the non-linear (XGBoost) probing figure from the results of
-``linear_probe_inductive_embeddings.py --probe xgboost``; the layout is unchanged. A results file
-that mixes probes (``probe`` column; absent = logistic regression) is rejected.
+Defaults: ``output/linear_probing/inductive_<probe>_probing_results.{csv,pdf}``, all dims and
+methods in the results file. A results file that mixes probes (``probe`` column) is rejected.
 """
 
 import argparse
@@ -35,27 +29,24 @@ import seaborn as sns
 # Load data
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-RESULTS_PATH = os.path.join(
-    SCRIPT_DIR, "..", "output", "linear_probing", "inductive_linear_probing_results.csv"
-)
-OUT_PATH = os.path.join(
-    SCRIPT_DIR, "..", "output", "linear_probing", "inductive_linear_probing_results.pdf"
-)
-parser = argparse.ArgumentParser(description="Plot inductive linear probing results.")
-parser.add_argument("--results", default=RESULTS_PATH, help="probing results CSV")
-parser.add_argument("--output", default=OUT_PATH, help="output PDF")
+OUT_DIR = os.path.join(SCRIPT_DIR, "..", "output", "linear_probing")
+LUAD_DATASET = "luad_noleak"
+parser = argparse.ArgumentParser(description="Plot the inductive probing results.")
+parser.add_argument("--probe", default="logreg_std", choices=["logreg_std", "mlp"],
+                    help="probe whose default results file is plotted")
+parser.add_argument("--results", default=None, help="probing results CSV")
+parser.add_argument("--output", default=None, help="output PDF")
 parser.add_argument("--dims", nargs="+", type=int, default=None,
                     help="embedding sizes to show (default: all in the results file)")
-parser.add_argument("--luad-dataset", default="luad",
-                    help="results dataset drawn in the TCGA-LUAD panels: luad (default) or "
-                         "luad_noleak (without the outcome/follow-up variables)")
 parser.add_argument("--methods", nargs="+", default=None,
                     help="methods to show, by figure name (default: all in the results file)")
 args = parser.parse_args()
-RESULTS_PATH, OUT_PATH = args.results, args.output
+stem = os.path.join(OUT_DIR, f"inductive_{args.probe}_probing_results")
+RESULTS_PATH = args.results or stem + ".csv"
+OUT_PATH = args.output or stem + ".pdf"
 
 df = pd.read_csv(RESULTS_PATH)
-probes = set(df["probe"].fillna("logreg")) if "probe" in df else {"logreg"}
+probes = set(df["probe"])
 if len(probes) != 1:
     raise SystemExit(f"{RESULTS_PATH} mixes probes {sorted(probes)}")
 if args.dims is not None:
@@ -66,26 +57,18 @@ if args.dims is not None:
 # figure is the all-variables comparison only.
 if "mode" in df.columns:
     df = df[df["mode"] == "combined"].copy()
-# One LUAD variant only: luad and luad_noleak share target names, so mixing them would also
-# merge their scores in the panel-a win counts.
-df = df[df["dataset"].isin(["mimic", "hancock", args.luad_dataset])].copy()
-df.loc[df["dataset"] == args.luad_dataset, "dataset"] = "luad"
+df = df[df["dataset"].isin(["mimic", "hancock", LUAD_DATASET])].copy()
+df.loc[df["dataset"] == LUAD_DATASET, "dataset"] = "luad"
 if df[df["dataset"] == "luad"].empty:
-    raise SystemExit(f"no {args.luad_dataset} rows in {RESULTS_PATH}")
+    raise SystemExit(f"no {LUAD_DATASET} rows in {RESULTS_PATH}")
 
 # Use average precision as the score, mirroring the "Average precision" y-axis
 # of the original figure.
 df = df.rename(columns={"average_precision": "Score", "method": "Method", "target": "Target"})
 # results-file method label -> figure name, in the figure order of the clustering analysis
 # TABICL_LF: label-free TabICL v1.1 row embeddings (embed_tabicl_labelfree_inductive.py).
-# TABICL: TabICLv2 embeddings conditioned on the probed target (embed_tabicl_inductive.py), i.e. a
-# supervised reference, which the figure name says.
 METHOD_NAMES = {"POME": "POME", "UMAP": "UMAP", "HIVAE": "HI-VAE", "SAINT": "SAINT",
-                "MFAE": "missForest+AE", "TABICL_LF": "TabICL",
-                "TABICL": "TabICL (supervised)"}
-# Supervised references: drawn in the per-target panels, but not counted in panel a, which
-# compares the label-free representations.
-REFERENCE_METHODS = {"TabICL (supervised)"}
+                "MFAE": "missForest+AE", "TABICL_LF": "TabICL"}
 df["Method"] = df["Method"].map(METHOD_NAMES).fillna(df["Method"])
 present = set(df["Method"])
 methods = args.methods or [m for m in METHOD_NAMES.values() if m in present]
@@ -106,7 +89,6 @@ setting_palette = dict(zip(METHOD_NAMES.values(), sns.color_palette("Set2")))
 # Panel a: aggregate over targets and embedding sizes. For each (Method, Target,
 # dim) take the median score, then the best median per (Method, Target), and
 # count how often each method has the strictly highest one (ties count for nobody).
-# Supervised references (REFERENCE_METHODS) take no part: no bar and not compared.
 # ---------------------------------------------------------------------------
 def method_win_counts(frame, order):
     """{method: #targets it wins} by best-across-dim median score."""
@@ -119,7 +101,7 @@ def method_win_counts(frame, order):
     return {m: int((winners[m] & unique).sum()) for m in order}
 
 
-panel_a_order = [m for m in setting_order if m not in REFERENCE_METHODS]
+panel_a_order = setting_order
 wins = method_win_counts(df, panel_a_order)
 agg_df = pd.DataFrame({"Setting": panel_a_order, "count": [wins[m] for m in panel_a_order]})
 

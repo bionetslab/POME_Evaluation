@@ -14,22 +14,28 @@ Progression Free Status) into the embeddings:
     Last Alive Less Initial Pathologic Diagnosis Date   follow-up time (constant in this data,
         Calculated Day Value                            removed because it is outcome-type)
 
-This script copies every ``data/train_test_splits/luad/split_NN_{train,test}_{pome.tsv,umap.csv}``
-to ``data/train_test_splits/luad_noleak/``. It drops these variables (rows of the POME graph
-format, columns of the UMAP sample matrix) and changes nothing else: the samples, partitions and
-values stay identical. All inductive scripts accept ``luad_noleak`` as a dataset. Outputs land
-next to the ``luad`` ones under their own ``luad_noleak`` directory, and the original LUAD
-results stay untouched.
+This script draws the 10 random 80/20 train/test splits of ``scripts/generate_splits.py`` (same
+seed 42 as for the other datasets) from the TCGA-LUAD inputs
+``data/input_datasets/TCGA_LUAD_wo_targets_graph.tsv`` (POME graph format) and
+``TCGA_LUAD_wo_targets.csv`` (UMAP sample matrix), drops these variables and writes
+``data/train_test_splits/luad_noleak/split_NN_{train,test}_{pome.tsv,umap.csv}``. It is the only
+LUAD dataset of the inductive analyses.
 
     container/run.sh scripts/make_luad_noleak_splits.py
 """
 
+import sys
 from pathlib import Path
 
 import pandas as pd
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SRC = PROJECT_ROOT / "data" / "train_test_splits" / "luad"
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+from generate_splits import make_splits  # noqa: E402
+
+INPUTS = PROJECT_ROOT / "data" / "input_datasets"
+GRAPH = INPUTS / "TCGA_LUAD_wo_targets_graph.tsv"
+SAMPLES = INPUTS / "TCGA_LUAD_wo_targets.csv"
 DST = PROJECT_ROOT / "data" / "train_test_splits" / "luad_noleak"
 LEAKAGE_VARIABLES = [
     "New Neoplasm Event Post Initial Therapy Indicator",
@@ -40,22 +46,21 @@ LEAKAGE_VARIABLES = [
 
 
 def main() -> None:
+    graph = pd.read_csv(GRAPH, sep="\t", index_col=0)
+    samples = pd.read_csv(SAMPLES, index_col=0)
+    samples.index = samples.index.astype(str)
+    missing = (set(LEAKAGE_VARIABLES) - set(graph.index)) | (set(LEAKAGE_VARIABLES) - set(samples.columns))
+    if missing:
+        raise SystemExit(f"variables not found: {sorted(missing)}")
     DST.mkdir(parents=True, exist_ok=True)
     n = 0
-    for path in sorted(SRC.glob("split_*_pome.tsv")):
-        df = pd.read_csv(path, sep="\t", index_col=0)
-        missing = set(LEAKAGE_VARIABLES) - set(df.index)
-        if missing:
-            raise SystemExit(f"{path.name}: variables not found: {sorted(missing)}")
-        df.drop(index=LEAKAGE_VARIABLES).to_csv(DST / path.name, sep="\t")
-        n += 1
-    for path in sorted(SRC.glob("split_*_umap.csv")):
-        df = pd.read_csv(path, index_col=0)
-        missing = set(LEAKAGE_VARIABLES) - set(df.columns)
-        if missing:
-            raise SystemExit(f"{path.name}: variables not found: {sorted(missing)}")
-        df.drop(columns=LEAKAGE_VARIABLES).to_csv(DST / path.name)
-        n += 1
+    for i, g_train, g_test, s_train, s_test in make_splits(graph, samples):
+        prefix = DST / f"split_{i:02d}"
+        g_train.drop(index=LEAKAGE_VARIABLES).to_csv(f"{prefix}_train_pome.tsv", sep="\t")
+        g_test.drop(index=LEAKAGE_VARIABLES).to_csv(f"{prefix}_test_pome.tsv", sep="\t")
+        s_train.drop(columns=LEAKAGE_VARIABLES).to_csv(f"{prefix}_train_umap.csv")
+        s_test.drop(columns=LEAKAGE_VARIABLES).to_csv(f"{prefix}_test_umap.csv")
+        n += 4
     print(f"wrote {n} split files without {len(LEAKAGE_VARIABLES)} leakage variables to {DST}")
 
 

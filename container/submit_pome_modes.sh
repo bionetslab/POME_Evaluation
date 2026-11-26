@@ -12,7 +12,7 @@
 #   container/submit_pome_modes.sh [options]
 #
 # Options (all have defaults suited to the data-integration figure):
-#   --datasets "hancock luad"        datasets to cover
+#   --datasets "hancock luad_noleak"        datasets to cover
 #   --modes    "numeric_only cat_only"   variable-type modes to cover
 #   --dims     "64"                  embedding sizes
 #   --runs     5                     runs per (split, dim)
@@ -41,7 +41,7 @@ set -euo pipefail
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$SETUP_DIR/.." && pwd)"
 
-DATASETS="hancock luad"
+DATASETS="hancock luad_noleak"
 MODES="numeric_only cat_only"
 DIMS="64"
 RUNS=5

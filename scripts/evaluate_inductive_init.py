@@ -50,7 +50,7 @@ from generate_inductive_stopping_ablation import embedder, load_graph, SPLITS_RO
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUT = PROJECT_ROOT / "output" / "inductive_init_check"
-DATASETS = {"hancock": "HANCOCK", "luad": "TCGA-LUAD", "mimic": "MIMIC-IV"}
+DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 EPOCHS = [1, 25, 100, 500, 2000]
 INITS = ["zero", "spectral", "random"]
 
@@ -167,7 +167,7 @@ def run_one(dataset, dim, split, epochs, targets, device, seed):
         test_emb = pd.DataFrame(te[kind], index=[str(s) for s in te_samples],
                                 columns=train_emb.columns)
         for target, y in targets.items():
-            res = probe_one(train_emb, test_emb, y, standardize=False)
+            res = probe_one(train_emb, test_emb, y)   # logreg_std
             if res is not None:
                 probe_rows.append(dict(meta, init=kind, target=target,
                                        average_precision=res["average_precision"]))
@@ -244,7 +244,7 @@ def summarize(args):
         print(ps.round(4).to_string(index=False))
 
     # Figure: (a) train re-embedding vs transductive, (b) test: other input vs zero, (c) delta AP
-    colors = {"hancock": "#2a78d6", "luad": "#eb6834", "mimic": "#1baf7a"}
+    colors = {"hancock": "#2a78d6", "luad_noleak": "#eb6834", "mimic": "#1baf7a"}
     fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.4), gridspec_kw=dict(wspace=0.45))
     ls = {32: "-", 64: "--"}
     panels = [("train", "zero", "a  training samples\nzero-input re-embedding\nvs. transductive"),

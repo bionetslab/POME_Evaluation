@@ -102,7 +102,7 @@ def run_one(dataset, split, dims, args):
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--datasets", nargs="+", default=["hancock", "luad", "mimic"])
+    p.add_argument("--datasets", nargs="+", default=["hancock", "luad_noleak", "mimic"])
     p.add_argument("--splits", type=int, nargs="+", default=list(range(10)))
     p.add_argument("--dims", type=int, nargs="+", default=[32, 64])
     p.add_argument("--out-root", type=Path, default=OUT_ROOT)

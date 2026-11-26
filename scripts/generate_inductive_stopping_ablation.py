@@ -26,7 +26,7 @@ Run with PYTHONHASHSEED=0 (POME fits differ across processes otherwise):
         container/submit.sh scripts/generate_inductive_stopping_ablation.py --datasets hancock
 CPU smoke test:
     APPTAINERENV_PYTHONHASHSEED=0 container/run.sh scripts/generate_inductive_stopping_ablation.py \\
-        --datasets luad --splits 0 --dims 16 --epoch-grid 20 40 --device cpu --out-root <scratch>
+        --datasets luad_noleak --splits 0 --dims 16 --epoch-grid 20 40 --device cpu --out-root <scratch>
 
 Figures / statistics: ``analyze_inductive_epoch_probes.py``.
 
@@ -117,7 +117,7 @@ def run_one(dataset, split, dim, targets, args, device):
                             test_index=test_emb.index.to_numpy(str))
         rows = []
         for target, y in targets.items():
-            res = probe_one(train_emb, test_emb, y, standardize=False)
+            res = probe_one(train_emb, test_emb, y)   # logreg_std
             if res is not None:
                 rows.append(dict(meta, epochs=epochs, target=target, train_link_auc=emb._auc,
                                  **res))
@@ -131,7 +131,7 @@ def run_one(dataset, split, dim, targets, args, device):
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--datasets", nargs="+", default=["hancock", "luad", "mimic"])
+    p.add_argument("--datasets", nargs="+", default=["hancock", "luad_noleak", "mimic"])
     p.add_argument("--splits", type=int, nargs="+", default=list(range(10)))
     p.add_argument("--dims", type=int, nargs="+", default=[32, 64])
     p.add_argument("--epoch-grid", type=int, nargs="+", default=EPOCH_GRID)

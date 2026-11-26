@@ -39,7 +39,7 @@ from scipy.stats import wilcoxon  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
-DATASETS = {"hancock": "HANCOCK", "luad": "TCGA-LUAD", "mimic": "MIMIC-IV"}
+DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 BUDGET = 2000  # POME's default inductive training budget
 DIM_COLORS = {32: "#1f77b4", 64: "#d62728"}
 

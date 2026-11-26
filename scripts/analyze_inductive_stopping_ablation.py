@@ -62,7 +62,7 @@ from scipy.stats import spearmanr, wilcoxon  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
-DATASETS = {"hancock": "HANCOCK", "luad": "TCGA-LUAD", "mimic": "MIMIC-IV"}
+DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 BUDGET = 2000
 EVAL_EVERY = 10
 PATIENCES = [1, 2, 3, 5, 10, 20]

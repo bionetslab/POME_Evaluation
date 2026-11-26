@@ -61,7 +61,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_epochs_pome14"
 
-DATASETS = ("hancock", "luad", "mimic")
+DATASETS = ("hancock", "luad_noleak", "mimic")
 DIMENSIONS = (16, 32, 64, 128)
 N_RUNS = 10
 

@@ -59,7 +59,7 @@ GPU (H200) jobs (first experiment / follow-up):
         --out-root output/shared_sample_encoding_followup
 CPU smoke test:
     POME_REPO=~/Projects/POME-shared-sample-encoding container/run.sh \\
-        scripts/generate_shared_sample_encoding_runs.py --datasets luad --seeds 2 --epochs 20 \\
+        scripts/generate_shared_sample_encoding_runs.py --datasets luad_noleak --seeds 2 --epochs 20 \\
         --out-root output/shared_sample_encoding_smoke
 
 Inputs:  data/train_test_splits/{dataset}/split_{NN}_{train,test}_pome.tsv
@@ -117,7 +117,7 @@ def check_pome_branch():
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--datasets", nargs="+", default=["hancock", "luad"])
+    p.add_argument("--datasets", nargs="+", default=["hancock", "luad_noleak"])
     p.add_argument("--split", type=int, default=0)
     p.add_argument("--dim", type=int, default=32)
     p.add_argument("--epochs", type=int, nargs="+", default=[500, 2000])

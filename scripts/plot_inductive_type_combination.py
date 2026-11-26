@@ -78,12 +78,12 @@ PANELS = [
     ("hancock", "Recurrence", "b", "HANCOCK: Recurrence"),
     ("hancock", "Survival", "c", "HANCOCK: Survival"),
     ("hancock", "RFS Event", "d", "HANCOCK: Recurrence-free \nsurvival event"),
-    ("luad", "Disease Free Status", "f", "TCGA-LUAD: \nDisease-free status"),
-    ("luad", "DSS Status", "g", "TCGA-LUAD: \nDisease-specific survival"),
-    ("luad", "Progression Free Status", "h",
+    ("luad_noleak", "Disease Free Status", "f", "TCGA-LUAD: \nDisease-free status"),
+    ("luad_noleak", "DSS Status", "g", "TCGA-LUAD: \nDisease-specific survival"),
+    ("luad_noleak", "Progression Free Status", "h",
      "TCGA-LUAD: \nProgression-free status"),
 ]
-BAR_PANELS = [("hancock", "a", "HANCOCK"), ("luad", "e", "TCGA-LUAD")]
+BAR_PANELS = [("hancock", "a", "HANCOCK"), ("luad_noleak", "e", "TCGA-LUAD")]
 
 
 # --- Analysis ----------------------------------------------------------------

@@ -54,9 +54,9 @@ panels = [
     ("hancock", "Recurrence", "d", "HANCOCK: Recurrence"),
     ("hancock", "Survival", "e", "HANCOCK: Survival"),
     ("hancock", "RFS Event", "f", "HANCOCK: Recurrence-free \nsurvival event"),
-    ("luad", "Disease Free Status", "g", "TCGA-LUAD: Disease-free status"),
-    ("luad", "DSS Status", "h", "TCGA-LUAD: Disease-specific survival"),
-    ("luad", "Progression Free Status", "i", "TCGA-LUAD: Progression-free status"),
+    ("luad_noleak", "Disease Free Status", "g", "TCGA-LUAD: Disease-free status"),
+    ("luad_noleak", "DSS Status", "h", "TCGA-LUAD: Disease-specific survival"),
+    ("luad_noleak", "Progression Free Status", "i", "TCGA-LUAD: Progression-free status"),
 ]
 
 # ---------------------------------------------------------------------------
