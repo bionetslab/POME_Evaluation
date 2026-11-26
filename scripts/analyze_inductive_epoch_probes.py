@@ -19,13 +19,22 @@ with the budget E=2000 (paired Wilcoxon over the 10 splits), lists the per-split
 a leave-one-split-out estimate (E* chosen on 9 splits, AP on the 10th) of what a fixed,
 dataset-specific epoch count would gain over the budget.
 
-Run from the project root (CPU):
+``ap_per_target`` also marks, per target and embedding size, the training length that the best
+label-free early-stopping criterion of ``inductive_stopping_criteria_ablation.py`` selects (lowest
+regret among the CV-based criteria, i.e. excluding the full and the shorter fixed budget; its
+hyperparameters tuned on d32/64 of all three datasets, whether or not it beats the full budget
+significantly): the median selected epoch over the 10 splits, drawn as a star on the mean curve.
+The rule is label-free, so per dataset, dim and split it selects the same epoch for every target.
+
+Run from the project root (CPU; after inductive_stopping_criteria_ablation.py):
     container/run.sh scripts/analyze_inductive_epoch_probes.py
 
-Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/grid_probes.csv
+Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/grid_probes.csv,
+         criteria_ablation/{summary,hyperparameters,selections}.csv
 Outputs (output/inductive_stopping_ablation/):
   epoch_peaks.csv           AP maxima over the epoch grid vs. the 2000-epoch budget
-  ap_per_target.pdf/.png    AP vs. epochs per target: mean +- SEM over splits, per dim
+  ap_per_target.pdf/.png    AP vs. epochs per target: mean +- SEM over splits, per dim, with the
+                            epoch selected by the best early-stopping criterion
 """
 import argparse
 from pathlib import Path
@@ -72,7 +81,23 @@ def epoch_peaks(probes):
     return pd.DataFrame(rows)
 
 
-def plot_targets(probes, out):
+def best_criterion_epochs(root):
+    """(label, {(dataset, dim): median selected epoch}) of the best early-stopping criterion."""
+    crit_dir = root / "criteria_ablation"
+    summary = pd.read_csv(crit_dir / "summary.csv")
+    stop = summary[~summary.criterion.isin(["budget", "fixed_epochs"])]
+    best = stop.sort_values("regret").iloc[0]
+    hp = pd.read_csv(crit_dir / "hyperparameters.csv")
+    param = hp.loc[hp.criterion == best.criterion, "param"].iloc[0]
+    sel = pd.read_csv(crit_dir / "selections.csv")
+    sel = sel[(sel.criterion == best.criterion) & (sel.param == param)]
+    g = sel.groupby(["dataset", "dim"])["epochs"]
+    # only (dataset, dim) units with a selection for every split (CV traces may still be running)
+    med = g.median()[g.size() == sel.split.nunique()].to_dict()
+    return f"{best.label} ({param})", med
+
+
+def plot_targets(probes, out, stop_label, stop_epochs):
     """AP vs epochs per target: mean +- SEM over splits, one line per embedding size."""
     targets = {ds: sorted(probes[probes.dataset == ds].target.unique()) for ds in DATASETS}
     ncol = max(len(t) for t in targets.values())
@@ -94,6 +119,14 @@ def plot_targets(probes, out):
                 m, se = a.mean(axis=1), a.sem(axis=1)
                 ax.plot(m.index, m, "o-", color=col, ms=3, lw=1.6, label=f"d={dim}")
                 ax.fill_between(m.index, m - se, m + se, color=col, alpha=.2, lw=0)
+                e = stop_epochs.get((ds, dim))
+                if e is not None:
+                    y = np.interp(np.log(e), np.log(m.index.to_numpy(float)), m.to_numpy())
+                    # before the first grid fit the AP is not measured: open star at the
+                    # AP of the first fit
+                    early = e < m.index.min()
+                    ax.plot(e, y, "*", color="white" if early else col, ms=13,
+                            mec=col if early else "black", mew=1.2 if early else 0.7, zorder=5)
             ax.axvline(BUDGET, color="grey", ls=":", lw=1)
             ax.set_xscale("log")
             ax.set_title(f"{dsl}: {t}", fontsize=10)
@@ -101,9 +134,18 @@ def plot_targets(probes, out):
                 ax.set_ylabel("probe AP (test split)")
             if i == len(DATASETS) - 1:
                 ax.set_xlabel("training epochs")
-    handles = axes[0, 0].get_legend_handles_labels()[0] + [plt.Line2D(
-        [], [], ls=":", color="grey", label=f"default budget ({BUDGET} epochs)")]
-    axes[0, 0].legend(handles=handles, fontsize=7, loc="lower right")
+    handles = axes[0, 0].get_legend_handles_labels()[0] + [
+        plt.Line2D([], [], ls=":", color="grey", label=f"default budget ({BUDGET} epochs)"),
+        plt.Line2D([], [], ls="", marker="*", ms=12, color="grey", mec="black", mew=0.7,
+                   label=f"early stop: {stop_label},\nmedian selected epoch over splits"),
+        plt.Line2D([], [], ls="", marker="*", ms=12, color="white", mec="grey", mew=1.2,
+                   label="(open: before the first grid fit;\nAP of the first fit shown)")]
+    # legend in a free panel if there is one, else in the first panel
+    free = [ax for ax in axes.ravel() if not ax.axison]
+    if free:
+        free[0].legend(handles=handles, fontsize=9, loc="center", frameon=False)
+    else:
+        axes[0, 0].legend(handles=handles, fontsize=7, loc="lower right")
     fig.suptitle("Linear-probe AP per target (mean ± SEM over 10 splits)", fontsize=11)
     fig.tight_layout()
     for ext in ("pdf", "png"):
@@ -119,7 +161,10 @@ def main() -> None:
     probes = load(args.root)
     peaks = epoch_peaks(probes)
     peaks.to_csv(args.root / "epoch_peaks.csv", index=False)
-    plot_targets(probes, args.root)
+    stop_label, stop_epochs = best_criterion_epochs(args.root)
+    plot_targets(probes, args.root, stop_label, stop_epochs)
+    print("best early-stopping criterion:", stop_label)
+    print({k: v for k, v in sorted(stop_epochs.items())})
     with pd.option_context("display.width", 250, "display.max_columns", 40):
         print(f"== AP maxima over the epoch grid vs {BUDGET} epochs (Wilcoxon over 10 splits) ==")
         print(peaks.round(4).to_string(index=False))

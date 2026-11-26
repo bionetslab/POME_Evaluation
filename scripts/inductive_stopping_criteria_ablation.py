@@ -48,6 +48,7 @@ Run from the project root (CPU; needs POME >= the inductive-revision branch):
 Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/{cv_trace,grid_probes}.csv
 Outputs: output/inductive_stopping_ablation/criteria_ablation/
   selections.csv        selected epoch per criterion x hyperparameters x dataset x dim x split
+                        (all dims with a CV trace; regrets and tuning use d32/64 only)
   regret_per_target.csv regret per criterion x hyperparameters x dataset x dim x split x target
   hyperparameters.csv   chosen hyperparameters per criterion
   summary.csv           per criterion: regret, CI, per dataset, p vs budget
@@ -71,6 +72,9 @@ DATASET_COLORS = {"hancock": "#2a78d6", "luad_noleak": "#eb6834", "mimic": "#1ba
 BUDGET = 2000
 EVAL_EVERY = 10
 KEY = ["dataset", "dim", "split"]
+# embedding sizes the criteria are compared and tuned on; selections.csv also covers other
+# sizes with a CV trace (d16, for the indicator in analyze_inductive_epoch_probes.py)
+TUNING_DIMS = (32, 64)
 PATIENCES = [1, 2, 3, 5, 10, 20]
 EMA = [0.1, 0.3]  # weight of the newest check
 
@@ -319,7 +323,7 @@ def main() -> None:
     grid_epochs = sorted({int(e) for _, g, _ in curves.values() for e in g})
     sel = select_all(trace, grid_epochs)
     sel.to_csv(out / "selections.csv", index=False)
-    reg = regrets(sel, curves)
+    reg = regrets(sel[sel.dim.isin(TUNING_DIMS)], curves)
     reg.to_csv(out / "regret_per_target.csv", index=False)
     tuned, hp = tuned_regret(reg)
     hp.to_csv(out / "hyperparameters.csv", index=False)
