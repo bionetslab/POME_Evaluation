@@ -123,14 +123,19 @@ container/run.sh scripts/generate_unsupervised_figure.py        # default --meth
 competitors. Every embedding is fit on a training split and transforms the held-out test split. The
 probe is fit on the training-split embedding and scored on the test-split embedding (average precision)
 for each binary target. There are 10 train/test splits per dataset, embedding sizes 16/32/64 and runs 0-4.
-`scripts/plot_inductive_linear_probing.py` draws the figure. Panel a counts the targets on which each
-method has the best median score, and panels b-i show one target each. Two probes are used; both
-z-score the embedding coordinates with the training statistics as preprocessing:
+Two probes are used; both z-score the embedding coordinates with the training statistics as
+preprocessing:
 
 - `logreg` (default): logistic regression (L2, liblinear) →
-  `output/linear_probing/inductive_logreg_probing_results.{csv,pdf}`
+  `output/linear_probing/inductive_logreg_probing_results.csv`
 - `mlp`: one hidden layer of 64 ReLU units with early stopping; the L2 penalty is tuned by an inner
-  3-fold CV on the training split → `output/linear_probing/inductive_mlp_probing_results.{csv,pdf}`
+  3-fold CV on the training split → `output/linear_probing/inductive_mlp_probing_results.csv`
+
+`scripts/plot_inductive_linear_probing.py` draws both probes in one figure,
+`output/linear_probing/inductive_probing_results.pdf`. Panels b-i show one target each: for every
+embedding size and method, the median AP of the logistic regression (filled circle) and of the MLP
+(empty circle), joined by a line in the method's colour. Panel a has two bars per method (filled =
+logistic regression, empty = MLP) counting the targets on which the method has the best median AP.
 
 **Datasets.** HANCOCK, MIMIC-IV and the leakage-free TCGA-LUAD (`luad_noleak`). Four LUAD inputs record
 the outcome or the follow-up after diagnosis and leak the targets: "New Neoplasm Event Post Initial
@@ -163,7 +168,7 @@ with its classical `fit`/`predict_proba` on the raw training-split table and the
 scores the test split → `output/linear_probing/inductive_tabicl_reference.csv` (one row per split and
 target). It produces no embedding and uses no probe, and it sees the labels, so it is not a competitor
 but an upper reference: each target panel draws its median AP over splits as a dashed line. It takes no
-part in the panel-a win count; the hatched part of each bar counts the wins that also beat it. TabICL
+part in the panel-a win count; the plot script prints how many wins also beat it (none so far). TabICL
 is used instead of TabPFN because TabPFN ≥ 2.5 requires a Prior Labs license login before its weights
 download. `tabicl`, `einops` and `huggingface_hub` are installed with
 `pip install --no-deps --target $(ws_find pome_eval)/pylib` (`run.sh`/`submit.sh` put it on
@@ -188,8 +193,8 @@ container/run.sh scripts/tabicl_inductive_reference.py --device cpu   # supervis
 # probe all methods and plot
 for P in logreg mlp; do
     container/run.sh scripts/linear_probe_inductive_embeddings.py --probe $P --jobs 32 --dims 16 32 64 --runs 0 1 2 3 4
-    container/run.sh scripts/plot_inductive_linear_probing.py --probe $P
 done
+container/run.sh scripts/plot_inductive_linear_probing.py
 ```
 `plot_inductive_linear_probing.py --methods POME UMAP` draws a subset of the methods.
 

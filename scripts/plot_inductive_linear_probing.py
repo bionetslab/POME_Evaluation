@@ -1,27 +1,27 @@
-"""Plot the inductive probing results.
+"""Plot the inductive probing results of both probes (logistic regression and MLP) in one figure.
 
-3x3 mosaic: one aggregated bar panel (a) + eight per-target boxplot panels (b-i), from the
-results of ``scripts/linear_probe_inductive_embeddings.py`` (embeddings fit on the train split
-and transformed onto the held-out test split). Each embedding size draws one box per method:
-POME, UMAP and the tabular competitors HI-VAE, SAINT and missForest+AE, with the names and
-colours of the clustering figure. The TCGA-LUAD panels show ``luad_noleak`` (LUAD without its
-outcome/follow-up variables).
+3x3 mosaic: one aggregated bar panel (a) + eight per-target panels (b-i), from the results of
+``scripts/linear_probe_inductive_embeddings.py --probe {logreg,mlp}`` (embeddings fit on the
+train split and transformed onto the held-out test split). Methods: POME, UMAP and the tabular
+competitors HI-VAE, SAINT and missForest+AE, with the names and colours of the clustering
+figure. The TCGA-LUAD panels show ``luad_noleak`` (LUAD without its outcome/follow-up variables).
 
-Supervised reference: the median test AP over splits of TabICL fit/predicted directly on the
-raw split tables with the target labels (``scripts/tabicl_inductive_reference.py``), drawn
-per target as a dashed line next to the positive class ratio. TabICL takes no part in the
-win count of panel a, which counts, per method, the targets on which it has the best median
-score (best over embedding sizes); the hatched part of a bar counts the wins whose best median
-also exceeds the TabICL reference.
+* Panels b-i: for every embedding size and method, the median test AP (over splits x runs) of
+  the logistic regression (filled circle) and of the MLP (empty circle), joined by a line, all
+  in the colour of the method. Dashed lines: positive class ratio (black) and the supervised
+  TabICL reference (red; median test AP over splits of TabICL fit/predicted directly on the raw
+  split tables with the target labels, ``scripts/tabicl_inductive_reference.py``).
+* Panel a: per method and probe (filled bar = logistic regression, empty bar = MLP), the number
+  of targets on which the method has the strictly best median AP (best over embedding sizes)
+  among the five methods. TabICL takes no part in the count; the wins that also beat the TabICL
+  reference are printed.
 
-    container/run.sh scripts/plot_inductive_linear_probing.py                   # logreg
-    container/run.sh scripts/plot_inductive_linear_probing.py --probe mlp
-    container/run.sh scripts/plot_inductive_linear_probing.py [--results CSV] [--output PDF] \
-        [--tabicl CSV] [--dims 16 32 64] [--methods POME UMAP]
+    container/run.sh scripts/plot_inductive_linear_probing.py [--output PDF] [--tabicl CSV] \
+        [--dims 16 32 64] [--methods POME UMAP]
 
-Defaults: ``output/linear_probing/inductive_<probe>_probing_results.{csv,pdf}`` and
-``output/linear_probing/inductive_tabicl_reference.csv``, all dims and methods in the results
-file. A results file that mixes probes (``probe`` column) is rejected.
+Inputs: ``output/linear_probing/inductive_{logreg,mlp}_probing_results.csv`` and
+``output/linear_probing/inductive_tabicl_reference.csv``.
+Output: ``output/linear_probing/inductive_probing_results.pdf``.
 """
 
 import argparse
@@ -29,110 +29,96 @@ import os
 
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
+import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
-# ---------------------------------------------------------------------------
-# Load data
-# ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(SCRIPT_DIR, "..", "output", "linear_probing")
 LUAD_DATASET = "luad_noleak"
+PROBES = {"logreg": "Logistic regression", "mlp": "MLP"}   # filled / empty markers and bars
+
 parser = argparse.ArgumentParser(description="Plot the inductive probing results.")
-parser.add_argument("--probe", default="logreg", choices=["logreg", "mlp"],
-                    help="probe whose default results file is plotted")
-parser.add_argument("--results", default=None, help="probing results CSV")
-parser.add_argument("--output", default=None, help="output PDF")
+for probe in PROBES:
+    parser.add_argument(f"--results-{probe}",
+                        default=os.path.join(OUT_DIR, f"inductive_{probe}_probing_results.csv"),
+                        help=f"{probe} probing results CSV")
 parser.add_argument("--tabicl", default=os.path.join(OUT_DIR, "inductive_tabicl_reference.csv"),
                     help="supervised TabICL reference CSV")
+parser.add_argument("--output", default=os.path.join(OUT_DIR, "inductive_probing_results.pdf"))
 parser.add_argument("--dims", nargs="+", type=int, default=None,
-                    help="embedding sizes to show (default: all in the results file)")
+                    help="embedding sizes to show (default: all in the results files)")
 parser.add_argument("--methods", nargs="+", default=None,
-                    help="methods to show, by figure name (default: all in the results file)")
+                    help="methods to show, by figure name (default: all in the results files)")
 args = parser.parse_args()
-stem = os.path.join(OUT_DIR, f"inductive_{args.probe}_probing_results")
-RESULTS_PATH = args.results or stem + ".csv"
-OUT_PATH = args.output or stem + ".pdf"
 
-df = pd.read_csv(RESULTS_PATH)
-probes = set(df["probe"])
-if len(probes) != 1:
-    raise SystemExit(f"{RESULTS_PATH} mixes probes {sorted(probes)}")
-if args.dims is not None:
-    df = df[df["dim"].isin(args.dims)].copy()
-
-# The results file may also carry the variable-type-restricted runs (mode
-# numeric_only / cat_only) that feed plot_inductive_type_combination.py. This
-# figure is the all-variables comparison only.
-if "mode" in df.columns:
-    df = df[df["mode"] == "combined"].copy()
-df = df[df["dataset"].isin(["mimic", "hancock", LUAD_DATASET])].copy()
-df.loc[df["dataset"] == LUAD_DATASET, "dataset"] = "luad"
-if df[df["dataset"] == "luad"].empty:
-    raise SystemExit(f"no {LUAD_DATASET} rows in {RESULTS_PATH}")
-
-# Use average precision as the score, mirroring the "Average precision" y-axis
-# of the original figure.
-df = df.rename(columns={"average_precision": "Score", "method": "Method", "target": "Target"})
 # results-file method label -> figure name, in the figure order of the clustering analysis
 METHOD_NAMES = {"POME": "POME", "UMAP": "UMAP", "HIVAE": "HI-VAE", "SAINT": "SAINT",
                 "MFAE": "missForest+AE"}
-df["Method"] = df["Method"].map(METHOD_NAMES).fillna(df["Method"])
-present = set(df["Method"])
+# fixed colour per method (Set2 in METHOD_NAMES order), so a subset keeps its colours
+palette = dict(zip(METHOD_NAMES.values(), sns.color_palette("Set2")))
+
+
+def load(path, probe):
+    df = pd.read_csv(path)
+    if set(df["probe"]) != {probe}:
+        raise SystemExit(f"{path}: expected probe {probe}, found {sorted(set(df['probe']))}")
+    if "mode" in df.columns:          # numeric_only / cat_only feed the type-combination figure
+        df = df[df["mode"] == "combined"]
+    df = df[df["dataset"].isin(["mimic", "hancock", LUAD_DATASET])].copy()
+    df.loc[df["dataset"] == LUAD_DATASET, "dataset"] = "luad"
+    df["method"] = df["method"].map(METHOD_NAMES).fillna(df["method"])
+    return df
+
+
+df = pd.concat([load(getattr(args, f"results_{p}"), p) for p in PROBES], ignore_index=True)
+if args.dims is not None:
+    df = df[df["dim"].isin(args.dims)]
+present = set(df["method"])
 methods = args.methods or [m for m in METHOD_NAMES.values() if m in present]
 missing = [m for m in methods if m not in present]
 if missing:
-    raise SystemExit(f"methods not in {RESULTS_PATH}: {missing}")
-df = df[df["Method"].isin(methods)].copy()
+    raise SystemExit(f"methods not in the results files: {missing}")
+df = df[df["method"].isin(methods)]
+dims = sorted(df["dim"].unique())
+
+# median AP per (probe, dataset, target, method, dim) over splits x runs
+med = (df.groupby(["probe", "dataset", "target", "method", "dim"])["average_precision"]
+       .median())
+pos_ratio = df.groupby(["dataset", "target"])["test_pos_ratio"].mean()
 
 # Supervised TabICL reference: median test AP over splits per (dataset, target).
 tabicl = pd.read_csv(args.tabicl)
 tabicl.loc[tabicl["dataset"] == LUAD_DATASET, "dataset"] = "luad"
 tabicl_ref = tabicl.groupby(["dataset", "target"])["average_precision"].median()
-missing_ref = (set(map(tuple, df[["dataset", "Target"]].drop_duplicates().to_numpy()))
-               - set(tabicl_ref.index))
+missing_ref = set(pos_ratio.index) - set(tabicl_ref.index)
 if missing_ref:
     raise SystemExit(f"no TabICL reference in {args.tabicl} for {sorted(missing_ref)}")
 
-# "Setting" = method, used as the boxplot hue in the per-target panels
-# (POME = Set2 mint-green, UMAP = Set2 orange, matching the paper).
-df["Setting"] = df["Method"]
-panel_df = df
-setting_order = list(methods)
-# fixed colour per method (Set2 in METHOD_NAMES order), so a subset keeps its colours
-setting_palette = dict(zip(METHOD_NAMES.values(), sns.color_palette("Set2")))
 
 # ---------------------------------------------------------------------------
-# Panel a: aggregate over targets and embedding sizes. For each (Method, Target,
-# dim) take the median score, then the best median per (Method, Target), and
-# count how often each method has the strictly highest one (ties count for nobody).
+# Panel a: per probe, the targets on which each method has the strictly best
+# best-across-dim median AP (ties count for nobody).
 # ---------------------------------------------------------------------------
-def method_win_counts(frame, order, reference):
-    """({method: #targets it wins}, {method: #of those wins above the reference}).
-
-    Wins by best-across-dim median score; ``reference`` = Series indexed by (dataset, target).
-    """
-    keys = ["dataset", "Target"]
-    median_scores = frame.groupby(["Method", *keys, "dim"])["Score"].median().reset_index()
-    max_scores = median_scores.groupby(["Method", *keys])["Score"].max().reset_index()
-    pivot = max_scores.pivot(index=keys, columns="Method", values="Score")[order]
-    best = pivot.max(axis=1)
-    winners = pivot.eq(best, axis=0)
+def win_counts(probe):
+    best = med[probe].groupby(["dataset", "target", "method"]).max().unstack("method")[methods]
+    top = best.max(axis=1)
+    winners = best.eq(top, axis=0)
     unique = winners.sum(axis=1) == 1
-    above = best.to_numpy() > reference.reindex(pivot.index).to_numpy()
-    return ({m: int((winners[m] & unique).sum()) for m in order},
-            {m: int((winners[m] & unique & above).sum()) for m in order})
+    above = top > tabicl_ref.reindex(best.index)
+    wins = {m: int((winners[m] & unique).sum()) for m in methods}
+    wins_above = {m: int((winners[m] & unique & above).sum()) for m in methods}
+    return wins, wins_above
 
 
-panel_a_order = setting_order
-wins, wins_above = method_win_counts(df, panel_a_order, tabicl_ref)
-agg_df = pd.DataFrame({"Setting": panel_a_order, "count": [wins[m] for m in panel_a_order],
-                       "above_tabicl": [wins_above[m] for m in panel_a_order]})
+wins = {p: win_counts(p) for p in PROBES}
 
 # ---------------------------------------------------------------------------
-# Per-target panels. (dataset, target, panel key, title)
+# Figure
 # ---------------------------------------------------------------------------
-panels = [
+panels = [  # (dataset, target, panel key, title)
     ("mimic", "Aplasia", "b", "MIMIC-IV: Aplasia"),
     ("mimic", "Neutropenic Fever", "c", "MIMIC-IV: Neutropenic fever"),
     ("hancock", "Recurrence", "d", "HANCOCK: Recurrence"),
@@ -142,10 +128,6 @@ panels = [
     ("luad", "DSS Status", "h", "TCGA-LUAD: Disease-specific survival"),
     ("luad", "Progression Free Status", "i", "TCGA-LUAD: Progression-free status"),
 ]
-
-# ---------------------------------------------------------------------------
-# Figure
-# ---------------------------------------------------------------------------
 mosaic = [["a", "b", "c"], ["d", "e", "f"], ["g", "h", "i"]]
 fig, axes = plt.subplot_mosaic(mosaic, figsize=(16, 12), layout="constrained")
 
@@ -154,108 +136,79 @@ labelfontsize = 20
 titlefontsize = 20
 ticklabelsize = 16
 legendfontsize = 16
+markersize = 9
 
-palette = sns.color_palette("Set2")
 
-# Panel a: aggregated bar plot, one bar per method.
-counts = dict(zip(agg_df["Setting"], agg_df["count"]))
-bar_positions = [0.95 * i for i in range(len(panel_a_order))]
-bar_width = 0.85
+def panel_label(ax, key):
+    ax.text(0.0, 1.0, key, transform=ax.transAxes + offset, fontsize=labelfontsize,
+            fontweight="bold")
 
-axes["a"].bar(
-    bar_positions,
-    [counts[s] for s in panel_a_order],
-    width=bar_width,
-    color=[setting_palette[s] for s in panel_a_order],
-)
-# hatched part: wins whose best median also exceeds the supervised TabICL reference
-axes["a"].bar(
-    bar_positions,
-    [wins_above[s] for s in panel_a_order],
-    width=bar_width,
-    color="none",
-    edgecolor="black",
-    hatch="//",
-    linewidth=0,
-    label="Win also beats TabICL",
-)
-axes["a"].set_ylim(0, max(counts.values()) + 1.5)   # room for the hatch legend
-axes["a"].legend(fontsize=ticklabelsize - 4, loc="upper right", frameon=False)
-axes["a"].yaxis.get_major_locator().set_params(integer=True)
-axes["a"].set_xlabel("")
-axes["a"].set_xticks(bar_positions)
-if len(panel_a_order) > 2:
-    axes["a"].set_xticklabels(panel_a_order, fontsize=ticklabelsize - 2, rotation=30, ha="right",
-                              rotation_mode="anchor")
-else:
-    axes["a"].set_xticklabels(panel_a_order, fontsize=ticklabelsize)
-axes["a"].set_ylabel("Number of targets with \nbest median score", fontsize=labelfontsize)
-axes["a"].tick_params(axis="y", labelsize=ticklabelsize)
-axes["a"].set_title("Results aggregated over \ntargets and embedding sizes", fontsize=titlefontsize)
-axes["a"].text(
-    0.0, 1.0, "a", transform=axes["a"].transAxes + offset, fontsize=labelfontsize, fontweight="bold"
-)
 
-# Per-target boxplot panels.
-legend_handles, legend_labels = None, None
+# Panel a: two bars per method (filled = logistic regression, empty = MLP).
+ax = axes["a"]
+x = np.arange(len(methods))
+bar_width = 0.4
+for i, probe in enumerate(PROBES):
+    counts = [wins[probe][0][m] for m in methods]
+    colors = [palette[m] for m in methods]
+    ax.bar(x + (i - 0.5) * bar_width, counts, width=bar_width * 0.9,
+           color=colors if probe == "logreg" else "white", edgecolor=colors, linewidth=2)
+ax.set_xticks(x)
+ax.set_xticklabels(methods, fontsize=ticklabelsize - 2, rotation=30, ha="right",
+                   rotation_mode="anchor")
+ax.set_ylabel("Number of targets with \nbest median score", fontsize=labelfontsize)
+ax.tick_params(axis="y", labelsize=ticklabelsize)
+ax.yaxis.get_major_locator().set_params(integer=True)
+ax.set_title("Results aggregated over \ntargets and embedding sizes", fontsize=titlefontsize)
+panel_label(ax, "a")
+
+# Per-target panels: dumbbell per (dim, method), logreg filled -> MLP empty.
+group_width = 0.8
+step = group_width / len(methods)
 for dataset, target, key, title in panels:
-    sub = panel_df[(panel_df["dataset"] == dataset) & (panel_df["Target"] == target)]
-    # Positive class ratio (dashed line) = mean test positive ratio for target.
-    naive = sub["test_pos_ratio"].mean()
+    ax = axes[key]
+    for j, m in enumerate(methods):
+        xs = np.arange(len(dims)) - group_width / 2 + (j + 0.5) * step
+        y_lr = [med.get(("logreg", dataset, target, m, d), np.nan) for d in dims]
+        y_mlp = [med.get(("mlp", dataset, target, m, d), np.nan) for d in dims]
+        for xi, a, b in zip(xs, y_lr, y_mlp):
+            ax.plot([xi, xi], [a, b], color=palette[m], linewidth=2, zorder=2)
+        ax.plot(xs, y_lr, "o", color=palette[m], markersize=markersize, zorder=3)
+        ax.plot(xs, y_mlp, "o", markerfacecolor="white", markeredgecolor=palette[m],
+                markeredgewidth=2, markersize=markersize, zorder=3)
+    ax.axhline(pos_ratio[(dataset, target)], color="black", linestyle="--", linewidth=2)
+    ax.axhline(tabicl_ref[(dataset, target)], color="firebrick", linestyle="--", linewidth=2)
+    ax.set_xticks(np.arange(len(dims)))
+    ax.set_xticklabels(dims)
+    ax.set_xlim(-0.5, len(dims) - 0.5)
+    ax.set_xlabel("Embedding size", fontsize=labelfontsize)
+    ax.set_ylabel("Median average precision", fontsize=labelfontsize - 2)
+    ax.tick_params(axis="both", labelsize=ticklabelsize)
+    ax.set_title(title, fontsize=titlefontsize)
+    panel_label(ax, key)
 
-    show_legend = key == "b"
-    sns.boxplot(
-        data=sub,
-        x="dim",
-        y="Score",
-        hue="Setting",
-        hue_order=setting_order,
-        ax=axes[key],
-        dodge=True,
-        gap=0.2,
-        legend=show_legend,
-        palette=setting_palette,
-    )
+# Shared legend at the top: methods (colour), probes (fill), reference lines.
+handles = [Patch(facecolor=palette[m], edgecolor=palette[m], label=m) for m in methods]
+handles += [
+    Line2D([], [], marker="o", linestyle="", color="dimgray", markersize=markersize,
+           label=PROBES["logreg"]),
+    Line2D([], [], marker="o", linestyle="", markerfacecolor="white",
+           markeredgecolor="dimgray", markeredgewidth=2, markersize=markersize,
+           label=PROBES["mlp"]),
+    Line2D([], [], color="black", linestyle="--", linewidth=2, label="Positive class ratio"),
+    Line2D([], [], color="firebrick", linestyle="--", linewidth=2, label="TabICL (supervised)"),
+]
+# legends fill column-wise: interleave so row 1 = methods, row 2 = probes + reference lines
+first, second = handles[:len(methods)], handles[len(methods):]
+second += [Patch(visible=False, label="")] * (len(first) - len(second))   # pad row 2
+handles = [h for pair in zip(first, second) for h in pair]
+legend = fig.legend(handles=handles, loc="center", bbox_to_anchor=(0.5, 1.04),
+                    ncol=len(first), fontsize=legendfontsize, frameon=True,
+                    fancybox=False)
 
-    axes[key].axhline(
-        naive, color="black", linestyle="--", linewidth=2, label="Positive class ratio"
-    )
-    axes[key].axhline(
-        tabicl_ref[(dataset, target)], color="firebrick", linestyle="--", linewidth=2,
-        label="TabICL (supervised)",
-    )
-
-    axes[key].set_xlabel("Embedding size", fontsize=labelfontsize)
-    axes[key].set_ylabel("Average precision", fontsize=labelfontsize)
-    axes[key].tick_params(axis="x", labelsize=ticklabelsize)
-    axes[key].tick_params(axis="y", labelsize=ticklabelsize)
-    axes[key].set_title(title, fontsize=titlefontsize)
-    axes[key].text(
-        0.0,
-        1.0,
-        key,
-        transform=axes[key].transAxes + offset,
-        fontsize=labelfontsize,
-        fontweight="bold",
-    )
-
-    if show_legend:
-        legend_handles, legend_labels = axes[key].get_legend_handles_labels()
-        axes[key].legend_.remove()
-
-# Shared legend at the top.
-legend1 = fig.legend(
-    legend_handles,
-    legend_labels,
-    loc="center",
-    bbox_to_anchor=(0.49, 1.02),
-    ncol=len(legend_labels),
-    fontsize=legendfontsize,
-    frameon=True,
-    fancybox=False,
-)
-
-fig.savefig(OUT_PATH, bbox_inches="tight", bbox_extra_artists=[legend1])
-print(f"Saved figure to {OUT_PATH}")
-print("Aggregated counts:")
-print(agg_df.to_string(index=False))
+os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+fig.savefig(args.output, bbox_inches="tight", bbox_extra_artists=[legend])
+print(f"Saved figure to {args.output}")
+summary = pd.DataFrame({f"{p}_wins": wins[p][0] for p in PROBES}
+                       | {f"{p}_wins_above_tabicl": wins[p][1] for p in PROBES})
+print(summary.to_string())
