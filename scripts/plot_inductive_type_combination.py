@@ -9,7 +9,7 @@ legacy path is kept in the repo for comparison; new work uses this script.
 The question is unchanged: for each embedding method, on how many targets does
 embedding *all* variables beat embedding only the continuous or only the
 categorical ones? What changes is the evaluation protocol -- scores now come
-from ``output/linear_probing/inductive_linear_probing_results.csv``, i.e. a
+from ``output/linear_probing/inductive_logreg_probing_results.csv``, i.e. a
 logistic regression fit on the train-split embedding and evaluated on the
 held-out test-split embedding, over the same ``data/train_test_splits/``
 partitions used by ``scripts/plot_inductive_linear_probing.py``. The three
@@ -20,7 +20,7 @@ encoder saw.
 Requires the restricted modes to have been generated and probed first:
 
     python scripts/generate_inductive_embeddings.py --modes numeric_only cat_only ...
-    python scripts/linear_probe_inductive_embeddings.py
+    python scripts/linear_probe_inductive_embeddings.py --modes combined numeric_only cat_only
 
 Layout (2x4 mosaic), mirroring the notebook figure:
 
@@ -58,7 +58,7 @@ import seaborn as sns
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RESULTS = PROJECT_ROOT / "output" / "linear_probing" / \
-    "inductive_linear_probing_results.csv"
+    "inductive_logreg_probing_results.csv"
 DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "linear_probing" / \
     "inductive_type_combination_effect.pdf"
 DEFAULT_DIM = 64

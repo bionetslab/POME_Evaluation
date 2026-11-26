@@ -117,7 +117,7 @@ def run_one(dataset, split, dim, targets, args, device):
                             test_index=test_emb.index.to_numpy(str))
         rows = []
         for target, y in targets.items():
-            res = probe_one(train_emb, test_emb, y)   # logreg_std
+            res = probe_one(train_emb, test_emb, y, standardize=False)   # raw logreg
             if res is not None:
                 rows.append(dict(meta, epochs=epochs, target=target, train_link_auc=emb._auc,
                                  **res))

@@ -77,7 +77,7 @@ BINDS=(--bind "$REPO" --bind "$WS")
 [[ "$POME_REPO" == "$HOME"/* ]] || BINDS+=(--bind "$POME_REPO")   # bind only if outside $HOME
 [[ -z "$UMAP_SHIM" || "$UMAP_REPO" == "$HOME"/* ]] || BINDS+=(--bind "$UMAP_REPO")
 PYPATH="${UMAP_SHIM:+$UMAP_SHIM:}$REPO/src:$POME_REPO/src"
-# Packages added after the image was built (e.g. tabicl for the TabICL embeddings),
+# Packages added after the image was built (e.g. tabicl for the TabICL reference),
 # installed with `pip install --no-deps --target $WS/pylib ...` inside the image.
 [[ -d "$WS/pylib" ]] && PYPATH="$PYPATH:$WS/pylib"
 APPTAINER=(apptainer run $NV "${BINDS[@]}" --pwd "$REPO"

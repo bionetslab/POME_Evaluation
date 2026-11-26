@@ -124,11 +124,11 @@ competitors. Every embedding is fit on a training split and transforms the held-
 probe is fit on the training-split embedding and scored on the test-split embedding (average precision)
 for each binary target. There are 10 train/test splits per dataset, embedding sizes 16/32/64 and runs 0-4.
 `scripts/plot_inductive_linear_probing.py` draws the figure. Panel a counts the targets on which each
-method has the best median score, and panels b-i show one target each. Two probes are used, both on
-features z-scored with the training statistics:
+method has the best median score, and panels b-i show one target each. Two probes are used; both
+z-score the embedding coordinates with the training statistics as preprocessing:
 
-- `logreg_std` (default): logistic regression (L2, liblinear) →
-  `output/linear_probing/inductive_logreg_std_probing_results.{csv,pdf}`
+- `logreg` (default): logistic regression (L2, liblinear) →
+  `output/linear_probing/inductive_logreg_probing_results.{csv,pdf}`
 - `mlp`: one hidden layer of 64 ReLU units with early stopping; the L2 penalty is tuned by an inner
   3-fold CV on the training split → `output/linear_probing/inductive_mlp_probing_results.{csv,pdf}`
 
@@ -156,19 +156,18 @@ the only LUAD dataset of the inductive analyses.
     training split and imputes train + test (cached in `_mfae_imputed/`). The design matrix uses
     training z-scores and training one-hot categories, and the autoencoder is trained on the training
     rows only.
-- **TabICL** (pre-trained tabular foundation model, label-free): `scripts/embed_tabicl_labelfree_inductive.py`
-  (`tabicl` 2.2.0, checkpoint `tabicl-classifier-v1.1-20250506.ckpt`) → `output/inductive_competitors/tabicl_lf`.
-  TabICL is used instead of TabPFN because TabPFN ≥ 2.5 requires a Prior Labs license login before its
-  weights download, and TabPFN has no label-free stage (labels enter from its first layer). The
-  embedding is the output of TabICL's row-wise interaction stage (512-d), taken before the in-context
-  stage that uses labels; v1.1's column embedding is not target-aware. One forward pass per split and
-  run embeds the training and test rows, with the column statistics from the training rows only. The
-  sklearn wrapper needs labels for `fit`, so a dummy label vector is passed; the script checks that a
-  second, different dummy vector gives identical embeddings. PCA fit on train reduces the embedding to
-  16/32/64. Each run is one ensemble member with a run-seeded feature order. `tabicl`, `einops` and
-  `huggingface_hub` are installed with `pip install --no-deps --target $(ws_find pome_eval)/pylib`
-  (`run.sh`/`submit.sh` put it on `PYTHONPATH`). The checkpoint is stored in
-  `$(ws_find pome_eval)/models/tabicl/`.
+
+**Supervised reference: TabICL.** `scripts/tabicl_inductive_reference.py` fits the pre-trained tabular
+foundation model TabICL (`tabicl` 2.2.0, default settings and checkpoint `tabicl-classifier-v2-20260212.ckpt`)
+with its classical `fit`/`predict_proba` on the raw training-split table and the target labels, and
+scores the test split → `output/linear_probing/inductive_tabicl_reference.csv` (one row per split and
+target). It produces no embedding and uses no probe, and it sees the labels, so it is not a competitor
+but an upper reference: each target panel draws its median AP over splits as a dashed line. It takes no
+part in the panel-a win count; the hatched part of each bar counts the wins that also beat it. TabICL
+is used instead of TabPFN because TabPFN ≥ 2.5 requires a Prior Labs license login before its weights
+download. `tabicl`, `einops` and `huggingface_hub` are installed with
+`pip install --no-deps --target $(ws_find pome_eval)/pylib` (`run.sh`/`submit.sh` put it on
+`PYTHONPATH`); the checkpoint is stored in `$(ws_find pome_eval)/models/tabicl/`.
 
 ```bash
 WS=$(ws_find pome_eval)
@@ -185,9 +184,9 @@ sbatch --job-name=ind_hivae --export=POME_EVAL_SIF=$WS/containers/hivae.sif \
 sbatch --job-name=ind_saint --export=POME_EVAL_SIF=$WS/containers/saint.sif,PYTHONHASHSEED=0 \
     container/submit.sh scripts/embed_saint_inductive.py --datasets hancock luad_noleak   # + mimic, per --dims
 sbatch --job-name=ind_mfae container/submit.sh scripts/embed_mfae_inductive.py
-sbatch --job-name=ind_tabicl_lf container/submit.sh scripts/embed_tabicl_labelfree_inductive.py
+container/run.sh scripts/tabicl_inductive_reference.py --device cpu   # supervised reference
 # probe all methods and plot
-for P in logreg_std mlp; do
+for P in logreg mlp; do
     container/run.sh scripts/linear_probe_inductive_embeddings.py --probe $P --jobs 32 --dims 16 32 64 --runs 0 1 2 3 4
     container/run.sh scripts/plot_inductive_linear_probing.py --probe $P
 done
@@ -202,7 +201,9 @@ probing results with the `numeric_only` / `cat_only` modes (`linear_probe_induct
 
 `scripts/linear_probe_full_dataset_embeddings.py` is the transductive control: it probes the
 full-dataset embeddings of HANCOCK and MIMIC on the same splits. LUAD is left out because its
-full-dataset embeddings contain the leaking variables.
+full-dataset embeddings contain the leaking variables. This control and the OOD, stopping, epoch and
+initialization ablations use the logistic regression on the raw (not z-scored) embedding coordinates
+(`probe_one(..., standardize=False)`).
 
 The earlier transductive versions of the figures are retained for comparison: `scripts/plot_fig3_linear_probing.ipynb` and `scripts/plot_type_combination_effect.ipynb`, fed by the `src/pome_evaluation/analyze_*_embedding_separability.ipynb` notebooks via `output/supervised/`.
 
@@ -268,7 +269,7 @@ For analyzing which visualization technique best preserves high-dimension cluste
 
 ### Analyze supervised learning results
 
-For comparing how well the embeddings of POME and its competitors predict held-out target variables, run `scripts/linear_probe_inductive_embeddings.py` (standardized logistic regression, or `--probe mlp`). It probes every dataset and method into one tidy CSV, fitting on each training split and scoring the held-out test split. `scripts/linear_probe_full_dataset_embeddings.py` is the transductive control over the same splits.
+For comparing how well the embeddings of POME and its competitors predict held-out target variables, run `scripts/linear_probe_inductive_embeddings.py` (logistic regression, or `--probe mlp`, both on z-scored coordinates; TabICL fit on the raw data with the labels as an upper reference). It probes every dataset and method into one tidy CSV, fitting on each training split and scoring the held-out test split. `scripts/linear_probe_full_dataset_embeddings.py` is the transductive control over the same splits.
 
 ### Generate simulated missingness datasets
 

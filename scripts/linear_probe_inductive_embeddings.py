@@ -7,7 +7,9 @@ Methods (embeddings fit on the training split, the held-out test split transform
     hivae      HI-VAE                    scripts/embed_hivae_inductive.py           output/inductive_competitors
     saint      SAINT (native)            scripts/embed_saint_inductive.py           output/inductive_competitors
     mfae       missForest + autoencoder  scripts/embed_mfae_inductive.py            output/inductive_competitors
-    tabicl_lf  TabICL v1.1, label-free   scripts/embed_tabicl_labelfree_inductive.py output/inductive_competitors
+
+TabICL is not probed here: it is a supervised reference (fit/predict on the raw split tables),
+``scripts/tabicl_inductive_reference.py``, drawn as an upper reference line in the figure.
 
 Every method is read from its own root (``METHOD_ROOTS``), so one call probes all of them;
 ``--emb-root`` overrides the root for every method (e.g. for variant embeddings). For every
@@ -23,15 +25,17 @@ embedding* and *evaluated on the held-out test-split embedding*, for each binary
 Object-typed targets are integer-encoded with LabelEncoder fit on the full target column (e.g.
 recurrence no=0/yes=1, survival_status deceased=0/living=1); numeric 0/1 targets pass through.
 
-Probes (``--probe``):
+Probes (``--probe``). Both standardize the embedding coordinates as preprocessing (z-scored
+with the training-split mean/std):
 
-    logreg_std : logistic regression on standardized features (z-scored with the training
-                 mean/std): LogisticRegression(penalty="l2", solver="liblinear", max_iter=1000).
-                 The default.
-    mlp        : one hidden layer of 64 ReLU units on standardized features, Adam, early stopping
-                 on a 10% validation split of the training data, seed 0. The L2 penalty alpha in
-                 {1e-4, 1e-2, 1} is tuned by an inner stratified 3-fold CV (seed 0, scoring =
-                 average precision) on the training split only, then refit on the whole split.
+    logreg : LogisticRegression(penalty="l2", solver="liblinear", max_iter=1000). The default.
+    mlp    : one hidden layer of 64 ReLU units, Adam, early stopping on a 10% validation split of
+             the training data, seed 0. The L2 penalty alpha in {1e-4, 1e-2, 1} is tuned by an
+             inner stratified 3-fold CV (seed 0, scoring = average precision) on the training
+             split only, then refit on the whole split.
+
+The other probing analyses (OOD, stopping/epoch/init ablations, full-dataset control) call
+``probe_one(..., standardize=False)``: the same logistic regression on the raw coordinates.
 
 Variable-type modes (``--modes``)
 ---------------------------------
@@ -75,7 +79,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
 OUTPUT_DIR = PROJECT_ROOT / "output" / "linear_probing"
 
-PROBES = ("logreg_std", "mlp")
+PROBES = ("logreg", "mlp")
 DATASETS = ("hancock", "mimic", "luad_noleak")
 COMPETITOR_ROOT = PROJECT_ROOT / "output" / "inductive_competitors"
 METHOD_ROOTS = {
@@ -84,7 +88,6 @@ METHOD_ROOTS = {
     "hivae": COMPETITOR_ROOT,
     "saint": COMPETITOR_ROOT,
     "mfae": COMPETITOR_ROOT,
-    "tabicl_lf": COMPETITOR_ROOT,
 }
 METHODS = tuple(METHOD_ROOTS)
 # Variable-type subsets written by generate_inductive_embeddings.py --modes.
@@ -179,15 +182,14 @@ def discover_runs(emb_root: Path, method: str, dataset: str,
 INNER_CV_FOLDS = 3
 
 
-def make_classifier(probe: str):
-    """The probe estimator; both standardize the features with the training statistics."""
-    if probe == "logreg_std":
-        return Pipeline([("scale", StandardScaler()),
-                         ("clf", LogisticRegression(penalty="l2", solver="liblinear",
-                                                    max_iter=1000))])
+def make_classifier(probe: str, standardize: bool = True):
+    """The probe estimator, optionally preceded by standardization with the training statistics."""
+    scale = [("scale", StandardScaler())] if standardize else []
+    if probe == "logreg":
+        return Pipeline(scale + [("clf", LogisticRegression(penalty="l2", solver="liblinear",
+                                                            max_iter=1000))])
     if probe == "mlp":
-        est = Pipeline([("scale", StandardScaler()),
-                        ("clf", MLPClassifier(hidden_layer_sizes=(64,), early_stopping=True,
+        est = Pipeline(scale + [("clf", MLPClassifier(hidden_layer_sizes=(64,), early_stopping=True,
                                               validation_fraction=0.1, max_iter=500,
                                               random_state=0))])
         cv = StratifiedKFold(n_splits=INNER_CV_FOLDS, shuffle=True, random_state=0)
@@ -197,8 +199,11 @@ def make_classifier(probe: str):
 
 
 def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
-              y_full: pd.Series, probe: str = "logreg_std") -> dict | None:
+              y_full: pd.Series, probe: str = "logreg",
+              standardize: bool = True) -> dict | None:
     """Fit the probe on train embedding, evaluate on test embedding for one target.
+
+    ``standardize=False`` drops the z-scoring (used by the OOD/ablation analyses).
 
     Returns a metrics dict, or None if the target can't be probed for this
     split (e.g. <2 classes in the training labels).
@@ -226,7 +231,7 @@ def probe_one(train_emb: pd.DataFrame, test_emb: pd.DataFrame,
     if len(y_tr) == 0 or len(y_te) == 0 or len(np.unique(y_tr)) < 2:
         return None
 
-    clf = make_classifier(probe)
+    clf = make_classifier(probe, standardize)
     clf.fit(X_tr, y_tr)
     proba = clf.predict_proba(X_te)[:, 1]
     pred = (proba >= 0.5).astype(int)
@@ -289,7 +294,7 @@ def main() -> None:
                         help="embedding root for every method (default: METHOD_ROOTS)")
     parser.add_argument("--output", type=Path, default=None,
                         help="default: output/linear_probing/inductive_<probe>_probing_results.csv")
-    parser.add_argument("--probe", choices=PROBES, default="logreg_std")
+    parser.add_argument("--probe", choices=PROBES, default="logreg")
     parser.add_argument("--jobs", type=int, default=1,
                         help="embedding pairs probed in parallel")
     args = parser.parse_args()

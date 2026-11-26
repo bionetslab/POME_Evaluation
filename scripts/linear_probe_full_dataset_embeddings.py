@@ -35,8 +35,8 @@ read from the split files (identical across the POME/UMAP formats), so the exact
 same samples are held out as in the inductive analysis -- including MIMIC's
 patient-level grouping, which is already baked into the splits.
 
-The probe (``--probe``) is that of the inductive script: ``logreg_std`` (logistic regression on
-standardized features, the default) or ``mlp``.
+The probe is the logistic regression of the inductive script on the raw (unstandardized)
+embedding coordinates (``probe_one(..., standardize=False)``).
 
 Run from the project root (any env with pandas + scikit-learn):
 
@@ -65,7 +65,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 # routine so the two analyses are identical apart from the embedding source.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from linear_probe_inductive_embeddings import (  # noqa: E402
-    PROBES, load_binary_targets, probe_one)
+    load_binary_targets, probe_one)
 
 # --- Configuration -----------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -168,14 +168,13 @@ def main() -> None:
     parser.add_argument("--runs", nargs="+", type=int, default=None,
                         help="run ids to probe (default: all found)")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--probe", choices=PROBES, default="logreg_std")
     args = parser.parse_args()
 
     warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
     print(f"Embeddings root: {EMBEDDINGS_ROOT}")
     print(f"Splits root: {SPLITS_ROOT}")
     print(f"Datasets: {args.datasets} | methods: {args.methods} | "
-          f"probe: {args.probe}")
+          f"probe: logreg (raw coordinates)")
 
     rows = []
     for dataset in args.datasets:
@@ -211,7 +210,7 @@ def main() -> None:
                         test_emb = emb.loc[emb.index.intersection(test_ids)]
                         for label, y_full in targets.items():
                             metrics = probe_one(train_emb, test_emb, y_full,
-                                                args.probe)
+                                                standardize=False)
                             if metrics is None:
                                 continue
                             n_nonfinite += (metrics["n_train_nonfinite"]
@@ -223,7 +222,7 @@ def main() -> None:
                                 # identical to the inductive results.
                                 "mode": "combined",
                                 "target": label, "dim": dim, "split": split,
-                                "run": run, **metrics, "probe": args.probe,
+                                "run": run, **metrics, "probe": "logreg_raw",
                             })
                     n_probed += 1
             msg = (f"  {method:4s}: probed {n_probed} embeddings "

@@ -167,7 +167,7 @@ def run_one(dataset, dim, split, epochs, targets, device, seed):
         test_emb = pd.DataFrame(te[kind], index=[str(s) for s in te_samples],
                                 columns=train_emb.columns)
         for target, y in targets.items():
-            res = probe_one(train_emb, test_emb, y)   # logreg_std
+            res = probe_one(train_emb, test_emb, y, standardize=False)   # raw logreg
             if res is not None:
                 probe_rows.append(dict(meta, init=kind, target=target,
                                        average_precision=res["average_precision"]))

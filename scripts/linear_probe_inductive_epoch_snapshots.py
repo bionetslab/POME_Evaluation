@@ -3,8 +3,8 @@ produced by ``scripts/generate_inductive_epoch_snapshots.py``, to measure how
 probing quality evolves with training duration.
 
 For every ``epoch_{E}`` snapshot directory this reuses the exact probing logic of
-``scripts/linear_probe_inductive_embeddings.py`` -- a logistic regression fit on
-the train-split embedding and evaluated on the held-out test-split embedding, per
+``scripts/linear_probe_inductive_embeddings.py`` -- a logistic regression (raw, unstandardized
+coordinates) fit on the train-split embedding and evaluated on the held-out test-split embedding, per
 binary target -- and stamps each result with its ``epoch``. The snapshot layout
 (``.../epoch_{E}/pome/{dataset}/split_{NN}/dim_{D}/run_{R}_{train,test}.csv``) is
 structurally identical to ``output/inductive``, so ``discover_runs`` works on each
@@ -42,7 +42,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 # Reuse the probing primitives so the methodology is identical to the
 # single-shot inductive probing script.
 from linear_probe_inductive_embeddings import (
-    DATASETS, PROBES, discover_runs, load_binary_targets, probe_one)
+    DATASETS, discover_runs, load_binary_targets, probe_one)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_EMB_ROOT = PROJECT_ROOT / "output" / "inductive_epochs"
@@ -252,7 +252,6 @@ def main() -> None:
                         help="run ids to probe (default: all found)")
     parser.add_argument("--emb-root", type=Path, default=DEFAULT_EMB_ROOT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--probe", choices=PROBES, default="logreg_std")
     parser.add_argument("--rankme-plateau-tol", type=float, default=0.2,
                         help="RankMe-plateau rule: marginal-gain threshold as a "
                              "fraction of the largest gain (default: 0.2)")
@@ -276,7 +275,7 @@ def main() -> None:
 
     print(f"Embedding root: {args.emb_root}")
     print(f"Epochs: {[e for e, _ in epoch_dirs]} | datasets: {args.datasets} | "
-          f"probe: {args.probe}")
+          f"probe: logreg (raw coordinates)")
 
     rows = []
     for epoch, epoch_dir in epoch_dirs:
@@ -302,7 +301,7 @@ def main() -> None:
                                          n_draws=args.gap_draws)
                 for label, y_full in targets.items():
                     metrics = probe_one(train_emb, test_emb, y_full,
-                                        args.probe)
+                                        standardize=False)
                     if metrics is None:
                         continue
                     rows.append({

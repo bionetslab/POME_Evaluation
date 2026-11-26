@@ -3,18 +3,25 @@
 3x3 mosaic: one aggregated bar panel (a) + eight per-target boxplot panels (b-i), from the
 results of ``scripts/linear_probe_inductive_embeddings.py`` (embeddings fit on the train split
 and transformed onto the held-out test split). Each embedding size draws one box per method:
-POME, UMAP, the tabular competitors HI-VAE, SAINT and missForest+AE, and the label-free TabICL
-(method TABICL_LF, drawn as "TabICL"), with the names and colours of the clustering figure.
-Panel a counts, per method, the targets on which it has the best median score. The TCGA-LUAD
-panels show ``luad_noleak`` (LUAD without its outcome/follow-up variables).
+POME, UMAP and the tabular competitors HI-VAE, SAINT and missForest+AE, with the names and
+colours of the clustering figure. The TCGA-LUAD panels show ``luad_noleak`` (LUAD without its
+outcome/follow-up variables).
 
-    container/run.sh scripts/plot_inductive_linear_probing.py                   # logreg_std
+Supervised reference: the median test AP over splits of TabICL fit/predicted directly on the
+raw split tables with the target labels (``scripts/tabicl_inductive_reference.py``), drawn
+per target as a dashed line next to the positive class ratio. TabICL takes no part in the
+win count of panel a, which counts, per method, the targets on which it has the best median
+score (best over embedding sizes); the hatched part of a bar counts the wins whose best median
+also exceeds the TabICL reference.
+
+    container/run.sh scripts/plot_inductive_linear_probing.py                   # logreg
     container/run.sh scripts/plot_inductive_linear_probing.py --probe mlp
     container/run.sh scripts/plot_inductive_linear_probing.py [--results CSV] [--output PDF] \
-        [--dims 16 32 64] [--methods POME UMAP]
+        [--tabicl CSV] [--dims 16 32 64] [--methods POME UMAP]
 
-Defaults: ``output/linear_probing/inductive_<probe>_probing_results.{csv,pdf}``, all dims and
-methods in the results file. A results file that mixes probes (``probe`` column) is rejected.
+Defaults: ``output/linear_probing/inductive_<probe>_probing_results.{csv,pdf}`` and
+``output/linear_probing/inductive_tabicl_reference.csv``, all dims and methods in the results
+file. A results file that mixes probes (``probe`` column) is rejected.
 """
 
 import argparse
@@ -32,10 +39,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(SCRIPT_DIR, "..", "output", "linear_probing")
 LUAD_DATASET = "luad_noleak"
 parser = argparse.ArgumentParser(description="Plot the inductive probing results.")
-parser.add_argument("--probe", default="logreg_std", choices=["logreg_std", "mlp"],
+parser.add_argument("--probe", default="logreg", choices=["logreg", "mlp"],
                     help="probe whose default results file is plotted")
 parser.add_argument("--results", default=None, help="probing results CSV")
 parser.add_argument("--output", default=None, help="output PDF")
+parser.add_argument("--tabicl", default=os.path.join(OUT_DIR, "inductive_tabicl_reference.csv"),
+                    help="supervised TabICL reference CSV")
 parser.add_argument("--dims", nargs="+", type=int, default=None,
                     help="embedding sizes to show (default: all in the results file)")
 parser.add_argument("--methods", nargs="+", default=None,
@@ -66,9 +75,8 @@ if df[df["dataset"] == "luad"].empty:
 # of the original figure.
 df = df.rename(columns={"average_precision": "Score", "method": "Method", "target": "Target"})
 # results-file method label -> figure name, in the figure order of the clustering analysis
-# TABICL_LF: label-free TabICL v1.1 row embeddings (embed_tabicl_labelfree_inductive.py).
 METHOD_NAMES = {"POME": "POME", "UMAP": "UMAP", "HIVAE": "HI-VAE", "SAINT": "SAINT",
-                "MFAE": "missForest+AE", "TABICL_LF": "TabICL"}
+                "MFAE": "missForest+AE"}
 df["Method"] = df["Method"].map(METHOD_NAMES).fillna(df["Method"])
 present = set(df["Method"])
 methods = args.methods or [m for m in METHOD_NAMES.values() if m in present]
@@ -76,6 +84,15 @@ missing = [m for m in methods if m not in present]
 if missing:
     raise SystemExit(f"methods not in {RESULTS_PATH}: {missing}")
 df = df[df["Method"].isin(methods)].copy()
+
+# Supervised TabICL reference: median test AP over splits per (dataset, target).
+tabicl = pd.read_csv(args.tabicl)
+tabicl.loc[tabicl["dataset"] == LUAD_DATASET, "dataset"] = "luad"
+tabicl_ref = tabicl.groupby(["dataset", "target"])["average_precision"].median()
+missing_ref = (set(map(tuple, df[["dataset", "Target"]].drop_duplicates().to_numpy()))
+               - set(tabicl_ref.index))
+if missing_ref:
+    raise SystemExit(f"no TabICL reference in {args.tabicl} for {sorted(missing_ref)}")
 
 # "Setting" = method, used as the boxplot hue in the per-target panels
 # (POME = Set2 mint-green, UMAP = Set2 orange, matching the paper).
@@ -90,20 +107,27 @@ setting_palette = dict(zip(METHOD_NAMES.values(), sns.color_palette("Set2")))
 # dim) take the median score, then the best median per (Method, Target), and
 # count how often each method has the strictly highest one (ties count for nobody).
 # ---------------------------------------------------------------------------
-def method_win_counts(frame, order):
-    """{method: #targets it wins} by best-across-dim median score."""
-    median_scores = frame.groupby(["Method", "Target", "dim"])["Score"].median().reset_index()
-    max_scores = median_scores.groupby(["Method", "Target"])["Score"].max().reset_index()
-    pivot = max_scores.pivot(index="Target", columns="Method", values="Score")[order]
+def method_win_counts(frame, order, reference):
+    """({method: #targets it wins}, {method: #of those wins above the reference}).
+
+    Wins by best-across-dim median score; ``reference`` = Series indexed by (dataset, target).
+    """
+    keys = ["dataset", "Target"]
+    median_scores = frame.groupby(["Method", *keys, "dim"])["Score"].median().reset_index()
+    max_scores = median_scores.groupby(["Method", *keys])["Score"].max().reset_index()
+    pivot = max_scores.pivot(index=keys, columns="Method", values="Score")[order]
     best = pivot.max(axis=1)
     winners = pivot.eq(best, axis=0)
     unique = winners.sum(axis=1) == 1
-    return {m: int((winners[m] & unique).sum()) for m in order}
+    above = best.to_numpy() > reference.reindex(pivot.index).to_numpy()
+    return ({m: int((winners[m] & unique).sum()) for m in order},
+            {m: int((winners[m] & unique & above).sum()) for m in order})
 
 
 panel_a_order = setting_order
-wins = method_win_counts(df, panel_a_order)
-agg_df = pd.DataFrame({"Setting": panel_a_order, "count": [wins[m] for m in panel_a_order]})
+wins, wins_above = method_win_counts(df, panel_a_order, tabicl_ref)
+agg_df = pd.DataFrame({"Setting": panel_a_order, "count": [wins[m] for m in panel_a_order],
+                       "above_tabicl": [wins_above[m] for m in panel_a_order]})
 
 # ---------------------------------------------------------------------------
 # Per-target panels. (dataset, target, panel key, title)
@@ -144,6 +168,20 @@ axes["a"].bar(
     width=bar_width,
     color=[setting_palette[s] for s in panel_a_order],
 )
+# hatched part: wins whose best median also exceeds the supervised TabICL reference
+axes["a"].bar(
+    bar_positions,
+    [wins_above[s] for s in panel_a_order],
+    width=bar_width,
+    color="none",
+    edgecolor="black",
+    hatch="//",
+    linewidth=0,
+    label="Win also beats TabICL",
+)
+axes["a"].set_ylim(0, max(counts.values()) + 1.5)   # room for the hatch legend
+axes["a"].legend(fontsize=ticklabelsize - 4, loc="upper right", frameon=False)
+axes["a"].yaxis.get_major_locator().set_params(integer=True)
 axes["a"].set_xlabel("")
 axes["a"].set_xticks(bar_positions)
 if len(panel_a_order) > 2:
@@ -181,6 +219,10 @@ for dataset, target, key, title in panels:
 
     axes[key].axhline(
         naive, color="black", linestyle="--", linewidth=2, label="Positive class ratio"
+    )
+    axes[key].axhline(
+        tabicl_ref[(dataset, target)], color="firebrick", linestyle="--", linewidth=2,
+        label="TabICL (supervised)",
     )
 
     axes[key].set_xlabel("Embedding size", fontsize=labelfontsize)

@@ -4,8 +4,8 @@ Reads the repeated-seed runs of ``generate_shared_sample_encoding_runs.py`` (con
 ``individual``, ``individual_latent``, ``shared_learnable``, ``shared_fixed``) and computes,
 per run,
 
-  * linear probing     test AP of the inductive-probing logreg (``probe_one``, standardized
-                       features) per binary target, ``probe_ap`` = mean over targets;
+  * linear probing     test AP of the inductive-probing logreg (``probe_one``, raw
+                       coordinates) per binary target, ``probe_ap`` = mean over targets;
   * clustering         Leiden on the kNN graph of the train embeddings, as in the paper's
                        unsupervised analysis (k = 5 % of samples, sqeuclidean, RBConfiguration,
                        seed 0): number of clusters, silhouette (sqeuclidean), Davies-Bouldin,
