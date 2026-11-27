@@ -16,8 +16,8 @@ CV-tuned stopping, seed ``--seed``) and three embeddings:
                        only the embedding route differs)
 
 The model-free references (``generate_model_free_ood_reference.py``) are written next to it; the
-cross-match tests are run by ``evaluate_inductive_ood.py`` (scXmatch environment) and drawn by
-``plot_inductive_ood.py``.
+cross-match tests are run by ``evaluate_inductive_ood.py`` (scXmatch environment); they are drawn as
+reference lines in the cross-match row of ``evaluate_inductive_init.py --summarize``.
 
 GPU (H200), one job per dataset:
     sbatch --export=PYTHONHASHSEED=0 container/submit.sh \\

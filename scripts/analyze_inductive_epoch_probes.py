@@ -122,11 +122,12 @@ def plot_targets(probes, out, stop_label, stop_epochs):
                 e = stop_epochs.get((ds, dim))
                 if e is not None:
                     y = np.interp(np.log(e), np.log(m.index.to_numpy(float)), m.to_numpy())
-                    # before the first grid fit the AP is not measured: open star at the
-                    # AP of the first fit
-                    early = e < m.index.min()
-                    ax.plot(e, y, "*", color="white" if early else col, ms=13,
-                            mec=col if early else "black", mew=1.2 if early else 0.7, zorder=5)
+                    # before the first grid fit (25 epochs) the AP is not measured: the star
+                    # sits at the AP of the first fit, joined to the curve by a dashed line
+                    first = m.index.min()
+                    if e < first:
+                        ax.plot([e, first], [y, y], "--", color=col, lw=1.2, zorder=4)
+                    ax.plot(e, y, "*", color=col, ms=13, mec="black", mew=0.7, zorder=5)
             ax.axvline(BUDGET, color="grey", ls=":", lw=1)
             ax.set_xscale("log")
             ax.set_title(f"{dsl}: {t}", fontsize=10)
@@ -138,8 +139,8 @@ def plot_targets(probes, out, stop_label, stop_epochs):
         plt.Line2D([], [], ls=":", color="grey", label=f"default budget ({BUDGET} epochs)"),
         plt.Line2D([], [], ls="", marker="*", ms=12, color="grey", mec="black", mew=0.7,
                    label=f"early stop: {stop_label},\nmedian selected epoch over splits"),
-        plt.Line2D([], [], ls="", marker="*", ms=12, color="white", mec="grey", mew=1.2,
-                   label="(open: before the first grid fit;\nAP of the first fit shown)")]
+        plt.Line2D([], [], ls="--", color="grey", lw=1.2,
+                   label="stop before the first fit (25 epochs):\nAP of the first fit shown")]
     # legend in a free panel if there is one, else in the first panel
     free = [ax for ax in axes.ravel() if not ax.axison]
     if free:

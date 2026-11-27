@@ -207,8 +207,9 @@ output/inductive_type_combination`, plus `generate_inductive_embeddings.py --met
 same modes and root), probed with `linear_probe_inductive_embeddings.py --emb-root
 output/inductive_type_combination --modes combined numeric_only cat_only` into
 `output/linear_probing/inductive_type_combination_probing_results.csv` (commands in the script's
-docstring). The OOD figure (`scripts/plot_inductive_ood.py`) compares the cross-match shift of
-POME's inductive test embeddings with two model-free references (raw values, spectral coordinates).
+docstring). The cross-match shift of POME's inductive test embeddings and its two model-free references (raw
+values, spectral coordinates) are drawn in the bottom row of the init figure
+(`scripts/evaluate_inductive_init.py --summarize`).
 
 `scripts/linear_probe_full_dataset_embeddings.py` is the transductive control: it probes the
 full-dataset embeddings of HANCOCK and MIMIC on the same splits. LUAD is left out because its
