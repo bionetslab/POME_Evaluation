@@ -82,8 +82,7 @@ def load(root):
                        ignore_index=True)
     probes = pd.concat([pd.read_csv(f) for f in sorted(root.glob("*/dim_*/split_*/grid_probes.csv"))],
                        ignore_index=True)
-    # only units with a CV trace (grid fits without one, e.g. d16, feed analyze_inductive_epoch_probes)
-    traces = traces[traces.dim.isin((32, 64))]   # d16 traces only feed the epoch-probe figure
+    # only units with a CV trace
     units = traces[KEY].drop_duplicates()
     probes = probes.merge(units, on=KEY)
     signals = [c["signal"] for c in CRITERIA.values()] + ["rankme_train", "rankme_val"]

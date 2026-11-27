@@ -1,9 +1,9 @@
 criterion,param
 budget,-
 fixed_epochs,E=200
-rankme_gap,"tol=0.0025,pat=1"
-rankme_val,"tol=0.01,pat=3"
-val_auc,"tol=0.0025,pat=3"
+rankme_gap,"tol=0,pat=2"
+rankme_val,"tol=0.0025,pat=5"
+val_auc,"tol=0.01,pat=5"
 val_auc_ema,"tol=0.01,pat=3,ema=0.3"
-val_loss,"tol=0.02,pat=10"
-val_loss_ema,"tol=0.02,pat=2,ema=0.1"
+val_loss,"tol=0.02,pat=5"
+val_loss_ema,"tol=0.02,pat=3,ema=0.3"

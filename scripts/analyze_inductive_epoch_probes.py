@@ -22,7 +22,7 @@ dataset-specific epoch count would gain over the budget.
 ``ap_per_target`` also marks, per target and embedding size, the training length that the best
 label-free early-stopping criterion of ``inductive_stopping_criteria_ablation.py`` selects (lowest
 regret among the CV-based criteria, i.e. excluding the full and the shorter fixed budget; its
-hyperparameters tuned on d32/64 of all three datasets, whether or not it beats the full budget
+hyperparameters tuned on d16/32/64 of all three datasets, whether or not it beats the full budget
 significantly): the median selected epoch over the 10 splits, drawn as a star on the mean curve.
 The rule is label-free, so per dataset, dim and split it selects the same epoch for every target.
 
@@ -35,8 +35,8 @@ Outputs (output/inductive_stopping_ablation/):
   epoch_peaks.csv           AP maxima over the epoch grid vs. the 2000-epoch budget
   ap_per_target.pdf/.png    AP vs. epochs per target: mean +- SEM over splits, per dim, with the
                             epoch selected by the best early-stopping criterion (POME's default
-                            since 1.6); panel a: mean regret (95 % CI) of that rule vs. the
-                            smoothed held-out link AUC, the RankMe gap of POME 1.4 (tuned) and
+                            since 1.7); panel a: mean regret (95 % CI) of that rule vs. the
+                            smoothed held-out link loss, the RankMe gap of POME 1.4 (tuned) and
                             the full 2000-epoch budget (criteria_ablation/summary.csv)
 """
 import argparse
@@ -55,8 +55,8 @@ DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV
 BUDGET = 2000  # POME's default inductive training budget
 DIM_COLORS = {16: "#2ca02c", 32: "#1f77b4", 64: "#d62728"}
 # regret panel: POME's default early stopping vs. the comparison rules (summary.csv criteria)
-REGRET_BARS = {"val_loss_ema": "POME\n(link loss)",
-               "val_auc_ema": "Link AUC",
+REGRET_BARS = {"val_auc_ema": "POME\n(link AUC)",
+               "val_loss_ema": "Link loss",
                "rankme_gap": "RankMe gap",
                "budget": "Max. budget\n(2000 epochs)"}
 

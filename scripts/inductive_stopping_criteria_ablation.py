@@ -6,7 +6,7 @@ compares the most promising label-free criteria -- including simply training to 
 of 2000 epochs -- by their regret in linear probing, aggregated over all individual binary
 targets (HANCOCK: 3, TCGA-LUAD: 3, MIMIC-IV: 2).
 
-Data: ``generate_inductive_stopping_ablation.py`` (per dataset x dim in {32, 64} x the 10 fixed
+Data: ``generate_inductive_stopping_ablation.py`` (per dataset x dim in {16, 32, 64} x the 10 fixed
 train/test splits of the linear-probing experiment):
   cv_trace.csv     label-free signals of POME's inductive sample-holdout CV (3 folds inside the
                    training split, checked every 10 epochs) over 2000 epochs, without stopping.
@@ -48,7 +48,7 @@ Run from the project root (CPU; needs POME >= the inductive-revision branch):
 Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/{cv_trace,grid_probes}.csv
 Outputs: output/inductive_stopping_ablation/criteria_ablation/
   selections.csv        selected epoch per criterion x hyperparameters x dataset x dim x split
-                        (all dims with a CV trace; regrets and tuning use d32/64 only)
+                        (all dims with a CV trace)
   regret_per_target.csv regret per criterion x hyperparameters x dataset x dim x split x target
   hyperparameters.csv   chosen hyperparameters per criterion
   summary.csv           per criterion: regret, CI, per dataset, p vs budget
@@ -72,9 +72,8 @@ DATASET_COLORS = {"hancock": "#2a78d6", "luad_noleak": "#eb6834", "mimic": "#1ba
 BUDGET = 2000
 EVAL_EVERY = 10
 KEY = ["dataset", "dim", "split"]
-# embedding sizes the criteria are compared and tuned on; selections.csv also covers other
-# sizes with a CV trace (d16, for the indicator in analyze_inductive_epoch_probes.py)
-TUNING_DIMS = (32, 64)
+# embedding sizes the criteria are compared and tuned on (all sizes with a CV trace)
+TUNING_DIMS = (16, 32, 64)
 PATIENCES = [1, 2, 3, 5, 10, 20]
 EMA = [0.1, 0.3]  # weight of the newest check
 
