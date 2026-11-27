@@ -34,7 +34,10 @@ Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/grid_pr
 Outputs (output/inductive_stopping_ablation/):
   epoch_peaks.csv           AP maxima over the epoch grid vs. the 2000-epoch budget
   ap_per_target.pdf/.png    AP vs. epochs per target: mean +- SEM over splits, per dim, with the
-                            epoch selected by the best early-stopping criterion
+                            epoch selected by the best early-stopping criterion (POME's default
+                            since 1.6); last panel: mean regret (95 % CI) of that rule vs. the
+                            smoothed held-out link AUC, the RankMe gap of POME 1.4 (tuned) and
+                            the full 2000-epoch budget (criteria_ablation/summary.csv)
 """
 import argparse
 from pathlib import Path
@@ -51,6 +54,11 @@ ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
 DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 BUDGET = 2000  # POME's default inductive training budget
 DIM_COLORS = {16: "#2ca02c", 32: "#1f77b4", 64: "#d62728"}
+# regret panel: POME's default early stopping vs. the comparison rules (summary.csv criteria)
+REGRET_BARS = {"val_loss_ema": "POME\n(link loss,\nsmoothed)",
+               "val_auc_ema": "link AUC,\nsmoothed",
+               "rankme_gap": "RankMe gap\n(POME 1.4)",
+               "budget": "full budget\n(2000 epochs)"}
 
 
 def load(root):
@@ -97,8 +105,23 @@ def best_criterion_epochs(root):
     return f"{best.label} ({param})", med
 
 
-def plot_targets(probes, out, stop_label, stop_epochs):
-    """AP vs epochs per target: mean +- SEM over splits, one line per embedding size."""
+def plot_regret(ax, summary):
+    """Mean regret (target mean, 95 % bootstrap CI over splits) of the REGRET_BARS criteria."""
+    s = summary.set_index("criterion").loc[list(REGRET_BARS)]
+    x = np.arange(len(s))
+    colors = ["#444444"] + ["#bbbbbb"] * (len(s) - 1)
+    ax.bar(x, s.regret, color=colors, width=0.65,
+           yerr=[s.regret - s.ci_low, s.ci_high - s.regret], capsize=3, ecolor="black",
+           error_kw=dict(lw=1))
+    ax.set_xticks(x)
+    ax.set_xticklabels(REGRET_BARS.values(), fontsize=8)
+    ax.set_ylabel("mean regret (AP)")
+    ax.set_title("Early-stopping regret (mean, 95 % CI)", fontsize=10)
+
+
+def plot_targets(probes, out, stop_epochs, summary):
+    """AP vs epochs per target: mean +- SEM over splits, one line per embedding size; the free
+    panel shows the regret of the early-stopping rules."""
     targets = {ds: sorted(probes[probes.dataset == ds].target.unique()) for ds in DATASETS}
     ncol = max(len(t) for t in targets.values())
     fig, axes = plt.subplots(len(DATASETS), ncol, figsize=(4 * ncol, 2.9 * len(DATASETS)),
@@ -128,7 +151,6 @@ def plot_targets(probes, out, stop_label, stop_epochs):
                     if e < first:
                         ax.plot([e, first], [y, y], "--", color=col, lw=1.2, zorder=4)
                     ax.plot(e, y, "*", color=col, ms=13, mec="black", mew=0.7, zorder=5)
-            ax.axvline(BUDGET, color="grey", ls=":", lw=1)
             ax.set_xlim(-60, BUDGET * 1.03)
             ax.set_title(f"{dsl}: {t}", fontsize=10)
             if j == 0:
@@ -136,17 +158,19 @@ def plot_targets(probes, out, stop_label, stop_epochs):
             if i == len(DATASETS) - 1:
                 ax.set_xlabel("training epochs")
     handles = axes[0, 0].get_legend_handles_labels()[0] + [
-        plt.Line2D([], [], ls=":", color="grey", label=f"default budget ({BUDGET} epochs)"),
         plt.Line2D([], [], ls="", marker="*", ms=12, color="grey", mec="black", mew=0.7,
-                   label="POME early stopping\n(median selected epoch over splits)")]
-    # legend in a free panel if there is one, else in the first panel
+                   label="POME early stopping (median selected epoch over splits)")]
     free = [ax for ax in axes.ravel() if not ax.axison]
     if free:
-        free[0].legend(handles=handles, fontsize=9, loc="center", frameon=False)
-    else:
-        axes[0, 0].legend(handles=handles, fontsize=7, loc="lower right")
-    fig.suptitle("Linear-probe AP per target (mean ± SEM over 10 splits)", fontsize=11)
-    fig.tight_layout()
+        free[0].axis("on")
+        plot_regret(free[0], summary)
+    for k, ax in enumerate(ax for ax in axes.ravel() if ax.axison):
+        ax.text(-0.13, 1.13, "abcdefghijklmnop"[k], transform=ax.transAxes, fontsize=13,
+                fontweight="bold", va="top", ha="left")
+    fig.suptitle("Linear-probe AP per target (mean ± SEM over 10 splits)", fontsize=11, y=0.995)
+    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.975),
+               ncol=len(handles), fontsize=9, frameon=False)
+    fig.tight_layout(rect=(0, 0, 1, 0.955))
     for ext in ("pdf", "png"):
         fig.savefig(out / f"ap_per_target.{ext}", dpi=200)
     plt.close(fig)
@@ -161,7 +185,8 @@ def main() -> None:
     peaks = epoch_peaks(probes)
     peaks.to_csv(args.root / "epoch_peaks.csv", index=False)
     stop_label, stop_epochs = best_criterion_epochs(args.root)
-    plot_targets(probes, args.root, stop_label, stop_epochs)
+    summary = pd.read_csv(args.root / "criteria_ablation" / "summary.csv")
+    plot_targets(probes, args.root, stop_epochs, summary)
     print("best early-stopping criterion:", stop_label)
     print({k: v for k, v in sorted(stop_epochs.items())})
     with pd.option_context("display.width", 250, "display.max_columns", 40):
