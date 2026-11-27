@@ -52,23 +52,18 @@ Outputs: output/inductive_stopping_ablation/criteria_ablation/
   regret_per_target.csv regret per criterion x hyperparameters x dataset x dim x split x target
   hyperparameters.csv   chosen hyperparameters per criterion
   summary.csv           per criterion: regret, CI, per dataset, p vs budget
-  figure_stopping_criteria.pdf/.png  manuscript figure
 """
 import argparse
 import itertools
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
-from scipy.stats import wilcoxon  # noqa: E402
+import numpy as np
+import pandas as pd
+from scipy.stats import wilcoxon
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
 DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
-DATASET_COLORS = {"hancock": "#2a78d6", "luad_noleak": "#eb6834", "mimic": "#1baf7a"}
 BUDGET = 2000
 EVAL_EVERY = 10
 KEY = ["dataset", "dim", "split"]
@@ -180,9 +175,6 @@ def choose(reg, datasets):
     return per.groupby("criterion").idxmin().map(lambda t: t[1])
 
 
-TUNING_LABEL = "one setting tuned on all three datasets"
-
-
 def tuned_regret(reg):
     """Rows of `reg` with each criterion's hyperparameters chosen on all datasets."""
     best = choose(reg, list(DATASETS))
@@ -230,87 +222,6 @@ def summarize(tuned):
     return pd.DataFrame(rows).sort_values("regret").reset_index(drop=True)
 
 
-def plot(summary, tuned, out):
-    s = summary.iloc[::-1].reset_index(drop=True)  # best on top
-    y = np.arange(len(s))
-    fig, axes = plt.subplots(1, 3, figsize=(7.2, 0.32 * len(s) + 1.3), sharey=True,
-                             gridspec_kw=dict(width_ratios=[1.25, 1, 1.1], wspace=0.12))
-    xmax = 1.1 * max(s.ci_high.max(), *(s[f"regret_{d}"].max() for d in DATASETS))
-    xticks = np.arange(0, xmax - 0.01, 0.02)  # no label at the shared panel edge
-    ink, muted, grid = "#1f1f1e", "#8a8986", "#e6e5e0"
-    for ax in axes:
-        ax.grid(axis="x", color=grid, lw=0.6)
-        ax.set_axisbelow(True)
-        for sp in ("top", "right"):
-            ax.spines[sp].set_visible(False)
-        ax.tick_params(labelsize=7)
-    hl = s.criterion == "budget"
-
-    # (a) overall regret (95% CI)
-    ax = axes[0]
-    for yi, r in zip(y, s.itertuples()):
-        col = ink if r.criterion == "budget" else muted
-        ax.plot([r.ci_low, r.ci_high], [yi, yi], color=col, lw=2, solid_capstyle="round")
-        ax.plot(r.regret, yi, "o", color=col, ms=6, mec="white", mew=1, zorder=3)
-        if np.isfinite(r.p_vs_budget):
-            note = f"p={r.p_vs_budget:.2g}" if r.p_vs_budget >= 1e-3 else "p<0.001"
-        elif r.criterion != "budget":
-            note = "never fires: = full budget" if r.criterion == "rankme_gap" else "= full budget"
-        else:
-            note = None
-        if note:
-            ax.text(0.98, yi - 0.42, note, transform=ax.get_yaxis_transform(), ha="right",
-                    va="bottom", fontsize=5.5, color=muted)
-    ax.set_yticks(y, s.label, fontsize=7)
-    for lab, h in zip(ax.get_yticklabels(), hl):
-        lab.set_fontweight("bold" if h else "normal")
-    ax.set_xlabel("linear-probe regret (AP)\nmean over 8 targets", fontsize=7)
-    ax.set_xlim(0, None)
-    ax.set_title("a  regret vs. best epoch", fontsize=8, loc="left", fontweight="bold")
-    ax.set_xlim(0, xmax)
-    ax.set_xticks(xticks)
-
-    # (b) per-dataset regret
-    ax = axes[1]
-    off = {"hancock": -0.22, "luad_noleak": 0.0, "mimic": 0.22}
-    for ds, dsl in DATASETS.items():
-        ax.plot(s[f"regret_{ds}"], y + off[ds], "o", color=DATASET_COLORS[ds], ms=4.5,
-                mec="white", mew=0.6, label=dsl)
-    ax.set_xlabel("linear-probe regret (AP)\nmean over the dataset's targets", fontsize=7)
-    ax.set_xlim(0, xmax)
-    ax.set_xticks(xticks)
-    ax.set_title("b  per dataset", fontsize=8, loc="left", fontweight="bold")
-
-    # (c) selected training length
-    ax = axes[2]
-    for ds, dsl in DATASETS.items():
-        for yi, crit in zip(y, s.criterion):
-            e = tuned[(tuned.criterion == crit) & (tuned.dataset == ds)].groupby(KEY)["epochs"].first()
-            jitter = np.random.default_rng(0).uniform(-0.07, 0.07, len(e))
-            ax.plot(e.to_numpy() * np.exp(jitter), np.full(len(e), yi + off[ds]), "|",
-                    color=DATASET_COLORS[ds], ms=4, alpha=0.6, mew=0.8)
-            ax.plot(e.median(), yi + off[ds], "o", color=DATASET_COLORS[ds], ms=4,
-                    mec="white", mew=0.6, zorder=3)
-    ax.set_xscale("log")
-    ax.set_xlim(8, 2600)
-    ax.set_xlabel("selected training epochs\n(ticks: splits x dims; dot: median)", fontsize=7)
-    ax.set_title("c  selected epochs", fontsize=8, loc="left", fontweight="bold")
-    for ax in axes:
-        for yi, h in zip(y, hl):
-            if h:
-                ax.axhspan(yi - 0.45, yi + 0.45, color="#f2f1ec", zorder=0, lw=0)
-    handles = [
-        plt.Line2D([], [], marker="o", color=muted, lw=2, ms=5, mec="white",
-                   label=TUNING_LABEL + " (95% CI)"),
-        *[plt.Line2D([], [], marker="o", ls="", color=DATASET_COLORS[d], ms=4.5, mec="white",
-                     label=dl) for d, dl in DATASETS.items()]]
-    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=5,
-               fontsize=6, frameon=False, handletextpad=0.3, columnspacing=1.2)
-    for ext in ("pdf", "png"):
-        fig.savefig(out / f"figure_stopping_criteria.{ext}", dpi=300, bbox_inches="tight")
-    plt.close(fig)
-
-
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--root", type=Path, default=ROOT)
@@ -335,7 +246,6 @@ def main() -> None:
     print(summary.drop(columns="label").round(4).to_string(index=False))
     print("\n== Hyperparameters ==")
     print(hp.to_string(index=False))
-    plot(summary, tuned, out)
     print(f"\nwrote {out}")
 
 
