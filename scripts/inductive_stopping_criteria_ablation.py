@@ -50,6 +50,7 @@ Outputs: output/inductive_stopping_ablation/criteria_ablation/
   selections.csv        selected epoch per criterion x hyperparameters x dataset x dim x split
                         (all dims with a CV trace)
   regret_per_target.csv regret per criterion x hyperparameters x dataset x dim x split x target
+                        (box plot in panel a of analyze_inductive_epoch_probes.py)
   hyperparameters.csv   chosen hyperparameters per criterion
   summary.csv           per criterion: regret, CI, per dataset, p vs budget
 """

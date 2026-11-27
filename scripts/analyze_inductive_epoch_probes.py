@@ -30,14 +30,15 @@ Run from the project root (CPU; after inductive_stopping_criteria_ablation.py):
     container/run.sh scripts/analyze_inductive_epoch_probes.py
 
 Inputs:  output/inductive_stopping_ablation/{dataset}/dim_{D}/split_{NN}/grid_probes.csv,
-         criteria_ablation/{summary,hyperparameters,selections}.csv
+         criteria_ablation/{summary,hyperparameters,selections,regret_per_target}.csv
 Outputs (output/inductive_stopping_ablation/):
   epoch_peaks.csv           AP maxima over the epoch grid vs. the 2000-epoch budget
   ap_per_target.pdf/.png    AP vs. epochs per target: mean +- SEM over splits, per dim, with the
                             epoch selected by the best early-stopping criterion (POME's default
-                            since 1.7); panel a: mean regret (95 % CI) of that rule vs. the
-                            smoothed held-out link loss, the RankMe gap of POME 1.4 (tuned) and
-                            the full 2000-epoch budget (criteria_ablation/summary.csv)
+                            since 1.7); panel a: box plot of the per-target regrets (3 dims x
+                            10 splits x 8 targets) of that rule vs. the smoothed held-out link
+                            loss, the RankMe gap of POME 1.4 (each at its tuned setting) and the
+                            full 2000-epoch budget (criteria_ablation/regret_per_target.csv)
 """
 import argparse
 from pathlib import Path
@@ -54,7 +55,7 @@ ROOT = PROJECT_ROOT / "output" / "inductive_stopping_ablation"
 DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 BUDGET = 2000  # POME's default inductive training budget
 DIM_COLORS = {16: "#2ca02c", 32: "#1f77b4", 64: "#d62728"}
-# regret panel: POME's default early stopping vs. the comparison rules (summary.csv criteria)
+# regret panel: POME's default early stopping vs. the comparison rules (criteria_ablation criteria)
 REGRET_BARS = {"val_auc_ema": "POME\n(link AUC)",
                "val_loss_ema": "Link loss",
                "rankme_gap": "RankMe gap",
@@ -105,21 +106,29 @@ def best_criterion_epochs(root):
     return f"{best.label} ({param})", med
 
 
-def plot_regret(ax, summary):
-    """Mean regret (target mean, 95 % bootstrap CI over splits) of the REGRET_BARS criteria."""
-    s = summary.set_index("criterion").loc[list(REGRET_BARS)]
-    x = np.arange(len(s))
-    colors = ["#444444"] + ["#bbbbbb"] * (len(s) - 1)
-    ax.bar(x, s.regret, color=colors, width=0.65,
-           yerr=[s.regret - s.ci_low, s.ci_high - s.regret], capsize=3, ecolor="black",
-           error_kw=dict(lw=1))
-    ax.set_xticks(x)
+def tuned_regrets(root):
+    """Per-target regrets (dataset x dim x split x target) of each criterion at its tuned
+    hyperparameters (criteria_ablation/{regret_per_target,hyperparameters}.csv)."""
+    crit_dir = root / "criteria_ablation"
+    reg = pd.read_csv(crit_dir / "regret_per_target.csv")
+    hp = pd.read_csv(crit_dir / "hyperparameters.csv")
+    return reg.merge(hp[["criterion", "param"]], on=["criterion", "param"])
+
+
+def plot_regret(ax, regrets):
+    """Box plot of the per-target regrets (dataset x dim x split x target, 240 values per
+    criterion) of the REGRET_BARS criteria, matplotlib's default box/whisker rules, no fliers."""
+    data = [regrets.loc[regrets.criterion == c, "regret"].to_numpy() for c in REGRET_BARS]
+    bp = ax.boxplot(data, patch_artist=True, widths=0.6, showfliers=False)
+    for patch, col in zip(bp["boxes"], ["#777777"] + ["#dddddd"] * (len(data) - 1)):
+        patch.set_facecolor(col)
+    ax.set_xticks(np.arange(1, len(data) + 1))
     ax.set_xticklabels(REGRET_BARS.values(), fontsize=8)
-    ax.set_ylabel("Mean regret (AP)")
+    ax.set_ylabel("Regret (AP)")
     ax.set_title("Early-stopping comparison", fontsize=10)
 
 
-def plot_targets(probes, out, stop_epochs, summary):
+def plot_targets(probes, out, stop_epochs, regrets):
     """Panel a: regret of the early-stopping rules; then AP vs epochs per target (mean +- SEM
     over splits, one line per embedding size), datasets in DATASETS order."""
     panels = [(ds, dsl, t) for ds, dsl in DATASETS.items()
@@ -128,7 +137,7 @@ def plot_targets(probes, out, stop_epochs, summary):
     nrow = -(-(len(panels) + 1) // ncol)
     fig, axes = plt.subplots(nrow, ncol, figsize=(4 * ncol, 2.9 * nrow), squeeze=False)
     flat = axes.ravel()
-    plot_regret(flat[0], summary)
+    plot_regret(flat[0], regrets)
     handles = []
     for k, (ds, dsl, t) in enumerate(panels, start=1):
         ax = flat[k]
@@ -182,8 +191,7 @@ def main() -> None:
     peaks = epoch_peaks(probes)
     peaks.to_csv(args.root / "epoch_peaks.csv", index=False)
     stop_label, stop_epochs = best_criterion_epochs(args.root)
-    summary = pd.read_csv(args.root / "criteria_ablation" / "summary.csv")
-    plot_targets(probes, args.root, stop_epochs, summary)
+    plot_targets(probes, args.root, stop_epochs, tuned_regrets(args.root))
     print("best early-stopping criterion:", stop_label)
     print({k: v for k, v in sorted(stop_epochs.items())})
     with pd.option_context("display.width", 250, "display.max_columns", 40):
