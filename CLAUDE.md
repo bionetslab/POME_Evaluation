@@ -108,6 +108,12 @@ umap-learn's single-modality `transform()` returns non-finite coordinates for ev
 sample carrying a NaN (~50% of HANCOCK, ~80% of TCGA-LUAD), which would silently reduce
 those arms to complete cases. With the fork all modes embed the full test split.
 
+## Figure conventions
+
+- Axis titles, axis labels, tick/category labels and legend entries always start with a capital
+  letter (e.g. "Training epochs", "Probe AP (test split)", "Link AUC"). Symbols and names
+  that are lower-case by definition (`d=32`, dataset or method names) stay as they are.
+
 ## Conda environments (important)
 
 The reproduction workflow uses **two** conda envs, and mixing them up produces confusing

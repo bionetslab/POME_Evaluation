@@ -55,10 +55,10 @@ DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV
 BUDGET = 2000  # POME's default inductive training budget
 DIM_COLORS = {16: "#2ca02c", 32: "#1f77b4", 64: "#d62728"}
 # regret panel: POME's default early stopping vs. the comparison rules (summary.csv criteria)
-REGRET_BARS = {"val_loss_ema": "POME\n(link loss,\nsmoothed)",
-               "val_auc_ema": "link AUC,\nsmoothed",
-               "rankme_gap": "RankMe gap\n(POME 1.4)",
-               "budget": "full budget\n(2000 epochs)"}
+REGRET_BARS = {"val_loss_ema": "POME\n(link loss)",
+               "val_auc_ema": "Link AUC",
+               "rankme_gap": "RankMe gap",
+               "budget": "Max. budget\n(2000 epochs)"}
 
 
 def load(root):
@@ -115,7 +115,7 @@ def plot_regret(ax, summary):
            error_kw=dict(lw=1))
     ax.set_xticks(x)
     ax.set_xticklabels(REGRET_BARS.values(), fontsize=8)
-    ax.set_ylabel("mean regret (AP)")
+    ax.set_ylabel("Mean regret (AP)")
     ax.set_title("Early-stopping regret (mean, 95 % CI)", fontsize=10)
 
 
@@ -154,9 +154,9 @@ def plot_targets(probes, out, stop_epochs, summary):
             ax.set_xlim(-60, BUDGET * 1.03)
             ax.set_title(f"{dsl}: {t}", fontsize=10)
             if j == 0:
-                ax.set_ylabel("probe AP (test split)")
+                ax.set_ylabel("Probe AP (test split)")
             if i == len(DATASETS) - 1:
-                ax.set_xlabel("training epochs")
+                ax.set_xlabel("Training epochs")
     handles = axes[0, 0].get_legend_handles_labels()[0] + [
         plt.Line2D([], [], ls="", marker="*", ms=12, color="grey", mec="black", mew=0.7,
                    label="POME early stopping (median selected epoch over splits)")]
@@ -167,10 +167,9 @@ def plot_targets(probes, out, stop_epochs, summary):
     for k, ax in enumerate(ax for ax in axes.ravel() if ax.axison):
         ax.text(-0.13, 1.13, "abcdefghijklmnop"[k], transform=ax.transAxes, fontsize=13,
                 fontweight="bold", va="top", ha="left")
-    fig.suptitle("Linear-probe AP per target (mean ± SEM over 10 splits)", fontsize=11, y=0.995)
-    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.975),
-               ncol=len(handles), fontsize=9, frameon=False)
-    fig.tight_layout(rect=(0, 0, 1, 0.955))
+    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.995),
+               ncol=len(handles), fontsize=9, frameon=True, fancybox=False, edgecolor="black")
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
     for ext in ("pdf", "png"):
         fig.savefig(out / f"ap_per_target.{ext}", dpi=200)
     plt.close(fig)
