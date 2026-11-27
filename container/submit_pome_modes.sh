@@ -16,19 +16,19 @@
 #   --modes    "numeric_only cat_only"   variable-type modes to cover
 #   --dims     "64"                  embedding sizes
 #   --runs     5                     runs per (split, dim)
-#   --epochs   2000                  fixed training epochs (POME >= 1.5, no early stopping)
+#   --epochs   N                     training budget (default: POME's, 2000, with early stopping)
 #   --splits   "0 1 2 3 4"           restrict to these split ids (default: all
 #                                    found); use to submit only the shards that
 #                                    are not already queued/running
 #   --splits-per-job 5               split ids per job (10 splits -> 2 jobs each)
 #   --time     06:00:00              walltime per job
 #   --output-dir DIR                 embedding root (default: the generator's,
-#                                    output/inductive_pome14)
+#                                    output/inductive_pome)
 #   --only-first                     submit just the first shard (to time a fit)
 #   --dry-run                        print the sbatch commands, submit nothing
 #
-# POME >= 1.5 trains inductive mode to this fixed budget without early stopping
-# (POME's and the generator's default is 2000).
+# POME >= 1.7 selects the training epochs within this budget by CV early stopping
+# on the smoothed held-out link AUC (POME's and the generator's default budget is 2000).
 #
 # Each job gets a unique --log-tag so the per-run tuned-epochs logs never race
 # (generate_inductive_embeddings.py rewrites that file after every run). When
@@ -47,7 +47,7 @@ DATASETS="hancock luad_noleak"
 MODES="numeric_only cat_only"
 DIMS="64"
 RUNS=5
-EPOCHS=2000
+EPOCHS=""
 SPLITS=""
 SPLITS_PER_JOB=5
 WALLTIME="06:00:00"
@@ -111,9 +111,9 @@ for dataset in $DATASETS; do
                  --modes "$mode"
                  --dims $DIMS
                  --runs "$RUNS"
-                 --epochs "$EPOCHS"
                  --splits "${chunk[@]}"
                  --log-tag "$tag"
+                 ${EPOCHS:+--epochs "$EPOCHS"}
                  ${OUTPUT_DIR:+--output-dir "$OUTPUT_DIR"})
             if [[ $DRY_RUN -eq 1 ]]; then
                 printf '%q ' "${cmd[@]}"; echo

@@ -2,8 +2,9 @@
 
 ``Embedder.transform()`` adds each new sample as a receive-only node (edges point only from the
 training value nodes to the new sample) whose own input feature is a zero vector. Two properties
-follow, which this script checks empirically on fully trained models (2000 epochs, POME's inductive
-default):
+follow, which this script checks empirically on models trained with POME's inductive defaults
+(POME >= 1.7: early stopping on the smoothed held-out link AUC within the 2000-epoch budget; the
+selected number of epochs is recorded per fit):
 
   * the new-sample input should hardly matter, because its own input is one of the ~degree + 1
     messages a sample node aggregates in each GAT layer:
@@ -31,7 +32,7 @@ samples per transform() call (zero input: filled, random input: open markers); b
 cross-match z per dataset on the same axis, with the model-free references of
 ``evaluate_inductive_ood.py`` (raw values, spectral coordinates; grey lines).
 
-GPU part (one job per dataset; PYTHONHASHSEED=0, POME >= 1.5):
+GPU part (one job per dataset; PYTHONHASHSEED=0, POME >= 1.7):
     sbatch --job-name=init_hancock --export=PYTHONHASHSEED=0 \\
         container/submit.sh scripts/evaluate_inductive_init.py --datasets hancock
 Cross-match (scXmatch environment, see evaluate_inductive_ood.py; resumable):
@@ -62,7 +63,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUT = PROJECT_ROOT / "output" / "inductive_init_check"
 OOD_RESULTS = PROJECT_ROOT / "output" / "inductive_ood" / "ood_crossmatch_results.csv"
 DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
-EPOCHS = 2000
+EPOCHS = None  # POME's inductive default: early stopping within the 2000-epoch budget
 INITS = ["zero", "random"]
 FRACTIONS = [0.01, 0.05, 0.1, 0.25, 0.5, 1.0]
 
@@ -115,7 +116,7 @@ def run_one(dataset, dim, split, args, targets, device):
     emb = embedder(dim, args.epochs, device)
     with contextlib.redirect_stdout(io.StringIO()):
         emb.fit(train_df.copy())
-    meta = dict(dataset=dataset, dim=dim, split=split, epochs=args.epochs)
+    meta = dict(dataset=dataset, dim=dim, split=split, epochs=emb.num_epochs)  # trained epochs
 
     train_emb = emb.get_embeddings()[0]
     train_emb.index = train_emb.index.astype(str)
@@ -285,7 +286,7 @@ def summarize(args):
     fill = {"zero": True, "random": False}
     muted = "#8a8986"
     fig = plt.figure(figsize=(7.2, 5.0))
-    gs = fig.add_gridspec(2, 3, hspace=0.75, wspace=0.5)
+    gs = fig.add_gridspec(2, 3, hspace=0.75, wspace=0.75)
     top = [fig.add_subplot(gs[0, j]) for j in range(3)]
     bottom = [fig.add_subplot(gs[1, j]) for j in range(3)]
 
@@ -293,10 +294,10 @@ def summarize(args):
         ax.plot(g.fraction, g[y], ls.get(dim, ":"), color=color, lw=1.1,
                 marker="o", ms=3.5, mfc=color if fill[init] else "white", mec=color, mew=0.9)
 
-    panels = [("train", "cos_mean", "a  training samples\nre-embedding vs. transductive",
-               "cosine similarity (mean)"),
-              ("test", "cos_mean", "b  unseen samples\nvs. production transform()",
-               "cosine similarity (mean)")]
+    panels = [("train", "cos_mean", "a  Training samples\nre-embedding vs. transductive",
+               "Cosine similarity (mean)"),
+              ("test", "cos_mean", "b  Unseen samples\nvs. production transform()",
+               "Cosine similarity (mean)")]
     for ax, (samples, y, title, ylab) in zip(top[:2], panels):
         for (ds, dim, init), g in cs[cs.samples == samples].groupby(["dataset", "dim", "init"]):
             line(ax, g.sort_values("fraction"), y, colors[ds], dim, init)
@@ -307,7 +308,7 @@ def summarize(args):
         line(ax, g.sort_values("fraction"), "delta_ap", colors[ds], dim, init)
     ax.axhline(0, color=muted, lw=0.6)
     ax.set_ylabel("Δ AP vs. production\n(mean over targets, splits)", fontsize=7)
-    ax.set_title("c  unseen samples\nprobe AP difference", fontsize=7, loc="left",
+    ax.set_title("c  Unseen samples\nprobe AP difference", fontsize=7, loc="left",
                  fontweight="bold")
 
     ref = pd.read_csv(OOD_RESULTS) if OOD_RESULTS.exists() else pd.DataFrame()
@@ -323,14 +324,14 @@ def summarize(args):
             if len(r):
                 ax.axhline(r.z_score.mean(), color=muted, ls=lsty, lw=0.9)
         ax.axhline(0, color=muted, lw=0.5)
-        ax.set_title(f"{'def'[list(DATASETS).index(ds)]}  {dsl}\ncross-match, test vs. train",
+        ax.set_title(f"{'def'[list(DATASETS).index(ds)]}  {dsl}\nCross-match, test vs. train",
                      fontsize=7, loc="left", fontweight="bold")
-        ax.set_ylabel("cross-match z (mean over splits)", fontsize=7)
+        ax.set_ylabel("Cross-match z (mean over splits)", fontsize=7)
     for ax in top + bottom:
         ax.set_xscale("log")
         ax.set_xticks(FRACTIONS, [f"{f:g}" for f in FRACTIONS])
         ax.minorticks_off()
-        ax.set_xlabel("fraction of samples per transform() call", fontsize=7)
+        ax.set_xlabel("Fraction of samples per transform() call", fontsize=7)
         ax.tick_params(labelsize=6)
         ax.ticklabel_format(axis="y", useOffset=False)
         for sp in ("top", "right"):
@@ -338,11 +339,11 @@ def summarize(args):
     handles = [plt.Line2D([], [], color=c, marker="o", ms=3.5, label=DATASETS[d])
                for d, c in colors.items()]
     handles += [plt.Line2D([], [], color="#555", ls=l, label=f"d={k}") for k, l in ls.items()]
-    handles += [plt.Line2D([], [], ls="", marker="o", ms=4, color="#555", label="zero input"),
+    handles += [plt.Line2D([], [], ls="", marker="o", ms=4, color="#555", label="Zero input"),
                 plt.Line2D([], [], ls="", marker="o", ms=4, mfc="white", mec="#555", mew=0.9,
-                           label="random input"),
-                plt.Line2D([], [], color=muted, ls=":", label="raw values (model-free)"),
-                plt.Line2D([], [], color=muted, ls="-.", label="spectral coords. (model-free)")]
+                           label="Random input"),
+                plt.Line2D([], [], color=muted, ls=":", label="Raw values (model-free)"),
+                plt.Line2D([], [], color=muted, ls="-.", label="Spectral coords. (model-free)")]
     fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.03), ncol=5,
                fontsize=6, frameon=False, handlelength=3)
     for ext in ("pdf", "png"):
@@ -356,7 +357,8 @@ def main() -> None:
     p.add_argument("--dims", type=int, nargs="+", default=[32, 64])
     p.add_argument("--splits", type=int, nargs="+", default=list(range(10)))
     p.add_argument("--fractions", type=float, nargs="+", default=FRACTIONS)
-    p.add_argument("--epochs", type=int, default=EPOCHS, help="training epochs (default 2000)")
+    p.add_argument("--epochs", type=int, default=EPOCHS,
+                   help="training budget (default: POME's, 2000 with early stopping)")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--device", default=None)
     p.add_argument("--out", type=Path, default=OUT)

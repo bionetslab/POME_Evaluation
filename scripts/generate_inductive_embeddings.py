@@ -10,12 +10,12 @@ POME  (``*_train_pome.tsv`` / ``*_test_pome.tsv``, graph format)
     inductively via ``transform()`` (single forward pass of the frozen trained
     encoder, no retraining).
 
-    POME >= 1.5 trains inductive mode to a fixed budget (default 2000 epochs) on
-    all training samples, without early stopping: linear-probe AP on unseen
-    samples does not degrade with training length up to 2000 epochs
-    (``generate_inductive_stopping_ablation.py`` / ``analyze_inductive_epoch_probes.py``),
-    so the former sample-holdout CV epoch tuning was dropped. ``--epochs`` is the
-    fixed number of training epochs (default 2000).
+    POME is used with its inductive defaults (POME >= 1.7): fit() first selects the
+    number of training epochs by early stopping on the smoothed held-out link AUC of
+    a 3-fold sample-holdout CV within the 2000-epoch budget, then trains on all
+    training samples for that many epochs (``generate_inductive_stopping_ablation.py``
+    / ``inductive_stopping_criteria_ablation.py`` / ``analyze_inductive_epoch_probes.py``).
+    ``--epochs`` overrides the budget (default: POME's, 2000).
 
 UMAP  (``*_train_umap.csv`` / ``*_test_umap.csv``, sample format)
     Fit UMAP on the training split and apply it to the unseen test samples.
@@ -98,17 +98,17 @@ Outputs (each run writes a ``_train`` and a ``_test`` CSV, sample-indexed):
 The ``combined`` mode keeps the original (mode-less) layout so existing outputs
 stay valid; the restricted modes add one path segment.
 
-POME is used with its own defaults (POME >= 1.5) and, unless ``--output-dir`` is given, writes
-to ``output/inductive_pome14`` so that the published POME embeddings under ``output/inductive``
-are not overwritten; UMAP writes to ``output/inductive``.
+POME is used with its own defaults (POME >= 1.7, the final version) and, unless ``--output-dir``
+is given, writes to ``output/inductive_pome`` so that the published POME embeddings under
+``output/inductive`` are not overwritten; UMAP writes to ``output/inductive``.
 
 For POME, the epoch count and wall-clock time of every run are additionally logged to
 
     <output-dir>/pome/tuned_epochs.csv
 
 with columns ``dataset, mode, split, dim, run, optimal_epochs, max_epochs, seconds``
-(the file name and columns are kept from the former CV epoch tuning so older logs still
-merge; with POME >= 1.5 ``optimal_epochs == max_epochs == --epochs``). It is
+(``optimal_epochs``: epochs selected by POME's early stopping and trained;
+``max_epochs``: the budget). It is
 upserted once per computed run (so it survives an interrupted run), and skipped
 runs leave their existing rows untouched.
 
@@ -137,7 +137,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SPLITS_ROOT = PROJECT_ROOT / "data" / "train_test_splits"
 INPUT_DATASETS = PROJECT_ROOT / "data" / "input_datasets"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive"
-DEFAULT_POME_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_pome14"
+DEFAULT_POME_OUTPUT_ROOT = PROJECT_ROOT / "output" / "inductive_pome"
 
 # luad_noleak = luad without its outcome/follow-up variables (scripts/make_luad_noleak_splits.py)
 DATASETS = ("hancock", "mimic", "luad_noleak")
@@ -165,7 +165,7 @@ NUMERIC_ONLY_DATASETS = {"mimic"}
 
 # POME hyperparameters (mirrors evaluate_inductive_ood.py in the POME repo).
 NA_ENCODING = -99.0
-DEFAULT_EPOCHS = 2000  # POME's default inductive training budget (POME >= 1.5)
+DEFAULT_EPOCHS = None  # POME's default inductive budget (2000) with early stopping
 DEFAULT_BINS = 15
 DEFAULT_DISCRETIZATION = "z"
 DEFAULT_SEED = 42
@@ -307,9 +307,9 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
 
             t_start = time.perf_counter()
             make_deterministic(seed_base + run)
-            # Inductive mode (POME >= 1.5): fit() trains for the fixed `epochs`
-            # on all training samples, no early stopping; the test samples are
-            # embedded inductively via transform() (a single frozen forward pass).
+            # Inductive mode (POME >= 1.7): fit() selects the epochs by CV early
+            # stopping within the budget, then trains on all training samples; the
+            # test samples are embedded inductively via transform() (one frozen pass).
             embedder = Embedder(
                 embedding_dimension=dim,
                 epochs=epochs,
@@ -328,7 +328,7 @@ def embed_pome_split(dataset: str, split_id: int, dims, n_runs: int,
             standardize_columns(test_emb).to_csv(test_out)
             elapsed = time.perf_counter() - t_start
             record_tuned_epochs(out_root, dataset, split_id, dim, run,
-                                embedder.num_epochs, epochs, mode, log_tag, elapsed)
+                                embedder.num_epochs, embedder.max_epochs, mode, log_tag, elapsed)
             # The per-run wall clock is what job walltimes get sized from, so
             # keep it in the job log as well as the epochs CSV.
             print(f"    [ok]   pome {dataset} split {split_id:02d} dim {dim} "
@@ -492,8 +492,8 @@ def main() -> None:
     parser.add_argument("--splits", nargs="+", type=int, default=None,
                         help="split ids to process (default: all discovered)")
     parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS,
-                        help="POME training epochs in inductive mode, no early "
-                             "stopping (default: 2000, POME's inductive default)")
+                        help="POME inductive training budget; early stopping selects "
+                             "the epochs within it (default: POME's, 2000)")
     parser.add_argument("--bins", type=int, default=DEFAULT_BINS,
                         help="POME bins_per_continuous (default: 15)")
     parser.add_argument("--discretization", default=DEFAULT_DISCRETIZATION,
@@ -507,7 +507,7 @@ def main() -> None:
                              "every run, so a shared file loses rows. Merge the "
                              "shards with scripts/merge_tuned_epochs.py")
     parser.add_argument("--output-dir", type=Path, default=None,
-                        help="output root (default: output/inductive_pome14 for POME, "
+                        help="output root (default: output/inductive_pome for POME, "
                              "output/inductive for UMAP)")
     parser.add_argument("--overwrite", action="store_true",
                         help="recompute and overwrite existing embedding files")
@@ -531,7 +531,7 @@ def main() -> None:
     print(f"Datasets: {args.datasets} | methods: {args.methods} | "
           f"modes: {args.modes} | dims: {args.dims} | runs: {args.runs}")
     if "pome" in args.methods:
-        print(f"POME: inductive mode, fixed budget epochs={args.epochs} "
+        print(f"POME: inductive mode, early stopping within budget epochs={args.epochs or 2000} "
               f"bins={args.bins} discretization={args.discretization} "
               f"device={device}")
 

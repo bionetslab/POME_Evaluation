@@ -2,7 +2,7 @@
 
 Methods (embeddings fit on the training split, the held-out test split transformed):
 
-    pome       POME 1.4                  scripts/generate_inductive_embeddings.py   output/inductive_pome14
+    pome       POME 1.7 (final)          scripts/generate_inductive_embeddings.py   output/inductive_pome
     umap       NA-aware UMAP             scripts/generate_inductive_embeddings.py   output/inductive
     hivae      HI-VAE                    scripts/embed_hivae_inductive.py           output/inductive_competitors
     saint      SAINT (native)            scripts/embed_saint_inductive.py           output/inductive_competitors
@@ -83,7 +83,7 @@ PROBES = ("logreg", "mlp")
 DATASETS = ("hancock", "mimic", "luad_noleak")
 COMPETITOR_ROOT = PROJECT_ROOT / "output" / "inductive_competitors"
 METHOD_ROOTS = {
-    "pome": PROJECT_ROOT / "output" / "inductive_pome14",
+    "pome": PROJECT_ROOT / "output" / "inductive_pome",
     "umap": PROJECT_ROOT / "output" / "inductive",
     "hivae": COMPETITOR_ROOT,
     "saint": COMPETITOR_ROOT,

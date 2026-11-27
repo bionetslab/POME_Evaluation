@@ -29,7 +29,9 @@ value encodings are fixed at their spectral initialization, and only the variabl
 are learned, anchored to their initialization. Numeric imputation uses the learned `e_j`.
 
 POME 1.4 results carry the tag `_pome14` and are the scripts' default output locations, e.g.
-`data/embeddings_pome14`, `output/inductive_pome14` and `imputed_*_pome14`. The published results
+`data/embeddings_pome14` and `imputed_*_pome14`. The inductive analyses use the final POME 1.7
+(early stopping on the smoothed held-out link AUC) and write its embeddings to `output/inductive_pome`.
+The published results
 (untagged files) are never overwritten. To regenerate the published results themselves, check out
 the tag `pre-pome-1.4` of this repo and install POME `v1.3`.
 
@@ -145,7 +147,8 @@ with the generator of `scripts/generate_splits.py` (seed 42) and drops these var
 the only LUAD dataset of the inductive analyses.
 
 **Methods** (the probing script reads each one from its own embedding root):
-- **POME 1.4**: `scripts/generate_inductive_embeddings.py --methods pome` → `output/inductive_pome14`.
+- **POME 1.7** (final; default early stopping): `scripts/generate_inductive_embeddings.py --methods pome`
+  → `output/inductive_pome` (3 dims × 10 splits × 5 runs, `--dims 16 32 64 --runs 5`).
 - **UMAP** (NA-aware fork): `scripts/generate_inductive_embeddings.py --methods umap` → `output/inductive`.
 - The tabular competitors of the clustering analysis, run inductively on the same POME-format split
   files. Each one is fit on the training split only and embeds the test samples with the frozen model,

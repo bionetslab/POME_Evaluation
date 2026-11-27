@@ -17,7 +17,7 @@ partitions used by ``scripts/plot_inductive_linear_probing.py``. The three
 modes are embedded from variable-type subsets of those very same splits, so
 Combined / Numeric only / Categorical only differ *only* in which variables the
 encoder saw. All three modes (also Combined) are generated in one self-consistent
-set with the current POME (>= 1.5, 2000 epochs) and UMAP, dim 64, 5 runs, in
+set with the final POME (1.7, default early stopping) and UMAP, dim 64, 5 runs, in
 ``output/inductive_type_combination``:
 
     container/submit_pome_modes.sh --modes "combined numeric_only cat_only" \
