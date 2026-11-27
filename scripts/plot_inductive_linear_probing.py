@@ -48,8 +48,9 @@ for probe in PROBES:
 parser.add_argument("--tabicl", default=os.path.join(OUT_DIR, "inductive_tabicl_reference.csv"),
                     help="supervised TabICL reference CSV")
 parser.add_argument("--output", default=os.path.join(OUT_DIR, "inductive_probing_results.pdf"))
-parser.add_argument("--dims", nargs="+", type=int, default=None,
-                    help="embedding sizes to show (default: all in the results files)")
+parser.add_argument("--dims", nargs="+", type=int, default=[16, 32, 64],
+                    help="embedding sizes to show (default: 16 32 64, the sizes of all methods; "
+                         "UMAP alone also has 128)")
 parser.add_argument("--methods", nargs="+", default=None,
                     help="methods to show, by figure name (default: all in the results files)")
 args = parser.parse_args()
