@@ -19,18 +19,26 @@ selected number of epochs is recorded per fit):
 Per dataset x dim x split (one fit per unit, seed ``--seed``) and per input x fraction it records
 
   * training samples: cosine(transductive embedding, inductive re-embedding through transform())
-  * test samples: cosine(production transform(), i.e. zero input with all test samples at once,
+  * test samples: cosine(default transform(), i.e. zero input with all test samples in one call,
     embedding with this input and fraction)
   * test samples: linear-probe AP per target (raw logreg fit on the transductive training
-    embeddings, ``probe_one(standardize=False)``) and its difference to the production embedding
+    embeddings, ``probe_one(standardize=False)``) and its difference to the default transform() embedding
   * the train / test embeddings (``emb/{dataset}/dim_{D}/split_{NN}.npz``) for the Rosenbaum
     cross-match test (scXmatch) of test vs. training samples, run by ``--crossmatch``
 
-Figure (``--summarize``): top row (a) training-sample re-embedding vs. transductive, (b) unseen
-samples vs. the production transform(), (c) probe AP difference, each against the fraction of
-samples per transform() call (zero input: filled, random input: open markers); bottom row (d-f)
-cross-match z per dataset on the same axis, with the model-free references of
-``evaluate_inductive_ood.py`` (raw values, spectral coordinates; grey lines).
+Figure (``--summarize``, embedding size ``FIGURE_DIM`` = 32 only; the summary CSVs keep all
+dims): top row (a) cosine of the training samples' re-embedding to their transductive embedding,
+against the fraction of samples per transform() call (0.01, 0.1, 1; zero input: filled, random
+input: open markers, joined by a vertical line; datasets slightly offset horizontally), (b) bars
+of the mean absolute linear-probe AP difference between random and zero input of the unseen
+samples (over targets and splits) per fraction and dataset, legend in the
+third slot; bottom row (c-e) box plots of the cross-match z (unseen vs. training samples) over the
+10 splits per dataset and embedding size (all dims run, e.g. 16/32/64; all unseen samples in one
+transform() call; zero input filled, random outlined), with the model-free references of
+``evaluate_inductive_ood.py`` (raw values; spectral coordinates per embedding size where
+available; mean over splits, grey lines). The
+unseen-sample cosine to the default transform() and the AP differences with their Wilcoxon p
+are in summary_cosines.csv and summary_probes.csv.
 
 GPU part (one job per dataset; PYTHONHASHSEED=0, POME >= 1.7):
     sbatch --job-name=init_hancock --export=PYTHONHASHSEED=0 \\
@@ -61,11 +69,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUT = PROJECT_ROOT / "output" / "inductive_init_check"
+FIGURE_DIM = 32  # embedding size shown in the figure
 OOD_RESULTS = PROJECT_ROOT / "output" / "inductive_ood" / "ood_crossmatch_results.csv"
 DATASETS = {"hancock": "HANCOCK", "luad_noleak": "TCGA-LUAD", "mimic": "MIMIC-IV"}
 EPOCHS = None  # POME's inductive default: early stopping within the 2000-epoch budget
 INITS = ["zero", "random"]
 FRACTIONS = [0.01, 0.05, 0.1, 0.25, 0.5, 1.0]
+FIGURE_FRACTIONS = [0.01, 0.1, 1.0]  # fractions shown in the figure (no differences between any)
 
 
 def unit(m):
@@ -133,7 +143,7 @@ def run_one(dataset, dim, split, args, targets, device):
 
     Z_tr = train_emb.loc[[str(s) for s in tr_samples]].to_numpy()
     te_index = [str(s) for s in te_samples]
-    prod = emb.transform(test_df.copy()).loc[te_index].to_numpy()   # production transform()
+    prod = emb.transform(test_df.copy()).loc[te_index].to_numpy()   # default transform()
     rows, probe_rows, arrays = [], [], {"train_transductive": Z_tr}
 
     def probes(Z):
@@ -258,7 +268,8 @@ def summarize(args):
         p = float(wilcoxon(per_split).pvalue) if (per_split.abs() > 1e-12).any() else np.nan
         rows.append(dict(dataset=ds, dim=dim, init=init, fraction=frac,
                          ap=g.average_precision.mean(), ap_production=g.ap_production.mean(),
-                         delta_ap=g.delta.mean(), max_abs_delta=g.delta.abs().max(), p_wilcoxon=p))
+                         delta_ap=g.delta.mean(), mean_abs_delta=g.delta.abs().mean(),
+                         max_abs_delta=g.delta.abs().max(), p_wilcoxon=p))
     ps = pd.DataFrame(rows)
     ps.to_csv(args.out / "summary_probes.csv", index=False)
 
@@ -273,7 +284,7 @@ def summarize(args):
         print("== cosine similarity (mean over samples, then splits) ==")
         print(cs.pivot_table(index=["dataset", "dim", "fraction"], columns=["samples", "init"],
                              values="cos_mean").round(5).to_string())
-        print("\n== linear-probe AP of test samples vs. production transform() ==")
+        print("\n== linear-probe AP of test samples vs. default transform() ==")
         print(ps.round(4).to_string(index=False))
         if len(xm):
             print("\n== cross-match z, test vs. training samples ==")
@@ -282,7 +293,10 @@ def summarize(args):
 
     # ---- figure ---------------------------------------------------------------------------
     colors = {"hancock": "#2a78d6", "luad_noleak": "#eb6834", "mimic": "#1baf7a"}
-    ls = {32: "-", 64: "--"}
+    cs = cs[(cs.dim == FIGURE_DIM) & cs.fraction.isin(FIGURE_FRACTIONS)]
+    ps = ps[(ps.dim == FIGURE_DIM) & ps.fraction.isin(FIGURE_FRACTIONS)]
+    if len(xm):
+        xs = xs[(xs.dim == FIGURE_DIM) & xs.fraction.isin(FIGURE_FRACTIONS)]
     fill = {"zero": True, "random": False}
     muted = "#8a8986"
     fig = plt.figure(figsize=(7.2, 5.0))
@@ -291,61 +305,107 @@ def summarize(args):
     bottom = [fig.add_subplot(gs[1, j]) for j in range(3)]
 
     def line(ax, g, y, color, dim, init):
-        ax.plot(g.fraction, g[y], ls.get(dim, ":"), color=color, lw=1.1,
+        ax.plot(g.fraction, g[y], "-", color=color, lw=1.1,
                 marker="o", ms=3.5, mfc=color if fill[init] else "white", mec=color, mew=0.9)
 
-    panels = [("train", "cos_mean", "a  Training samples\nre-embedding vs. transductive",
-               "Cosine similarity (mean)"),
-              ("test", "cos_mean", "b  Unseen samples\nvs. production transform()",
-               "Cosine similarity (mean)")]
-    for ax, (samples, y, title, ylab) in zip(top[:2], panels):
-        for (ds, dim, init), g in cs[cs.samples == samples].groupby(["dataset", "dim", "init"]):
-            line(ax, g.sort_values("fraction"), y, colors[ds], dim, init)
-        ax.set_title(title, fontsize=7, loc="left", fontweight="bold")
-        ax.set_ylabel(ylab, fontsize=7)
-    ax = top[2]
-    for (ds, dim, init), g in ps.groupby(["dataset", "dim", "init"]):
-        line(ax, g.sort_values("fraction"), "delta_ap", colors[ds], dim, init)
-    ax.axhline(0, color=muted, lw=0.6)
-    ax.set_ylabel("Δ AP vs. production\n(mean over targets, splits)", fontsize=7)
-    ax.set_title("c  Unseen samples\nprobe AP difference", fontsize=7, loc="left",
-                 fontweight="bold")
+    # panels a-c: per dataset and fraction, zero (filled) and random (open) input joined by a
+    # vertical line; the datasets side by side around each fraction (log x, multiplicative offset)
+    offset = {ds: 10 ** (0.14 * (k - 1)) for k, ds in enumerate(colors)}
+
+    def pairs(ax, g, y):
+        for ds, gd in g.groupby("dataset"):
+            w = gd.pivot_table(index="fraction", columns="init", values=y)
+            x = w.index.to_numpy() * offset[ds]
+            ax.vlines(x, w.zero, w.random, color=colors[ds], lw=1.0, zorder=2)
+            ax.plot(x, w.zero, "o", ls="", ms=3.5, color=colors[ds], zorder=3)
+            # transparent face: where zero and random coincide, the filled point stays visible
+            ax.plot(x, w.random, "o", ls="", ms=5, mfc="none", mec=colors[ds], mew=0.9,
+                    zorder=4)
+
+    # a: training samples, cosine to their transductive embedding; b: unseen samples, absolute
+    # probe AP (the unseen-sample cosine to the default transform() is in summary_cosines.csv)
+    ax = top[0]
+    pairs(ax, cs[cs.samples == "train"], "cos_mean")
+    ax.set_title("Training samples: re-embedding\nvs. transductive embedding", fontsize=7)
+    ax.set_ylabel("Cosine similarity (mean)", fontsize=7)
+    # b: mean |AP(random) - AP(zero)| over targets x splits, bars per fraction and dataset
+    ax = top[1]
+    pr = ps[ps.init == "random"]
+    width = 0.8 / len(colors)
+    for k, (ds, col) in enumerate(colors.items()):
+        g = pr[pr.dataset == ds].set_index("fraction").reindex(FIGURE_FRACTIONS)
+        ax.bar(np.arange(len(FIGURE_FRACTIONS)) + (k - 1) * width, g.mean_abs_delta, width,
+               color=col)
+    ax.set_xticks(range(len(FIGURE_FRACTIONS)), [f"{f:g}" for f in FIGURE_FRACTIONS])
+    ax.set_title("Downstream effect of unseen\nsample initialization", fontsize=7)
+    ax.set_ylabel("|Δ AP| (mean over targets, splits)", fontsize=7)
+    ax.set_xlabel("Fraction of samples per transform() call", fontsize=7)
+    ax.tick_params(labelsize=6)
+    plots = [top[0]]
 
     ref = pd.read_csv(OOD_RESULTS) if OOD_RESULTS.exists() else pd.DataFrame()
     if len(ref):
         ref = ref[(ref.comparison == "main") & ref.config.isin(["raw_onehot", "spectral"])]
     for ax, (ds, dsl) in zip(bottom, DATASETS.items()):
+        # c-e: box plots of the per-split z (10 splits) per embedding size, zero
+        # (filled) left of random (outlined) input; all unseen samples in one transform() call
+        # (the fraction makes no difference)
         if len(xm):
-            for (dim, init), g in xs[xs.dataset == ds].groupby(["dim", "init"]):
-                g = g.sort_values("fraction")
-                line(ax, g, "z_mean", colors[ds], dim, init)
-        for cfg, lsty in (("raw_onehot", ":"), ("spectral", "-.")):
-            r = ref[(ref.dataset == ds) & (ref.config == cfg)] if len(ref) else ref
-            if len(r):
-                ax.axhline(r.z_score.mean(), color=muted, ls=lsty, lw=0.9)
-        ax.axhline(0, color=muted, lw=0.5)
-        ax.set_title(f"{'def'[list(DATASETS).index(ds)]}  {dsl}\nCross-match, test vs. train",
-                     fontsize=7, loc="left", fontweight="bold")
-        ax.set_ylabel("Cross-match z (mean over splits)", fontsize=7)
-    for ax in top + bottom:
+            xd = xm[(xm.dataset == ds) & np.isclose(xm.fraction, 1.0)]
+            dims = sorted(xd.dim.unique())
+            for i, d in enumerate(dims):
+                for init, dx in (("zero", -0.2), ("random", 0.2)):
+                    z = xd.loc[(xd.dim == d) & (xd.init == init), "z_score"].to_numpy()
+                    if not len(z):
+                        continue
+                    bp = ax.boxplot([z], positions=[i + dx], widths=0.32, patch_artist=True,
+                                    showfliers=False, medianprops=dict(color="black", lw=1.0),
+                                    boxprops=dict(lw=0.8), whiskerprops=dict(lw=0.8),
+                                    capprops=dict(lw=0.8))
+                    bp["boxes"][0].set_facecolor(colors[ds] if fill[init] else "white")
+                    bp["boxes"][0].set_alpha(0.55 if fill[init] else 1)
+            ax.set_xticks(range(len(dims)), [str(d) for d in dims])
+            ax.set_xlim(-0.6, len(dims) - 0.4)
+        # model-free references (mean over splits): raw values across the panel, spectral
+        # coordinates (dimension-dependent) as a segment at each embedding size it was run for
+        r = ref[ref.dataset == ds] if len(ref) else ref
+        if len(r):
+            raw = r[r.config == "raw_onehot"]
+            if len(raw):
+                ax.axhline(raw.z_score.mean(), color=muted, ls=":", lw=0.9)
+            if len(xm):
+                for i, d in enumerate(dims):
+                    sp = r[(r.config == "spectral") & (r.dim == d)]
+                    if len(sp):
+                        ax.hlines(sp.z_score.mean(), i - 0.45, i + 0.45, color=muted, ls="-.",
+                                  lw=0.9)
+        ax.set_title(f"Out-of-distribution\nanalysis ({dsl})", fontsize=7)
+        ax.set_ylabel("Cross-match z", fontsize=7)
+        ax.set_xlabel("Embedding size d", fontsize=7)
+        ax.tick_params(labelsize=6)
+    for ax in plots:
         ax.set_xscale("log")
-        ax.set_xticks(FRACTIONS, [f"{f:g}" for f in FRACTIONS])
+        ax.set_xticks(FIGURE_FRACTIONS, [f"{f:g}" for f in FIGURE_FRACTIONS])
+        ax.set_xlim(FIGURE_FRACTIONS[0] / 2.2, FIGURE_FRACTIONS[-1] * 2.2)
         ax.minorticks_off()
         ax.set_xlabel("Fraction of samples per transform() call", fontsize=7)
         ax.tick_params(labelsize=6)
         ax.ticklabel_format(axis="y", useOffset=False)
-        for sp in ("top", "right"):
-            ax.spines[sp].set_visible(False)
+    for ax, key in zip(top[:2] + bottom, "abcde"):
+        ax.text(-0.32, 1.22, key, transform=ax.transAxes, fontsize=10, fontweight="bold",
+                va="top", ha="left")
     handles = [plt.Line2D([], [], color=c, marker="o", ms=3.5, label=DATASETS[d])
                for d, c in colors.items()]
-    handles += [plt.Line2D([], [], color="#555", ls=l, label=f"d={k}") for k, l in ls.items()]
-    handles += [plt.Line2D([], [], ls="", marker="o", ms=4, color="#555", label="Zero input"),
+    handles += [plt.Line2D([], [], ls="", label=""),  # pad: columns fill top to bottom
+                plt.Line2D([], [], ls="", marker="o", ms=4, color="#555", label="Zero input"),
                 plt.Line2D([], [], ls="", marker="o", ms=4, mfc="white", mec="#555", mew=0.9,
                            label="Random input"),
                 plt.Line2D([], [], color=muted, ls=":", label="Raw values (model-free)"),
                 plt.Line2D([], [], color=muted, ls="-.", label="Spectral coords. (model-free)")]
-    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.03), ncol=5,
-               fontsize=6, frameon=False, handlelength=3)
+    handles = [h for h in handles if h.get_label()]  # one column: no padding needed
+    top[2].axis("off")
+    top[2].legend(handles=handles, loc="center", fontsize=6, frameon=True, fancybox=False,
+                  edgecolor="black", handlelength=3)
     for ext in ("pdf", "png"):
         fig.savefig(args.out / f"figure_inductive_init.{ext}", dpi=300, bbox_inches="tight")
     print(f"wrote {args.out}")
