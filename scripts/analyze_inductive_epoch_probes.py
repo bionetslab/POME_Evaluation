@@ -35,7 +35,7 @@ Outputs (output/inductive_stopping_ablation/):
   epoch_peaks.csv           AP maxima over the epoch grid vs. the 2000-epoch budget
   ap_per_target.pdf/.png    AP vs. epochs per target: mean +- SEM over splits, per dim, with the
                             epoch selected by the best early-stopping criterion (POME's default
-                            since 1.6); last panel: mean regret (95 % CI) of that rule vs. the
+                            since 1.6); panel a: mean regret (95 % CI) of that rule vs. the
                             smoothed held-out link AUC, the RankMe gap of POME 1.4 (tuned) and
                             the full 2000-epoch budget (criteria_ablation/summary.csv)
 """
@@ -116,55 +116,53 @@ def plot_regret(ax, summary):
     ax.set_xticks(x)
     ax.set_xticklabels(REGRET_BARS.values(), fontsize=8)
     ax.set_ylabel("Mean regret (AP)")
-    ax.set_title("Early-stopping regret (mean, 95 % CI)", fontsize=10)
+    ax.set_title("Early-stopping comparison", fontsize=10)
 
 
 def plot_targets(probes, out, stop_epochs, summary):
-    """AP vs epochs per target: mean +- SEM over splits, one line per embedding size; the free
-    panel shows the regret of the early-stopping rules."""
-    targets = {ds: sorted(probes[probes.dataset == ds].target.unique()) for ds in DATASETS}
-    ncol = max(len(t) for t in targets.values())
-    fig, axes = plt.subplots(len(DATASETS), ncol, figsize=(4 * ncol, 2.9 * len(DATASETS)),
-                             squeeze=False)
-    for i, (ds, dsl) in enumerate(DATASETS.items()):
-        for j in range(ncol):
-            ax = axes[i, j]
-            if j >= len(targets[ds]):
-                ax.axis("off")
+    """Panel a: regret of the early-stopping rules; then AP vs epochs per target (mean +- SEM
+    over splits, one line per embedding size), datasets in DATASETS order."""
+    panels = [(ds, dsl, t) for ds, dsl in DATASETS.items()
+              for t in sorted(probes[probes.dataset == ds].target.unique())]
+    ncol = 3
+    nrow = -(-(len(panels) + 1) // ncol)
+    fig, axes = plt.subplots(nrow, ncol, figsize=(4 * ncol, 2.9 * nrow), squeeze=False)
+    flat = axes.ravel()
+    plot_regret(flat[0], summary)
+    handles = []
+    for k, (ds, dsl, t) in enumerate(panels, start=1):
+        ax = flat[k]
+        g = probes[(probes.dataset == ds) & (probes.target == t)]
+        for dim, col in DIM_COLORS.items():
+            a = g[g.dim == dim].pivot_table(index="epochs", columns="split",
+                                            values="average_precision")
+            if a.empty:
                 continue
-            t = targets[ds][j]
-            g = probes[(probes.dataset == ds) & (probes.target == t)]
-            for dim, col in DIM_COLORS.items():
-                a = g[g.dim == dim].pivot_table(index="epochs", columns="split",
-                                                values="average_precision")
-                if a.empty:
-                    continue
-                m, se = a.mean(axis=1), a.sem(axis=1)
-                ax.plot(m.index, m, "o-", color=col, ms=3, lw=1.6, label=f"d={dim}")
-                ax.fill_between(m.index, m - se, m + se, color=col, alpha=.2, lw=0)
-                e = stop_epochs.get((ds, dim))
-                if e is not None:
-                    y = np.interp(e, m.index.to_numpy(float), m.to_numpy())
-                    # before the first grid fit (25 epochs) the AP is not measured: the star
-                    # sits at the AP of the first fit, joined to the curve by a dashed line
-                    first = m.index.min()
-                    if e < first:
-                        ax.plot([e, first], [y, y], "--", color=col, lw=1.2, zorder=4)
-                    ax.plot(e, y, "*", color=col, ms=13, mec="black", mew=0.7, zorder=5)
-            ax.set_xlim(-60, BUDGET * 1.03)
-            ax.set_title(f"{dsl}: {t}", fontsize=10)
-            if j == 0:
-                ax.set_ylabel("Probe AP (test split)")
-            if i == len(DATASETS) - 1:
-                ax.set_xlabel("Training epochs")
-    handles = axes[0, 0].get_legend_handles_labels()[0] + [
-        plt.Line2D([], [], ls="", marker="*", ms=12, color="grey", mec="black", mew=0.7,
-                   label="POME early stopping (median selected epoch over splits)")]
-    free = [ax for ax in axes.ravel() if not ax.axison]
-    if free:
-        free[0].axis("on")
-        plot_regret(free[0], summary)
-    for k, ax in enumerate(ax for ax in axes.ravel() if ax.axison):
+            m, se = a.mean(axis=1), a.sem(axis=1)
+            line, = ax.plot(m.index, m, "o-", color=col, ms=3, lw=1.6, label=f"d={dim}")
+            if k == 1:
+                handles.append(line)
+            ax.fill_between(m.index, m - se, m + se, color=col, alpha=.2, lw=0)
+            e = stop_epochs.get((ds, dim))
+            if e is not None:
+                y = np.interp(e, m.index.to_numpy(float), m.to_numpy())
+                # before the first grid fit (25 epochs) the AP is not measured: the star
+                # sits at the AP of the first fit, joined to the curve by a dashed line
+                first = m.index.min()
+                if e < first:
+                    ax.plot([e, first], [y, y], "--", color=col, lw=1.2, zorder=4)
+                ax.plot(e, y, "*", color=col, ms=13, mec="black", mew=0.7, zorder=5)
+        ax.set_xlim(-60, BUDGET * 1.03)
+        ax.set_title(f"{dsl}: {t}", fontsize=10)
+        if k % ncol == 0:
+            ax.set_ylabel("Probe AP (test split)")
+        if k + ncol > len(panels):  # no panel below
+            ax.set_xlabel("Training epochs")
+    for ax in flat[len(panels) + 1:]:
+        ax.axis("off")
+    handles += [plt.Line2D([], [], ls="", marker="*", ms=12, color="grey", mec="black", mew=0.7,
+                           label="POME early stopping (median selected epoch over splits)")]
+    for k, ax in enumerate(flat[:len(panels) + 1]):
         ax.text(-0.13, 1.13, "abcdefghijklmnop"[k], transform=ax.transAxes, fontsize=13,
                 fontweight="bold", va="top", ha="left")
     fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.995),
